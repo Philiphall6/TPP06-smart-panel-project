@@ -1,39 +1,35 @@
-# Phase 3 — Remove Tuya and migrate to ESPHome
+# Phase 3 — Remove Tuya and provide local ESPHome access
 
 ## Purpose
 
-Remove dependence on the Tuya app and cloud to achieve durable local control.
+Keep the TPP06 board and its Anyka processor, while modifying the existing software to remove the Tuya app and cloud dependency. The result must be available locally through ESPHome.
 
-## Hardware constraint
+No controller replacement is planned, and ESPHome is not to be flashed directly onto the Anyka processor.
 
-The board uses an Anyka `AK3761EE128` processor. ESPHome lists its supported microcontrollers, but not the Anyka family. ESPHome should therefore not be flashed directly onto the Anyka processor.
+## Prerequisites
 
-Reference: [ESPHome supported microcontrollers](https://esphome.io/components/).
+- Verified local NAND backup.
+- Working UART access.
+- Identified authorised account and established system login.
+- Boot logs and a service inventory saved without secrets.
 
-## Two paths to evaluate
+## Work plan
 
-### A. Replace the controller with an ESP32 running ESPHome
-
-This is the most direct route to removing Tuya. It requires:
-
-1. Mapping buttons, LEDs, display, power, and board outputs.
-2. Defining electrical levels and any required isolation.
-3. Testing inputs, display, and LEDs on a bench first.
-4. Building a minimal ESPHome configuration, then adding functions one at a time.
-5. Validating local Home Assistant control before permanently retiring the Tuya logic.
-
-### B. Keep the Anyka processor with local software
-
-After UART access, assess whether the existing Linux system can run a local service. This may avoid a hardware replacement, but it is not a native ESPHome installation and requires analysis of the system, available memory, and build toolchain.
+1. Identify Tuya services, startup scripts, network interfaces, and the processes that control the display, buttons, and outputs.
+2. Map existing local mechanisms: Unix sockets, network ports, commands, configuration files, and hardware buses.
+3. Create or adapt a local service that controls the panel without the Tuya cloud.
+4. Expose that service to ESPHome through a documented local interface. The protocol will be selected after the inventory: an ESPHome API if feasible on the system, or an ESPHome component/adapter connected to the panel's local interface.
+5. Disable Tuya startup and communications only after local control has been completely validated.
+6. Verify that buttons, display, and local automations work with no Internet connection.
 
 ## Success criteria
 
-- The panel runs without a Tuya account or cloud access.
-- Essential controls remain available locally.
-- Home Assistant controls the panel over the local network.
-- The I/O map, final wiring, and configuration are documented.
-- The NAND backup remains outside GitHub.
+- The panel boots and remains functional with no Tuya account or cloud access.
+- Local panel controls remain operational.
+- ESPHome can read state and control the required functions on the local network.
+- The change is reversible through the NAND backup retained outside GitHub.
+- Documentation describes modified services, the local interface, and the rollback method without publishing a password or key.
 
 ## Phase outcome
 
-A validated local architecture: either ESPHome on a replacement controller or a local solution adapted to the Anyka system.
+Localized TPP06 software with no active Tuya service and a documented ESPHome integration.

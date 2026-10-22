@@ -25,13 +25,13 @@ Ouvrir une console série, documenter le démarrage, puis accéder au système a
 
 **État :** brochage identifié ; connexion terminal à réaliser.
 
-## Étape 3 — Suppression de Tuya et migration locale
+## Étape 3 — Suppression de Tuya et accès via ESPHome
 
-Supprimer la dépendance Tuya et choisir une solution locale. ESPHome ne s’exécute pas directement sur le processeur Anyka identifié ; cette étape commence donc par le choix d’une architecture locale.
+Conserver le processeur Anyka et modifier son logiciel pour supprimer Tuya, remplacer ses dépendances cloud par un service local et rendre le panneau accessible via ESPHome.
 
 - [Guide étape 3 : suppression de Tuya et ESPHome](docs/fr/03-suppression-tuya-esphome.md)
 
-**État :** à concevoir après l’inventaire UART et matériel.
+**État :** à réaliser après l’accès UART et l’inventaire du logiciel existant.
 
 ## Références
 

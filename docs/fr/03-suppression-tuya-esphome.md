@@ -1,39 +1,35 @@
-# Étape 3 — Suppression de Tuya et migration vers ESPHome
+# Étape 3 — Suppression de Tuya et accès local via ESPHome
 
 ## But
 
-Supprimer la dépendance à l’application et au cloud Tuya pour obtenir un contrôle local durable.
+Conserver la carte TPP06 et son processeur Anyka, mais modifier le logiciel existant pour supprimer la dépendance à l’application et au cloud Tuya. Le résultat doit être accessible localement depuis ESPHome.
 
-## Contrainte matérielle
+Aucun remplacement de contrôleur n’est prévu et ESPHome ne doit pas être flashé directement sur le processeur Anyka.
 
-La carte utilise un processeur Anyka `AK3761EE128`. ESPHome répertorie des microcontrôleurs pris en charge, mais pas cette famille Anyka. Il ne faut donc pas tenter de flasher ESPHome directement sur le processeur Anyka.
+## Pré-requis
 
-Référence : [microcontrôleurs pris en charge par ESPHome](https://esphome.io/components/).
+- Sauvegarde NAND locale vérifiée.
+- Accès UART fonctionnel.
+- Identification du compte autorisé et connexion système établie.
+- Journaux de démarrage et inventaire des services sauvegardés sans secrets.
 
-## Deux voies à évaluer
+## Plan de travail
 
-### A. Remplacer le contrôleur par un ESP32 exécutant ESPHome
-
-C’est la voie la plus directe pour supprimer Tuya. Elle demande :
-
-1. Cartographier les boutons, voyants, écran, alimentation et sorties de la carte.
-2. Définir les niveaux électriques et isolations nécessaires.
-3. Tester d’abord les entrées, l’écran et les voyants sur établi.
-4. Créer une configuration ESPHome minimale, puis ajouter les fonctions une par une.
-5. Valider le contrôle local dans Home Assistant avant de retirer définitivement la logique Tuya.
-
-### B. Conserver le processeur Anyka avec un logiciel local
-
-Après l’accès UART, vérifier s’il est techniquement possible d’exécuter un service local sur le système Linux existant. Cette option peut éviter le remplacement matériel, mais elle n’est pas une installation ESPHome native et nécessite une analyse du système, de la mémoire disponible et de la chaîne de compilation.
+1. Identifier les services Tuya, les scripts de démarrage, les interfaces réseau et les processus qui commandent l’écran, les boutons et les sorties.
+2. Cartographier les mécanismes locaux déjà présents : sockets Unix, ports réseau, commandes, fichiers de configuration et bus matériels.
+3. Créer ou adapter un service local qui commande le panneau sans cloud Tuya.
+4. Exposer ce service à ESPHome avec une interface documentée et locale. Le protocole sera choisi après l’inventaire : API ESPHome si elle est réalisable sur le système, ou composant/adaptateur ESPHome vers l’interface locale du panneau.
+5. Désactiver le démarrage et les communications Tuya seulement après validation complète du contrôle local.
+6. Vérifier que les boutons, l’écran et les automatisations locales fonctionnent sans Internet.
 
 ## Critères de réussite
 
-- Le panneau fonctionne sans compte Tuya ni accès cloud.
-- Les commandes essentielles restent disponibles localement.
-- Home Assistant contrôle le panneau en réseau local.
-- Un schéma d’E/S, le câblage final et la configuration sont documentés.
-- La sauvegarde NAND reste conservée hors GitHub.
+- Le panneau démarre et reste fonctionnel sans compte Tuya ni accès au cloud.
+- Les commandes locales du panneau restent opérationnelles.
+- ESPHome peut lire l’état et commander les fonctions utiles sur le réseau local.
+- La modification est réversible grâce à la sauvegarde NAND conservée hors GitHub.
+- La documentation décrit les services modifiés, l’interface locale et la procédure de retour arrière, sans publier de mot de passe ni de clé.
 
 ## Sortie de l’étape
 
-Une architecture locale validée : soit ESPHome sur contrôleur de remplacement, soit solution locale adaptée au système Anyka.
+Un logiciel TPP06 localisé, sans service Tuya actif, et une intégration ESPHome documentée.

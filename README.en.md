@@ -25,13 +25,13 @@ Open a serial console, record the boot process, then access the system with the 
 
 **Status:** pinout identified; terminal connection remains to be made.
 
-## Phase 3 — Remove Tuya and migrate to local control
+## Phase 3 — Remove Tuya and provide ESPHome access
 
-Remove the Tuya dependency and choose a local-control architecture. ESPHome does not run directly on the identified Anyka processor, so this phase starts with an architecture decision.
+Keep the Anyka processor and modify its software to remove Tuya, replace its cloud dependencies with a local service, and make the panel accessible through ESPHome.
 
 - [Phase 3 guide: remove Tuya and ESPHome](docs/en/03-remove-tuya-esphome.md)
 
-**Status:** to be designed after the UART and hardware inventory.
+**Status:** to be completed after UART access and an inventory of the existing software.
 
 ## References
 
