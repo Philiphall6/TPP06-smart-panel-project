@@ -1,0 +1,18 @@
+# Données d’appareil et fichiers volumineux
+*.bin
+*.BIN
+*.img
+*.dump
+*.bak
+*.hex
+*.log
+captures/
+firmware/
+
+# Secrets et clés
+secrets/
+*.secret
+*.key
+*.pem
+mot-de-passe*.txt
+password*.txt
