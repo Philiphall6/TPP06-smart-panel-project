@@ -4,6 +4,15 @@
 
 [🇫🇷 Documentation française](README.fr.md) &nbsp;·&nbsp; [🇬🇧 English documentation](README.en.md)
 
+## Les deux variantes du panneau
+
+<p align="center">
+  <img src="media/visuels-produit/01-panneau-blanc.png" alt="TPP06 avec commandes blanches" width="300">
+  &nbsp;&nbsp;
+  <img src="media/visuels-produit/02-panneau-noir.png" alt="TPP06 avec commandes noires" width="300">
+</p>
+
+*Visuels de référence des deux panneaux utilisés dans le projet.*
 ---
 
 ## Le projet en quatre étapes
