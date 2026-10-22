@@ -33,3 +33,9 @@ Aucun remplacement de contrôleur n’est prévu et ESPHome ne doit pas être fl
 ## Sortie de l’étape
 
 Un logiciel TPP06 localisé, sans service Tuya actif, et une intégration ESPHome documentée.
+
+## Piste interface : LVGL
+
+La documentation [LVGL d’ESPHome](https://esphome.io/components/lvgl/) sert de référence pour une interface tactile locale : écrans, widgets, pages et événements tactiles. Elle suppose toutefois une cible prise en charge par ESPHome avec un pilote d’écran et un pilote tactile configurés ; elle ne peut donc pas être flashée directement sur l’Anyka.
+
+Après validation de l’accès UART, l’inventaire devra rechercher le programme graphique existant, le pilote d’écran, le contrôleur tactile et une éventuelle bibliothèque LVGL. Si le logiciel du panneau utilise déjà LVGL ou peut l’utiliser nativement, les modifications se feront dans ce programme Anyka. Sinon, cette documentation restera une référence d’interface tandis que le service local exposera les états et commandes du panneau à ESPHome.

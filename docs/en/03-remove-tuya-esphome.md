@@ -33,3 +33,9 @@ No controller replacement is planned, and ESPHome is not to be flashed directly 
 ## Phase outcome
 
 Localized TPP06 software with no active Tuya service and a documented ESPHome integration.
+
+## UI lead: LVGL
+
+The [ESPHome LVGL documentation](https://esphome.io/components/lvgl/) is a useful reference for a local touchscreen UI: screens, widgets, pages, and touch events. It assumes an ESPHome-supported target with configured display and touchscreen drivers; it therefore cannot be flashed directly onto the Anyka.
+
+After UART access is validated, the inventory must look for the existing graphics program, display driver, touchscreen controller, and any LVGL library. If the panel software already uses LVGL or can use it natively, changes will be made in that Anyka program. Otherwise, the documentation remains a UI reference while the local service exposes panel states and commands to ESPHome.
