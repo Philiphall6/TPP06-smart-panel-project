@@ -16,6 +16,11 @@ Establish a reliable hardware baseline before any software change: identify the 
 
 ![T48 programmer](../../media/lecture-nand/01-programmateur-t48.jpg)
 
+## Recommended order
+
+1. First try the [public unverified candidate list](password-candidates.md) through authorised local/UART access.
+2. If it does not provide access, read the NAND with the XGecu to create a backup and analyse the system.
+
 ## NAND read
 
 1. Disconnect the panel and the T48 before each physical change.

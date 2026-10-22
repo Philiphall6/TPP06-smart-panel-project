@@ -16,6 +16,11 @@
 
 ![Programmateur T48](../../media/lecture-nand/01-programmateur-t48.jpg)
 
+## Ordre conseillé
+
+1. Essayer d’abord la [liste publique de candidats non vérifiés](candidats-mot-de-passe.md) via l’accès local/UART autorisé.
+2. Si elle ne donne aucun accès, lire la NAND au XGecu afin de créer une sauvegarde puis d’analyser le système.
+
 ## Lecture NAND
 
 1. Débrancher le panneau et le T48 avant chaque manipulation.
