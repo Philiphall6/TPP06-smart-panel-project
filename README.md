@@ -1,26 +1,7 @@
-# TPP06
+# TPP06 — Projet sans Tuya
 
-Notes de maintenance pour un panneau MOES / Tuya **TPP06**.
+[English](README.en.md) · [Français](README.fr.md)
 
-## État du projet
+Ce dépôt documente le passage d’un panneau MOES / Tuya TPP06 vers un fonctionnement local, sans dépendance au cloud Tuya.
 
-- Carte identifiée : `TPP06-Z-AK V1.0.2`
-- Processeur : Anyka `AK3761EE128`
-- Mémoire de démarrage : GigaDevice `GD5F1GM7UEYIG`, SPI NAND, WSON-8 8 × 6 mm, 3,3 V.
-- Une sauvegarde NAND vérifiée existe hors du dépôt.
-- Les dumps, mots de passe, clés et identifiants de l’appareil ne sont pas versionnés.
-
-## Documentation
-
-- [NAND et sauvegarde](docs/nand.md)
-- [Journal de lecture NAND](docs/lecture-nand.md)
-- [Carte et remontage](docs/remontage.md)
-- [Récupération du mot de passe](docs/recuperation-mot-de-passe.md)
-- [Retour d’expérience : lecture NAND et recherche de hash — Français](docs/retour-experience-lecture-nand.md)
-- [Field report: NAND read and password-hash search — English](docs/field-report-password-search.md)
-- [Console UART](docs/uart.md)
-- [Matériel à identifier](docs/materiel.md)
-
-## Règles de sécurité
-
-Ne jamais utiliser `Erase` ou `Program` dans XGPro sans une raison précise et une sauvegarde validée. Débrancher le T48 avant de déplacer une puce, un adaptateur ou des fils.
+Il ne contient ni dump NAND, ni mot de passe, ni clé, ni identifiant propre à un appareil.
