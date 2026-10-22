@@ -16,6 +16,7 @@ Notes de maintenance pour un panneau MOES / Tuya **TPP06**.
 - [Journal de lecture NAND](docs/lecture-nand.md)
 - [Carte et remontage](docs/remontage.md)
 - [Récupération du mot de passe](docs/recuperation-mot-de-passe.md)
+- [Retour d’expérience : lecture NAND et recherche de hash](docs/field-report-password-search.md)
 - [Console UART](docs/uart.md)
 - [Matériel à identifier](docs/materiel.md)
 
