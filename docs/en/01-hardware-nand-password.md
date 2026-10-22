@@ -2,7 +2,11 @@
 
 ## Purpose
 
-Establish a reliable hardware baseline before any software change: identify the components, produce a stable NAND backup, and keep sensitive information outside Git.
+Establish a reliable hardware baseline when Phase 0 does not provide access: identify the components, produce a stable NAND backup, and analyse the system locally.
+
+## Before starting
+
+First try [Phase 0 — passwords to try](00-passwords-to-try.md). If no candidate works, NAND reading creates a verified backup and makes it possible to search for panel-specific login information.
 
 ## Identified hardware
 
@@ -15,11 +19,6 @@ Establish a reliable hardware baseline before any software change: identify the 
 | Programmer | XGecu T48 with a 8 × 6 mm QFN/WSON-8 adapter |
 
 ![T48 programmer](../../media/lecture-nand/01-programmateur-t48.jpg)
-
-## Recommended order
-
-1. First try the [public unverified candidate list](password-candidates.md) through authorised local/UART access.
-2. If it does not provide access, read the NAND with the XGecu to create a backup and analyse the system.
 
 ## NAND read
 
@@ -38,7 +37,7 @@ The binary backup remains private and outside GitHub.
 
 On the two observed panels, the relevant hash was found by searching the raw NAND dump for `root:` or `root`. The MD5crypt hash beginning with `$1$`, found in SquashFS, was not the relevant lead for that method.
 
-This observation does not guarantee the same outcome on another board. An [unverified candidate list](password-candidates.md) is published for authorised testing; do not publish a device-specific hash, dump, keys, or credentials.
+This observation does not guarantee the same outcome on another board. Do not publish a device-specific hash, dump, keys, or credentials.
 
 ## Phase outcome
 

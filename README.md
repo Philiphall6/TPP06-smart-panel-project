@@ -1,18 +1,25 @@
 # TPP06 · Local, sans Tuya
 
-> Redonner le contrôle local à un panneau **MOES / Tuya TPP06** : comprendre le matériel, accéder au système, puis remplacer les dépendances cloud par une intégration ESPHome locale.
+> Redonner le contrôle local à un panneau **MOES / Tuya TPP06** : essayer d’abord les accès communautaires connus, comprendre le matériel si nécessaire, accéder au système, puis remplacer les dépendances cloud par une intégration ESPHome locale.
 
 [🇫🇷 Documentation française](README.fr.md) &nbsp;·&nbsp; [🇬🇧 English documentation](README.en.md)
 
 ---
 
-## Le projet en trois étapes
+## Le projet en quatre étapes
 
 | Étape | Objectif | État |
 |:--|:--|:--|
-| **01 · Matériel & NAND** | Identifier la mémoire, effectuer plusieurs lectures vérifiées et retrouver les identifiants de maintenance autorisés. | ✅ Terminé |
+| **00 · Mots de passe à essayer** | Essayer une petite liste communautaire avant de démonter le panneau. Elle n’est pas liée au numéro de série ; une même valeur peut fonctionner sur plusieurs appareils. | ✅ Documenté |
+| **01 · Matériel & NAND** | Créer une sauvegarde vérifiée et retrouver l’accès propre au panneau si l’étape 0 échoue. | ✅ Terminé |
 | **02 · UART & système** | Ouvrir la console série et valider l’accès à l’ensemble du système, sans modification. | 🟡 En cours |
 | **03 · Local & ESPHome** | Conserver l’Anyka, modifier le logiciel pour retirer Tuya et fournir un accès local à ESPHome. | 🔜 Préparé |
+
+## Commencer par l’étape 0
+
+Avant d’utiliser le XGecu ou de dessouder la NAND, essayer les [mots de passe communautaires](docs/fr/00-mots-de-passe-a-essayer.md) sur un panneau auquel on est autorisé à accéder. Ils ne sont pas liés au numéro de série : c’est une petite liste de valeurs partagées. Sur notre panneau, le mot de passe récupéré correspondait à l’un des candidats du forum ; le même résultat peut se répéter sur d’autres appareils, sans être garanti.
+
+Si aucun candidat ne donne accès, passer à l’étape 1 : sauvegarde NAND vérifiée, puis recherche locale des informations de connexion.
 
 ## Prochaine étape : accès système par UART
 
@@ -36,7 +43,7 @@ Une fois cet accès complet validé, l’étape 3 commencera :
 - procédure UART réversible ;
 - feuille de route pour une intégration ESPHome locale.
 
-Les dumps NAND, hashes, identifiants propres à un appareil, clés et données personnelles restent hors du dépôt. Les [candidats de mot de passe non vérifiés](docs/fr/candidats-mot-de-passe.md) sont publiés séparément pour les essais autorisés.
+Les dumps NAND, hashes, identifiants propres à un appareil, clés et données personnelles restent hors du dépôt. Les mots de passe de l’étape 0 sont une liste communautaire de candidats à essayer, et non des données extraites d’un appareil.
 
 ## Remerciements
 

@@ -6,9 +6,17 @@
 
 Transformer le panneau TPP06 en équipement local, sans application ni cloud Tuya, en conservant d’abord toutes les possibilités de retour arrière.
 
-## Étape 1 — Matériel, NAND et mot de passe
+## Étape 0 — Mots de passe à essayer
 
-Identifier la carte et sa NAND, créer une sauvegarde vérifiée, puis retrouver les identifiants autorisés nécessaires à la maintenance locale.
+Tester d’abord une petite liste communautaire de mots de passe avant de lire la NAND. Elle n’est pas liée au numéro de série ; une même valeur peut fonctionner sur plusieurs panneaux. Si aucun candidat ne fonctionne, passer à la récupération locale par NAND.
+
+- [Guide étape 0](docs/fr/00-mots-de-passe-a-essayer.md)
+
+**État :** liste documentée ; un candidat a correspondu au mot de passe récupéré sur ce panneau.
+
+## Étape 1 — Matériel et NAND
+
+Identifier la carte et sa NAND, puis créer une sauvegarde vérifiée uniquement si l’étape 0 ne donne pas accès ou si une analyse matérielle est nécessaire.
 
 - [Guide étape 1](docs/fr/01-materiel-nand-mot-de-passe.md)
 - [Journal détaillé de lecture NAND](docs/lecture-nand.md)
@@ -41,4 +49,4 @@ Conserver le processeur Anyka et modifier son logiciel pour supprimer Tuya, remp
 
 ## Source communautaire
 
-Une partie des repères matériels et de la méthode de lecture provient des retours publiés dans le sujet Home Assistant : [Integration in HA of new mini 3.5 smart control panel TPP06](https://community.home-assistant.io/t/integration-in-ha-of-new-mini-3-5-smart-control-panel-tpp06/762516/120?page=6). Les procédures du dépôt sont adaptées et vérifiées sur notre propre panneau ; aucun dump, mot de passe ou autre secret n’est publié.
+Une partie des repères matériels, de la liste de mots de passe et de la méthode de lecture provient des retours publiés dans le sujet Home Assistant : [Integration in HA of new mini 3.5 smart control panel TPP06](https://community.home-assistant.io/t/integration-in-ha-of-new-mini-3-5-smart-control-panel-tpp06/762516/120?page=6). Les procédures du dépôt sont adaptées et vérifiées sur notre propre panneau ; aucun dump, hash, clé ou identifiant propre à un appareil n’est publié.

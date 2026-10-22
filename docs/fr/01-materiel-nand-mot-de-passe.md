@@ -2,7 +2,11 @@
 
 ## But
 
-Établir une base matérielle fiable avant toute modification du logiciel : identifier les composants, réaliser une sauvegarde NAND stable et conserver les informations sensibles hors Git.
+Établir une base matérielle fiable lorsque l’étape 0 ne donne pas accès : identifier les composants, réaliser une sauvegarde NAND stable et analyser le système localement.
+
+## Avant de commencer
+
+Essayer d’abord l’[étape 0 — mots de passe à essayer](00-mots-de-passe-a-essayer.md). Si aucun candidat ne fonctionne, la lecture NAND permet de créer une sauvegarde vérifiée et de rechercher les informations de connexion propres au panneau.
 
 ## Matériel identifié
 
@@ -15,11 +19,6 @@
 | Programmateur | XGecu T48 avec adaptateur QFN/WSON-8 8 × 6 mm |
 
 ![Programmateur T48](../../media/lecture-nand/01-programmateur-t48.jpg)
-
-## Ordre conseillé
-
-1. Essayer d’abord la [liste publique de candidats non vérifiés](candidats-mot-de-passe.md) via l’accès local/UART autorisé.
-2. Si elle ne donne aucun accès, lire la NAND au XGecu afin de créer une sauvegarde puis d’analyser le système.
 
 ## Lecture NAND
 
@@ -38,7 +37,7 @@ La sauvegarde binaire reste privée et hors GitHub.
 
 Sur les deux panneaux observés, le hash pertinent a été trouvé en cherchant `root:` ou `root` dans le dump NAND brut. Le hash MD5crypt commençant par `$1$`, trouvé dans SquashFS, n’était pas le bon indice pour cette méthode.
 
-Cette observation ne garantit pas le même résultat sur toute autre carte. Une [liste de candidats non vérifiés](candidats-mot-de-passe.md) est publiée à des fins de test autorisé ; ne publiez pas le hash, le dump, les clés ou les identifiants propres à un appareil.
+Cette observation ne garantit pas le même résultat sur toute autre carte. Ne publiez pas le hash, le dump, les clés ou les identifiants propres à un appareil.
 
 ## Sortie de l’étape
 
