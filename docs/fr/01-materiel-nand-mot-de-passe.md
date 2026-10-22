@@ -33,10 +33,10 @@ La sauvegarde binaire reste privée et hors GitHub.
 
 Sur les deux panneaux observés, le hash pertinent a été trouvé en cherchant `root:` ou `root` dans le dump NAND brut. Le hash MD5crypt commençant par `$1$`, trouvé dans SquashFS, n’était pas le bon indice pour cette méthode.
 
-Cette observation ne garantit pas le même résultat sur toute autre carte. Ne pas publier le hash, le mot de passe, le dump, les clés ou les identifiants.
+Cette observation ne garantit pas le même résultat sur toute autre carte. Une [liste de candidats non vérifiés](candidats-mot-de-passe.md) est publiée à des fins de test autorisé ; ne publiez pas le hash, le dump, les clés ou les identifiants propres à un appareil.
 
 ## Sortie de l’étape
 
 - Sauvegarde NAND locale validée.
 - Panneau remonté et démarré.
-- Secrets stockés uniquement dans un emplacement privé.
+- Dumps, hashes et identifiants propres à un appareil conservés dans un emplacement privé.

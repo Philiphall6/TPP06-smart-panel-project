@@ -36,7 +36,7 @@ Une fois cet accès complet validé, l’étape 3 commencera :
 - procédure UART réversible ;
 - feuille de route pour une intégration ESPHome locale.
 
-Les dumps NAND, identifiants, mots de passe, clés et données personnelles restent hors du dépôt.
+Les dumps NAND, hashes, identifiants propres à un appareil, clés et données personnelles restent hors du dépôt. Les [candidats de mot de passe non vérifiés](docs/fr/candidats-mot-de-passe.md) sont publiés séparément pour les essais autorisés.
 
 ## Remerciements
 

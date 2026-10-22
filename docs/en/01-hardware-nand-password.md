@@ -33,10 +33,10 @@ The binary backup remains private and outside GitHub.
 
 On the two observed panels, the relevant hash was found by searching the raw NAND dump for `root:` or `root`. The MD5crypt hash beginning with `$1$`, found in SquashFS, was not the relevant lead for that method.
 
-This observation does not guarantee the same outcome on another board. Do not publish the hash, password, dump, keys, or identifiers.
+This observation does not guarantee the same outcome on another board. An [unverified candidate list](password-candidates.md) is published for authorised testing; do not publish a device-specific hash, dump, keys, or credentials.
 
 ## Phase outcome
 
 - Local NAND backup validated.
 - Panel reassembled and booted.
-- Secrets stored only in private storage.
+- Device-specific dumps, hashes, and credentials stored only in private storage.
