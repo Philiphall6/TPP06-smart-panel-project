@@ -8,7 +8,7 @@ Transformer le panneau TPP06 en équipement local, sans application ni cloud Tuy
 
 ## Étape 0 — Mots de passe à essayer
 
-Tester d’abord une petite liste communautaire de mots de passe avant de lire la NAND. Elle n’est pas liée au numéro de série ; une même valeur peut fonctionner sur plusieurs panneaux. Si aucun candidat ne fonctionne, passer à la récupération locale par NAND.
+Préparer une petite liste communautaire, puis l’essayer après connexion de l’UART et avant toute lecture NAND. Elle n’est pas liée au numéro de série ; une même valeur peut fonctionner sur plusieurs panneaux. Si aucun candidat ne fonctionne, passer à la récupération locale par NAND.
 
 - [Guide étape 0](docs/fr/00-mots-de-passe-a-essayer.md)
 

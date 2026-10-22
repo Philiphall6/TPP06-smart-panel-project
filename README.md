@@ -17,9 +17,9 @@
 
 ## Commencer par l’étape 0
 
-Avant d’utiliser le XGecu ou de dessouder la NAND, essayer les [mots de passe communautaires](docs/fr/00-mots-de-passe-a-essayer.md) sur un panneau auquel on est autorisé à accéder. Ils ne sont pas liés au numéro de série : c’est une petite liste de valeurs partagées. Sur notre panneau, le mot de passe récupéré correspondait à l’un des candidats du forum ; le même résultat peut se répéter sur d’autres appareils, sans être garanti.
+La liste de [mots de passe communautaires](docs/fr/00-mots-de-passe-a-essayer.md) doit être prête avant toute lecture NAND, mais son essai nécessite d’abord l’[UART](docs/fr/02-uart-acces-systeme.md). Elle n’est pas liée au numéro de série : c’est une petite liste de valeurs partagées. Sur notre panneau, le mot de passe récupéré correspondait à l’un des candidats du forum ; le même résultat peut se répéter sur d’autres appareils, sans être garanti.
 
-Si aucun candidat ne donne accès, passer à l’étape 1 : sauvegarde NAND vérifiée, puis recherche locale des informations de connexion.
+L’ordre pratique est donc : UART → essai de la liste → sauvegarde NAND avec le XGecu et recherche locale si aucun candidat ne donne accès.
 
 ## Prochaine étape : accès système par UART
 

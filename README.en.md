@@ -8,7 +8,7 @@ Convert the TPP06 panel into a local device with no Tuya app or cloud dependency
 
 ## Phase 0 — Passwords to try
 
-First test a small community password list before reading the NAND. It is not related to the serial number; a value may work across several panels. If none works, proceed with local NAND recovery.
+Prepare a small community password list, then try it after connecting UART and before reading the NAND. It is not related to the serial number; a value may work across several panels. If none works, proceed with local NAND recovery.
 
 - [Phase 0 guide](docs/en/00-passwords-to-try.md)
 
