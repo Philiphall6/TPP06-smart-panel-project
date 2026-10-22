@@ -38,3 +38,7 @@ Keep the Anyka processor and modify its software to remove Tuya, replace its clo
 - [Hardware to identify — French](docs/materiel.md)
 - [NAND and backup — French](docs/nand.md)
 - [Board and reassembly — French](docs/remontage.md)
+
+## Community source
+
+Some of the hardware pointers and NAND-reading approach came from reports in the Home Assistant discussion: [Integration in HA of new mini 3.5 smart control panel TPP06](https://community.home-assistant.io/t/integration-in-ha-of-new-mini-3-5-smart-control-panel-tpp06/762516/120?page=6). The repository procedures are adapted and verified on our own panel; no dump, password, or other secret is published.

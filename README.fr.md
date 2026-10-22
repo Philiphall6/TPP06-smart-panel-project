@@ -38,3 +38,7 @@ Conserver le processeur Anyka et modifier son logiciel pour supprimer Tuya, remp
 - [Matériel à identifier](docs/materiel.md)
 - [NAND et sauvegarde](docs/nand.md)
 - [Carte et remontage](docs/remontage.md)
+
+## Source communautaire
+
+Une partie des repères matériels et de la méthode de lecture provient des retours publiés dans le sujet Home Assistant : [Integration in HA of new mini 3.5 smart control panel TPP06](https://community.home-assistant.io/t/integration-in-ha-of-new-mini-3-5-smart-control-panel-tpp06/762516/120?page=6). Les procédures du dépôt sont adaptées et vérifiées sur notre propre panneau ; aucun dump, mot de passe ou autre secret n’est publié.
