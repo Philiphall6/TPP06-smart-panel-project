@@ -39,3 +39,20 @@ Un logiciel TPP06 localisé, sans service Tuya actif, et une intégration ESPHom
 La documentation [LVGL d’ESPHome](https://esphome.io/components/lvgl/) sert de référence pour une interface tactile locale : écrans, widgets, pages et événements tactiles. Elle suppose toutefois une cible prise en charge par ESPHome avec un pilote d’écran et un pilote tactile configurés ; elle ne peut donc pas être flashée directement sur l’Anyka.
 
 Après validation de l’accès UART, l’inventaire devra rechercher le programme graphique existant, le pilote d’écran, le contrôleur tactile et une éventuelle bibliothèque LVGL. Si le logiciel du panneau utilise déjà LVGL ou peut l’utiliser nativement, les modifications se feront dans ce programme Anyka. Sinon, cette documentation restera une référence d’interface tandis que le service local exposera les états et commandes du panneau à ESPHome.
+
+## Architecture cible confirmée par la communauté
+
+Un retour publié dans le sujet Home Assistant consacré au TPP06 décrit une solution fonctionnelle sans Tuya : les services Tuya sont retirés, LVGL dessine directement dans le framebuffer, et les GPIO du panneau sont recensés (émetteur IR, voyants, boutons, relais et buzzer). Le panneau devient alors un produit Home Assistant entièrement local.
+
+Cette expérience confirme l’architecture recherchée ici : conserver l’Anyka, remplacer l’interface et les services cloud par un logiciel local, puis raccorder ce logiciel à Home Assistant/ESPHome. La première intégration peut utiliser des composants externes et des adaptations spécifiques ; elle sera ensuite simplifiée et documentée pour être réutilisable.
+
+### Éléments à relever pendant l’inventaire UART
+
+- périphérique framebuffer, résolution et format de pixels ;
+- pilote et coordonnées de l’écran tactile ;
+- programme graphique actuellement lancé et bibliothèques utilisées ;
+- numéros et polarités des GPIO pour l’IR, les voyants, boutons, relais et buzzer ;
+- services Tuya, scripts de démarrage et accès réseau à remplacer ;
+- interface locale la plus simple pour Home Assistant et ESPHome.
+
+Source communautaire : [Integration in HA of new mini 3.5 smart control panel TPP06](https://community.home-assistant.io/t/integration-in-ha-of-new-mini-3-5-smart-control-panel-tpp06/762516/120?page=6).

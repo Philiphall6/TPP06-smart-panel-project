@@ -39,3 +39,20 @@ Localized TPP06 software with no active Tuya service and a documented ESPHome in
 The [ESPHome LVGL documentation](https://esphome.io/components/lvgl/) is a useful reference for a local touchscreen UI: screens, widgets, pages, and touch events. It assumes an ESPHome-supported target with configured display and touchscreen drivers; it therefore cannot be flashed directly onto the Anyka.
 
 After UART access is validated, the inventory must look for the existing graphics program, display driver, touchscreen controller, and any LVGL library. If the panel software already uses LVGL or can use it natively, changes will be made in that Anyka program. Otherwise, the documentation remains a UI reference while the local service exposes panel states and commands to ESPHome.
+
+## Target architecture confirmed by the community
+
+A report published in the Home Assistant TPP06 discussion describes a working Tuya-free solution: Tuya services are removed, LVGL renders directly to the framebuffer, and the panel GPIOs are mapped (IR transmitter, indicator LEDs, buttons, relays, and buzzer). The panel then becomes a fully local Home Assistant product.
+
+That experience confirms the architecture pursued here: retain the Anyka, replace the cloud services and UI with local software, then connect that software to Home Assistant/ESPHome. The first integration may use external components and panel-specific adaptations; it can then be simplified and documented for reuse.
+
+### Items to record during the UART inventory
+
+- framebuffer device, resolution, and pixel format;
+- touchscreen driver and coordinates;
+- currently launched graphics program and libraries;
+- GPIO numbers and active polarity for IR, LEDs, buttons, relays, and buzzer;
+- Tuya services, startup scripts, and network access to replace;
+- the simplest local interface for Home Assistant and ESPHome.
+
+Community source: [Integration in HA of new mini 3.5 smart control panel TPP06](https://community.home-assistant.io/t/integration-in-ha-of-new-mini-3-5-smart-control-panel-tpp06/762516/120?page=6).
