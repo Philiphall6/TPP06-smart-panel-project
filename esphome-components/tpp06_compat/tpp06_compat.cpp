@@ -7,6 +7,13 @@
 
 #if defined(USE_HOST) && defined(__arm__) && __SIZEOF_LONG__ == 4
 
+// Zig's musl headers intentionally omit SYS_clock_gettime on 32-bit ARM even
+// though the legacy Linux 4.4 syscall is present.  Keep the ABI number local
+// to this ARM-only compatibility unit.
+#ifndef SYS_clock_gettime
+#define SYS_clock_gettime 263
+#endif
+
 namespace {
 
 struct KernelTimespec32 {

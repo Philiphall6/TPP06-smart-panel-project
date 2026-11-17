@@ -21,12 +21,9 @@ esphome:
   friendly_name: "${friendly_name}"
   project:
     name: philiphall6.tpp06
-    version: "0.1.3"
+    version: "0.1.4"
   build_flags:
     - -static
-    - -march=armv5te
-    - -marm
-    - -mfloat-abi=soft
     - -pthread
     - -fno-threadsafe-statics
     - -Wl,-u,pthread_mutex_lock
@@ -53,8 +50,8 @@ external_components:
 
 host:
   mac_address: "${device_mac}"
-  # Downloaded once into Device Builder's own cache, then reused locally.
-  # No Mint or remote compilation server is required.
+  # The compiler is selected automatically: native Zig on ARM64 Home
+  # Assistant hosts (Raspberry Pi), Bootlin GCC on x86-64 hosts.
   cross_compile: {}
 
 tpp06_compat:

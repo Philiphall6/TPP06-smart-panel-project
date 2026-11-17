@@ -3,6 +3,7 @@ import hashlib
 import logging
 import os
 from pathlib import Path
+import platform
 import sys
 import tarfile
 import urllib.request
@@ -47,6 +48,13 @@ DEFAULT_TOOLCHAIN_URL = (
 DEFAULT_TOOLCHAIN_SHA256 = "2e78440c4b37a9c84d6165f12fd2525e72bf88c32445e1c3400d1e01384c92ce"
 DEFAULT_TOOLCHAIN_DIRECTORY = "armv5-eabi--uclibc--stable-2026.08-1"
 DEFAULT_TOOLCHAIN_PREFIX = "arm-buildroot-linux-uclibcgnueabi"
+
+ZIG_VERSION = "0.17.1"
+ZIG_AARCH64_URL = (
+    f"https://ziglang.org/download/{ZIG_VERSION}/zig-aarch64-linux-{ZIG_VERSION}.tar.xz"
+)
+ZIG_AARCH64_SHA256 = "a1546d5646eb184437918d6635ca6b762a0e889eac09cef720ee7a1ed3fe7795"
+ZIG_AARCH64_DIRECTORY = f"zig-aarch64-linux-{ZIG_VERSION}"
 
 CROSS_COMPILE_SCHEMA = cv.Schema(
     {
@@ -138,7 +146,7 @@ def _sha256(path: Path) -> str:
 
 def _download_toolchain(url: str, destination: Path, expected_sha256: str) -> None:
     partial = destination.with_suffix(destination.suffix + ".part")
-    _LOGGER.info("Downloading the verified TPP06 ARMv5 toolchain (first build only)")
+    _LOGGER.info("Downloading a verified TPP06 compiler archive (first build only)")
     try:
         with urllib.request.urlopen(url, timeout=120) as response, partial.open("wb") as output:
             while chunk := response.read(1024 * 1024):
@@ -156,6 +164,21 @@ def _download_toolchain(url: str, destination: Path, expected_sha256: str) -> No
 
 
 def _configure_cross_compiler(config: ConfigType) -> None:
+    machine = platform.machine().lower()
+    if machine in ("aarch64", "arm64"):
+        _configure_zig_cross_compiler()
+        return
+
+    if machine not in ("x86_64", "amd64"):
+        raise EsphomeError(
+            f"Unsupported Device Builder architecture {machine!r}; "
+            "TPP06 compilation supports x86-64 and ARM64 hosts"
+        )
+
+    _configure_bootlin_cross_compiler(config)
+
+
+def _configure_bootlin_cross_compiler(config: ConfigType) -> None:
     cache = CORE.relative_internal_path("tpp06-armv5-toolchain")
     cache.mkdir(parents=True, exist_ok=True)
     archive_path = cache / "toolchain.tar.xz"
@@ -187,4 +210,48 @@ def _configure_cross_compiler(config: ConfigType) -> None:
         if not executable.is_file():
             raise EsphomeError(f"TPP06 toolchain program is missing: {executable}")
         os.environ[variable] = str(executable)
+    architecture_flags = " -march=armv5te -marm -mfloat-abi=soft"
+    os.environ["CC"] += architecture_flags
+    os.environ["CXX"] += architecture_flags
+    os.environ["ESPHOME_PCH_ENABLE"] = "0"
+
+
+def _configure_zig_cross_compiler() -> None:
+    cache = CORE.relative_internal_path("tpp06-armv5-zig")
+    cache.mkdir(parents=True, exist_ok=True)
+    archive_path = cache / f"zig-{ZIG_VERSION}.tar.xz"
+    install_path = cache / ZIG_AARCH64_DIRECTORY
+    zig = install_path / "zig"
+    lock_path = cache / ".install.lock"
+
+    with lock_path.open("a+b") as lock:
+        fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
+        if not zig.is_file():
+            if (
+                not archive_path.is_file()
+                or _sha256(archive_path).lower() != ZIG_AARCH64_SHA256
+            ):
+                archive_path.unlink(missing_ok=True)
+                _download_toolchain(
+                    ZIG_AARCH64_URL, archive_path, ZIG_AARCH64_SHA256
+                )
+            _LOGGER.info("Extracting the ARM64 Zig compiler into the ESPHome cache")
+            with tarfile.open(archive_path, "r:xz") as archive:
+                archive.extractall(cache, filter="data")
+        if not zig.is_file():
+            raise EsphomeError(f"TPP06 Zig compiler missing after extraction: {zig}")
+
+        ar_wrapper = cache / "zig-ar"
+        wrapper_contents = f'#!/bin/sh\nexec "{zig}" ar "$@"\n'
+        if not ar_wrapper.is_file() or ar_wrapper.read_text() != wrapper_contents:
+            ar_wrapper.write_text(wrapper_contents)
+            ar_wrapper.chmod(0o755)
+
+    target = "-target arm-linux-musleabi -mcpu=arm926ej_s -DTPP06_ZIG_TOOLCHAIN"
+    os.environ["CC"] = f"{zig} cc {target}"
+    os.environ["CXX"] = f"{zig} c++ {target}"
+    os.environ["AR"] = str(ar_wrapper)
+    # Zig has no objdump/readelf subcommands; they are not needed to compile.
+    os.environ.pop("OBJDUMP", None)
+    os.environ.pop("READELF", None)
     os.environ["ESPHOME_PCH_ENABLE"] = "0"

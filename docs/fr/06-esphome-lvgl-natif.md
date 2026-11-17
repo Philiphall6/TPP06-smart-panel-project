@@ -60,11 +60,12 @@ Deux modes sont proposés :
   pilotes matériels `external_components` continuent à venir de GitHub.
 
 Le TPP06 nécessite toujours une compilation croisée ARMv5, mais aucun serveur
-extérieur n'est requis. Le composant `host` télécharge la toolchain Bootlin
-directement dans le cache du Device Builder lors de la première compilation,
-vérifie son SHA-256 puis la réutilise. Toutes les compilations suivantes sont
-effectuées localement par le Device Builder de Home Assistant. Le premier
-téléchargement représente environ 82 Mio.
+extérieur n'est requis. Le composant `host` détecte l'architecture de Home
+Assistant : il utilise la toolchain Bootlin sur x86-64 et Zig natif sur un
+Raspberry Pi/aarch64. L'archive choisie est téléchargée dans le cache de Device
+Builder, vérifiée par son SHA-256 puis réutilisée. Toutes les compilations sont
+effectuées localement par Device Builder. Le premier téléchargement est donc
+plus long.
 
 Si le journal contient un chemin `.remote_builds/...`, la compilation est
 encore déportée. Ouvrir **Paramètres → Envoyer les compilations**, supprimer ou
@@ -88,6 +89,10 @@ port `8082`. Les versions suivantes peuvent donc être installées directement
 depuis Device Builder sur l'adresse IP du panneau, avec `ota_password`. Les
 implémentations MD5 et SHA-256 portables incluses dans ce dépôt évitent la
 dépendance OpenSSL absente du Linux Tuya.
+
+À partir de la version `0.1.4`, cette compilation locale fonctionne également
+quand Device Builder tourne sur un Raspberry Pi ARM64. Après une mise à niveau
+depuis `0.1.3`, nettoyer une fois les fichiers de compilation de l'appareil.
 
 ## Compiler
 

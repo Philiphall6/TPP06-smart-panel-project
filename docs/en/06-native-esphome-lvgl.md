@@ -62,10 +62,11 @@ be edited freely; only the hardware `external_components` remain sourced from
 GitHub.
 
 An ARMv5 cross compiler is still required, but no external build server is
-needed. On the first build, the external `host` component downloads the
-Bootlin toolchain into Device Builder's own cache and verifies its SHA-256.
-Every subsequent build reuses that cache and runs locally inside Home
-Assistant. The initial download is approximately 82 MB.
+needed. The external `host` component detects the Home Assistant architecture:
+it uses the Bootlin toolchain on x86-64 and native Zig on Raspberry Pi/aarch64.
+The selected archive is downloaded into Device Builder's cache, SHA-256
+verified, and reused. Every build therefore runs locally inside Home Assistant;
+the initial download takes longer.
 
 If the build log contains a `.remote_builds/...` path, compilation is still
 being offloaded. Open **Settings → Send builds**, remove or disable the paired
@@ -86,6 +87,10 @@ From project version `0.1.3`, the running executable provides ESPHome OTA on
 port `8082`. Later builds can therefore be installed directly to the panel's
 IP from Device Builder using `ota_password`. Portable MD5 and SHA-256 backends
 in this repository avoid the OpenSSL dependency missing from Tuya Linux.
+
+Starting with version `0.1.4`, this local build also works when Device Builder
+runs on an ARM64 Raspberry Pi. After upgrading from `0.1.3`, clean this
+device's build files once.
 
 The recommended first test uses Tuya Cutter, which pauses Tuya, selects a
 writable temporary preferences directory, and retains a safe rollback path:
