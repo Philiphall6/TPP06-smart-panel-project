@@ -94,7 +94,9 @@ ESPHome officiel 2026.10.2 compile maintenant en ARMv5/uClibc grâce à une
 couche de composants externes pour le framebuffer et le tactile. L'interface
 LVGL, le tactile et l'API Home Assistant sont validés sur le TPP06. Le dépôt
 GitHub sert de source portable à Device Builder ; chaque maison ne conserve
-localement que ses substitutions. Aucun démarrage automatique n'est installé.
+localement que ses substitutions. La première installation reste réversible
+via Tuya Cutter ; une fois ESPHome lancé, les mises à jour suivantes utilisent
+l'OTA ESPHome natif sur le port 8082.
 
 - [Guide ESPHome + LVGL natif](docs/fr/06-esphome-lvgl-natif.md)
 - [Native ESPHome + LVGL guide](docs/en/06-native-esphome-lvgl.md)

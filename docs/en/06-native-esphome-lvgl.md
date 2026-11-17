@@ -67,6 +67,26 @@ Bootlin toolchain into Device Builder's own cache and verifies its SHA-256.
 Every subsequent build reuses that cache and runs locally inside Home
 Assistant. The initial download is approximately 82 MB.
 
+If the build log contains a `.remote_builds/...` path, compilation is still
+being offloaded. Open **Settings → Send builds**, remove or disable the paired
+build server, then clean this device's build files. A normal local path starts
+with `/config/.esphome/build/...`.
+
+Before compiling, replace `CHANGE_ME_BEFORE_INSTALL` in the `ota_password`
+substitution with an installation-specific password. Never commit that value.
+
+## Initial deployment and later OTA updates
+
+Device Builder cannot use **Install** to place the very first executable into
+an untouched Tuya system. The build itself succeeded when the log says
+`Successfully compiled program`; download that executable and deploy it
+reversibly with Tuya Cutter as described below.
+
+From project version `0.1.3`, the running executable provides ESPHome OTA on
+port `8082`. Later builds can therefore be installed directly to the panel's
+IP from Device Builder using `ota_password`. Portable MD5 and SHA-256 backends
+in this repository avoid the OpenSSL dependency missing from Tuya Linux.
+
 The recommended first test uses Tuya Cutter, which pauses Tuya, selects a
 writable temporary preferences directory, and retains a safe rollback path:
 

@@ -66,6 +66,29 @@ vérifie son SHA-256 puis la réutilise. Toutes les compilations suivantes sont
 effectuées localement par le Device Builder de Home Assistant. Le premier
 téléchargement représente environ 82 Mio.
 
+Si le journal contient un chemin `.remote_builds/...`, la compilation est
+encore déportée. Ouvrir **Paramètres → Envoyer les compilations**, supprimer ou
+désactiver le serveur associé, puis nettoyer les fichiers de compilation de
+l'appareil. Un chemin local normal commence par `/config/.esphome/build/...`.
+
+Avant de compiler, remplacer `CHANGE_ME_BEFORE_INSTALL` dans la substitution
+`ota_password` par un mot de passe propre à l'installation. Ne jamais publier
+ce mot de passe dans un dépôt.
+
+## Installation initiale et mises à jour OTA
+
+Le bouton **Installer** de Device Builder ne peut pas installer directement le
+premier binaire dans un système Tuya intact. La compilation est néanmoins
+réussie lorsque le journal affiche `Successfully compiled program`. Télécharger
+alors l'exécutable et effectuer le premier déploiement réversible avec Tuya
+Cutter, comme décrit ci-dessous.
+
+À partir de la version `0.1.3`, le binaire expose ensuite l'OTA ESPHome sur le
+port `8082`. Les versions suivantes peuvent donc être installées directement
+depuis Device Builder sur l'adresse IP du panneau, avec `ota_password`. Les
+implémentations MD5 et SHA-256 portables incluses dans ce dépôt évitent la
+dépendance OpenSSL absente du Linux Tuya.
+
 ## Compiler
 
 Le correctif a été construit sur la révision ESPHome `9bf2bbc` (branche

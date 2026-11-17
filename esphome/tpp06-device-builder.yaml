@@ -5,6 +5,7 @@
 substitutions:
   device_name: "tpp06-lvgl"
   friendly_name: "TPP06 ESPHome LVGL"
+  ota_password: "CHANGE_ME_BEFORE_INSTALL"
   device_mac: "02:00:00:00:06:01"
   cover_entity: "cover.tpp06_example_cover"
   cave_light_entity: "light.tpp06_example_light_1"
