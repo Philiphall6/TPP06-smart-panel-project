@@ -7,8 +7,9 @@ et reçoit le tactile Goodix par `evdev`.
 
 > **Validé sur matériel le 17 novembre 2026.** Le binaire ARMv5 statique démarre
 > sur le TPP06, détecte le framebuffer 320×480 BGR565 et le tactile Goodix, puis
-> termine correctement l'initialisation ESPHome. L'installation au démarrage
-> reste expérimentale : effectuer d'abord plusieurs essais depuis `/tmp`.
+> termine correctement l'initialisation ESPHome. Le bouton LVGL répond au toucher
+> et affiche bien `TACTILE OK`. L'installation au démarrage reste expérimentale :
+> effectuer d'abord plusieurs essais depuis `/tmp`.
 
 ## Ce qui a été adapté
 

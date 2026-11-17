@@ -6,8 +6,9 @@ through Linux `evdev`; no ESP32 replacement is involved.
 
 > **Hardware-tested on 17 November 2026.** The static ARMv5 program starts on
 > the TPP06, detects its 320×480 BGR565 framebuffer and Goodix touchscreen, and
-> completes ESPHome setup. Startup installation remains experimental; first run
-> several successful temporary tests from `/tmp`.
+> completes ESPHome setup. The LVGL button responds to touch and displays
+> `TACTILE OK`. Startup installation remains experimental; first run several
+> successful temporary tests from `/tmp`.
 
 The [reproducible patch](../../esphome-lvgl/esphome-tpp06-lvgl.patch) adds:
 
