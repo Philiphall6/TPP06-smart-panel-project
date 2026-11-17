@@ -5,6 +5,12 @@ TCP `8090` production-test service and starts `adbd` on TCP port `5555`. It was
 validated only on an `AK3761E` TPP06 identified as `ak3761e_tpp06z`, running
 kernel `4.4.192V2.4` dated 13 December 2024.
 
+## Verified console capture
+
+![TPP06 ADB over Wi-Fi, root shell, and Tuya kernel](../../media/adb-wifi/console-adb-wifi.png)
+
+The password is deliberately masked and the `AUTHKEY` is never displayed.
+
 > **Warning.** The `bootpicture` update handler deletes and replaces
 > `/data/app` and `/data/customize`. A different hardware or firmware revision
 > may fail to boot. Never interrupt power during the upload.

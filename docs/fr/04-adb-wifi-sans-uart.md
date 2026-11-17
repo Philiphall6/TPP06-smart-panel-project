@@ -24,6 +24,12 @@ Linux Tuya 4.4.192V2.4 ... armv5tejl GNU/Linux
 Le réglage survit à un redémarrage normal. Une réinitialisation usine ou une
 mise à jour Tuya peut cependant supprimer ou remplacer l'overlay.
 
+### Capture de la console validée
+
+![Connexion ADB Wi-Fi au TPP06, shell root et noyau Tuya](../../media/adb-wifi/console-adb-wifi.png)
+
+Le mot de passe est volontairement masqué et l'`AUTHKEY` n'est jamais affiché.
+
 ## Prérequis
 
 - le panneau et l'ordinateur sur le même réseau local de confiance ;
