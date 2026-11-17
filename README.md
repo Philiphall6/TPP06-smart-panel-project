@@ -41,6 +41,7 @@ L'outil masque l'`AUTHKEY` et n'affiche jamais les éventuels identifiants Wi-Fi
 | **04 · ADB par Wi-Fi** | Installer par le port `8090` un accès ADB persistant sur `5555`, sans ouvrir le panneau. | 🧪 Préversion expérimentale |
 | **05 · openHASP local** | Exécuter une interface locale 320×480 sur l’écran, avec tactile et MQTT/Home Assistant. | 🧪 Premier portage validé |
 | **06 · ESPHome + LVGL natif** | Exécuter le moteur LVGL d'ESPHome directement sur Linux Anyka avec framebuffer et tactile natifs. | 🧪 Compilation ARMv5 validée |
+| **07 · Tuya Cutter** | Automatiser détection, sauvegarde, restauration, essais et basculement réversible entre Tuya, openHASP et ESPHome. | 🧪 Outil en validation |
 
 ## Commencer par l’étape 0
 
@@ -97,6 +98,21 @@ panneau. Aucun démarrage automatique n'est encore installé.
 - [Guide ESPHome + LVGL natif](docs/fr/06-esphome-lvgl-natif.md)
 - [Native ESPHome + LVGL guide](docs/en/06-native-esphome-lvgl.md)
 - [Correctif reproductible ESPHome](esphome-lvgl/esphome-tpp06-lvgl.patch)
+
+## Installateur réversible Tuya Cutter
+
+Le nouvel assistant Python prend seulement l'adresse IP, récupère l'accès du
+panneau sans afficher ses secrets, crée des sauvegardes vérifiées et automatise
+les essais temporaires ou le basculement réversible entre Tuya, openHASP et
+ESPHome-LVGL.
+
+```bash
+python3 tools/tpp06_tuya_cutter.py 192.168.1.52
+```
+
+- [Tutoriel complet Tuya Cutter](docs/fr/07-tuya-cutter.md)
+- [Tuya Cutter English guide](docs/en/07-tuya-cutter.md)
+- [Installateur Python](tools/tpp06_tuya_cutter.py)
 
 ## Ce que contient le dépôt
 

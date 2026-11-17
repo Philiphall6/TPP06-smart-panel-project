@@ -8,6 +8,8 @@
 *.log
 captures/
 firmware/
+tpp06-backups/
+__pycache__/
 
 # Secrets et clés
 secrets/

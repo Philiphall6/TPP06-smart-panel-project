@@ -88,6 +88,17 @@ des composants Linux natifs pour `/dev/fb0` et `/dev/input/event1`.
 premier essai graphique et tactile sur le panneau reste à effectuer après son
 prochain redémarrage ; aucune installation permanente n'est faite.
 
+## Étape 7 — Installateur réversible Tuya Cutter
+
+Automatiser la lecture de l'accès propre au panneau, la connexion ADB, les
+sauvegardes et les essais ou installations openHASP/ESPHome-LVGL.
+
+- [Guide étape 7 : TPP06 Tuya Cutter](docs/fr/07-tuya-cutter.md)
+- [Outil Python](tools/tpp06_tuya_cutter.py)
+
+**État :** CLI et protections de restauration testées hors ligne ; validation
+ADB complète prévue après le prochain redémarrage du panneau.
+
 ## Références
 
 - [Matériel à identifier](docs/materiel.md)

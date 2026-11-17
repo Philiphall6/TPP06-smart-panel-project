@@ -87,6 +87,17 @@ native Linux components for `/dev/fb0` and `/dev/input/event1`.
 The first graphics and touch test on the panel remains pending after its next
 reboot; no persistent installation has been made.
 
+## Phase 7 — Reversible Tuya Cutter installer
+
+Automate device-owned credential recovery, ADB access, verified backups, and
+temporary or permanent openHASP/ESPHome-LVGL selection.
+
+- [Phase 7 guide: TPP06 Tuya Cutter](docs/en/07-tuya-cutter.md)
+- [Python installer](tools/tpp06_tuya_cutter.py)
+
+**Status:** CLI and restore protections tested offline; complete ADB validation
+is scheduled after the panel's next reboot.
+
 ## References
 
 - [Hardware to identify — French](docs/materiel.md)
