@@ -99,7 +99,6 @@ localement que ses substitutions. Aucun démarrage automatique n'est installé.
 - [Guide ESPHome + LVGL natif](docs/fr/06-esphome-lvgl-natif.md)
 - [Native ESPHome + LVGL guide](docs/en/06-native-esphome-lvgl.md)
 - [YAML portable Device Builder](esphome/tpp06-device-builder.yaml)
-- [Serveur de compilation ARMv5 portable](tools/tpp06_remote_builder.sh)
 - [Correctif reproductible ESPHome](esphome-lvgl/esphome-tpp06-lvgl.patch)
 
 ## Installateur réversible Tuya Cutter

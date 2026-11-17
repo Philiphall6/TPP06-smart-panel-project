@@ -61,20 +61,11 @@ configuration locally. Pages, widgets, styles, positions, and actions can then
 be edited freely; only the hardware `external_components` remain sourced from
 GitHub.
 
-An ARMv5 cross compiler is still required. The portable remote-build helper
-sets up a reproducible builder and pairs it with Home Assistant:
-
-```bash
-chmod +x tools/tpp06_remote_builder.sh
-tools/tpp06_remote_builder.sh install \
-  armv5-eabi--uclibc--stable-2026.08-1.tar.xz
-tools/tpp06_remote_builder.sh run HOME_ASSISTANT_IP 6057
-```
-
-The helper verifies the Bootlin archive checksum, creates an isolated Python
-environment, and installs pinned ESPHome and Device Builder versions. In Home
-Assistant, open **Device Builder → Settings → Send builds**, pair the server,
-and verify the fingerprint on both sides.
+An ARMv5 cross compiler is still required, but no external build server is
+needed. On the first build, the external `host` component downloads the
+Bootlin toolchain into Device Builder's own cache and verifies its SHA-256.
+Every subsequent build reuses that cache and runs locally inside Home
+Assistant. The initial download is approximately 82 MB.
 
 The recommended first test uses Tuya Cutter, which pauses Tuya, selects a
 writable temporary preferences directory, and retains a safe rollback path:

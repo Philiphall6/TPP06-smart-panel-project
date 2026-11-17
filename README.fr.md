@@ -83,7 +83,6 @@ des composants Linux natifs pour `/dev/fb0` et `/dev/input/event1`.
 
 - [Guide étape 6 : ESPHome + LVGL natif](docs/fr/06-esphome-lvgl-natif.md)
 - [YAML portable pour Device Builder](esphome/tpp06-device-builder.yaml)
-- [Serveur de compilation ARMv5 portable](tools/tpp06_remote_builder.sh)
 - [Correctif à appliquer au dépôt ESPHome](esphome-lvgl/esphome-tpp06-lvgl.patch)
 
 **État :** ESPHome officiel 2026.10.2, framebuffer, tactile, API Home Assistant

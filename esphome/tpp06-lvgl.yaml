@@ -19,7 +19,7 @@ esphome:
   friendly_name: "${friendly_name}"
   project:
     name: philiphall6.tpp06
-    version: "0.1.1"
+    version: "0.1.2"
   build_flags:
     - -static
     - -march=armv5te
@@ -49,6 +49,9 @@ external_components:
 
 host:
   mac_address: "${device_mac}"
+  # Downloaded once into Device Builder's own cache, then reused locally.
+  # No Mint or remote compilation server is required.
+  cross_compile: {}
 
 tpp06_compat:
 

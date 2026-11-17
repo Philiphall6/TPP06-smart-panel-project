@@ -59,22 +59,12 @@ Deux modes sont proposés :
   styles, positions et actions deviennent alors locaux et éditables. Seuls les
   pilotes matériels `external_components` continuent à venir de GitHub.
 
-Le TPP06 nécessite toujours une compilation croisée ARMv5. Le script portable
-[`tools/tpp06_remote_builder.sh`](../../tools/tpp06_remote_builder.sh) prépare
-un serveur de compilation à associer à Device Builder :
-
-```bash
-chmod +x tools/tpp06_remote_builder.sh
-tools/tpp06_remote_builder.sh install \
-  armv5-eabi--uclibc--stable-2026.08-1.tar.xz
-tools/tpp06_remote_builder.sh run ADRESSE_IP_HOME_ASSISTANT 6057
-```
-
-Le script vérifie la somme SHA-256 de l'archive Bootlin, crée son propre
-environnement Python et installe des versions déterminées d'ESPHome et Device
-Builder. Les chemins de la machine de développement ne sont pas utilisés.
-Dans Home Assistant, ouvrir **Device Builder → Settings → Send builds**, puis
-associer le serveur et vérifier l'empreinte affichée des deux côtés.
+Le TPP06 nécessite toujours une compilation croisée ARMv5, mais aucun serveur
+extérieur n'est requis. Le composant `host` télécharge la toolchain Bootlin
+directement dans le cache du Device Builder lors de la première compilation,
+vérifie son SHA-256 puis la réutilise. Toutes les compilations suivantes sont
+effectuées localement par le Device Builder de Home Assistant. Le premier
+téléchargement représente environ 82 Mio.
 
 ## Compiler
 
