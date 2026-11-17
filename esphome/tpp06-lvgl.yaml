@@ -1,0 +1,498 @@
+esphome:
+  name: tpp06-lvgl
+  friendly_name: TPP06 ESPHome LVGL
+  build_flags:
+    - -static
+    - -march=armv5te
+    - -marm
+    - -mfloat-abi=soft
+    - -pthread
+    - -fno-threadsafe-statics
+    - -Wl,-u,pthread_mutex_lock
+    - -Wl,-u,pthread_mutex_init
+    - -Wl,-u,pthread_mutex_trylock
+    - -Wl,-u,pthread_mutex_unlock
+    - -Wl,-u,pthread_mutex_destroy
+    - -Wl,-u,pthread_self
+
+external_components:
+  - source:
+      type: git
+      url: https://github.com/Philiphall6/TPP06-smart-panel-project
+      ref: main
+      path: esphome-components
+    refresh: 5min
+    components:
+      - evdev
+      - fbdev
+      - host
+      - tpp06_compat
+
+host:
+  mac_address: "02:00:00:00:06:01"
+
+tpp06_compat:
+
+logger:
+  level: INFO
+
+api:
+  reboot_timeout: 0s
+  on_client_connected:
+    - lvgl.label.update:
+        id: ha_status_label
+        text: "HOME ASSISTANT CONNECTE"
+        text_color: 0x52D273
+  on_client_disconnected:
+    - if:
+        condition:
+          not:
+            api.connected:
+        then:
+          - lvgl.label.update:
+              id: ha_status_label
+              text: "HOME ASSISTANT HORS LIGNE"
+              text_color: 0xFFB347
+
+text_sensor:
+  - platform: homeassistant
+    id: ha_cover_sdb_state
+    entity_id: cover.salle_de_bain
+    internal: true
+    on_value:
+      - lvgl.label.update:
+          id: cover_state_label
+          text: !lambda |-
+            if (x == "open") return std::string("OUVERT");
+            if (x == "closed") return std::string("FERME");
+            if (x == "opening") return std::string("OUVERTURE...");
+            if (x == "closing") return std::string("FERMETURE...");
+            return std::string("ETAT INCONNU");
+
+  - platform: homeassistant
+    id: ha_cave_state
+    entity_id: light.milight_cave
+    internal: true
+    on_value:
+      - lvgl.label.update:
+          id: cave_state_label
+          text: !lambda |-
+            return x == "on" ? std::string("ALLUMEE") : std::string("ETEINTE");
+          text_color: !lambda |-
+            return x == "on" ? lv_color_hex(0x52D273) : lv_color_hex(0x9AA4B2);
+
+  - platform: homeassistant
+    id: ha_cave_bar_state
+    entity_id: light.mosquitto_mqtt_broker_cave_bar
+    internal: true
+    on_value:
+      - lvgl.label.update:
+          id: bar_state_label
+          text: !lambda |-
+            return x == "on" ? std::string("ALLUMEE") : std::string("ETEINTE");
+          text_color: !lambda |-
+            return x == "on" ? lv_color_hex(0x52D273) : lv_color_hex(0x9AA4B2);
+
+display:
+  - platform: fbdev
+    id: tpp06_display
+    device: /dev/fb0
+    dimensions:
+      width: 320
+      height: 480
+    auto_clear_enabled: false
+    update_interval: never
+
+touchscreen:
+  - platform: evdev
+    id: tpp06_touch
+    display: tpp06_display
+    device: /dev/input/event1
+    update_interval: 20ms
+    calibration:
+      x_min: 0
+      x_max: 320
+      y_min: 0
+      y_max: 480
+
+lvgl:
+  displays: tpp06_display
+  touchscreens:
+    - touchscreen_id: tpp06_touch
+  buffer_size: 25%
+  bg_color: 0x101820
+  pages:
+    - id: page_sdb
+      bg_color: 0x101820
+      widgets:
+        - label:
+            align: top_mid
+            y: 18
+            text: "SALLE DE BAIN"
+            text_color: 0xFFFFFF
+        - label:
+            id: ha_status_label
+            align: top_mid
+            y: 52
+            text: "HOME ASSISTANT HORS LIGNE"
+            text_color: 0xFFB347
+        - obj:
+            x: 20
+            y: 90
+            width: 280
+            height: 70
+            radius: 12
+            bg_color: 0x1D2A38
+            border_color: 0x31465A
+            widgets:
+              - label:
+                  align: top_mid
+                  y: 8
+                  text: "VOLET"
+                  text_color: 0x8CC8FF
+              - label:
+                  id: cover_state_label
+                  align: bottom_mid
+                  y: -8
+                  text: "CONNEXION..."
+                  text_color: 0xFFFFFF
+        - button:
+            x: 20
+            y: 180
+            width: 86
+            height: 92
+            bg_color: 0x276B9E
+            widgets:
+              - label: {align: center, text: "OUVRIR"}
+            on_click:
+              - homeassistant.action:
+                  action: cover.open_cover
+                  data:
+                    entity_id: cover.salle_de_bain
+        - button:
+            x: 117
+            y: 180
+            width: 86
+            height: 92
+            bg_color: 0x4B5563
+            widgets:
+              - label: {align: center, text: "STOP"}
+            on_click:
+              - homeassistant.action:
+                  action: cover.stop_cover
+                  data:
+                    entity_id: cover.salle_de_bain
+        - button:
+            x: 214
+            y: 180
+            width: 86
+            height: 92
+            bg_color: 0x276B9E
+            widgets:
+              - label: {align: center, text: "FERMER"}
+            on_click:
+              - homeassistant.action:
+                  action: cover.close_cover
+                  data:
+                    entity_id: cover.salle_de_bain
+        - label:
+            align: center
+            y: 55
+            text: "Commandes via Home Assistant"
+            text_color: 0x9AA4B2
+        - button:
+            x: 10
+            y: 415
+            width: 96
+            height: 52
+            bg_color: 0x276B9E
+            widgets:
+              - label: {align: center, text: "SDB"}
+        - button:
+            x: 112
+            y: 415
+            width: 96
+            height: 52
+            bg_color: 0x263645
+            widgets:
+              - label: {align: center, text: "CAVE"}
+            on_click:
+              - lvgl.page.show: page_cave
+        - button:
+            x: 214
+            y: 415
+            width: 96
+            height: 52
+            bg_color: 0x263645
+            widgets:
+              - label: {align: center, text: "BAR"}
+            on_click:
+              - lvgl.page.show: page_bar
+
+    - id: page_cave
+      bg_color: 0x101820
+      widgets:
+        - label:
+            align: top_mid
+            y: 18
+            text: "ECLAIRAGE CAVE"
+            text_color: 0xFFFFFF
+        - label:
+            id: cave_state_label
+            align: top_mid
+            y: 55
+            text: "CONNEXION..."
+            text_color: 0xFFB347
+        - button:
+            x: 40
+            y: 95
+            width: 240
+            height: 70
+            bg_color: 0x276B9E
+            widgets:
+              - label: {align: center, text: "MARCHE / ARRET"}
+            on_click:
+              - homeassistant.action:
+                  action: light.toggle
+                  data:
+                    entity_id: light.milight_cave
+        - label:
+            x: 24
+            y: 185
+            text: "LUMINOSITE"
+            text_color: 0xC8D2DC
+        - slider:
+            id: cave_brightness
+            x: 20
+            y: 215
+            width: 280
+            height: 28
+            min_value: 1
+            max_value: 100
+            value: 70
+            on_release:
+              - homeassistant.action:
+                  action: light.turn_on
+                  data:
+                    entity_id: light.milight_cave
+                  data_template:
+                    brightness_pct: "{{ brightness }}"
+                  variables:
+                    brightness: !lambda return static_cast<int>(x);
+        - label:
+            x: 24
+            y: 263
+            text: "COULEUR"
+            text_color: 0xC8D2DC
+        - button:
+            x: 20
+            y: 295
+            width: 52
+            height: 52
+            bg_color: 0xFF3030
+            on_click:
+              - homeassistant.action:
+                  action: light.turn_on
+                  data: {entity_id: light.milight_cave, color_name: red}
+        - button:
+            x: 77
+            y: 295
+            width: 52
+            height: 52
+            bg_color: 0x30D060
+            on_click:
+              - homeassistant.action:
+                  action: light.turn_on
+                  data: {entity_id: light.milight_cave, color_name: green}
+        - button:
+            x: 134
+            y: 295
+            width: 52
+            height: 52
+            bg_color: 0x3080FF
+            on_click:
+              - homeassistant.action:
+                  action: light.turn_on
+                  data: {entity_id: light.milight_cave, color_name: blue}
+        - button:
+            x: 191
+            y: 295
+            width: 52
+            height: 52
+            bg_color: 0xB060FF
+            on_click:
+              - homeassistant.action:
+                  action: light.turn_on
+                  data: {entity_id: light.milight_cave, color_name: purple}
+        - button:
+            x: 248
+            y: 295
+            width: 52
+            height: 52
+            bg_color: 0xFFF1D0
+            on_click:
+              - homeassistant.action:
+                  action: light.turn_on
+                  data: {entity_id: light.milight_cave, color_temp_kelvin: "2700"}
+        - button:
+            x: 10
+            y: 415
+            width: 96
+            height: 52
+            bg_color: 0x263645
+            widgets:
+              - label: {align: center, text: "SDB"}
+            on_click:
+              - lvgl.page.show: page_sdb
+        - button:
+            x: 112
+            y: 415
+            width: 96
+            height: 52
+            bg_color: 0x276B9E
+            widgets:
+              - label: {align: center, text: "CAVE"}
+        - button:
+            x: 214
+            y: 415
+            width: 96
+            height: 52
+            bg_color: 0x263645
+            widgets:
+              - label: {align: center, text: "BAR"}
+            on_click:
+              - lvgl.page.show: page_bar
+
+    - id: page_bar
+      bg_color: 0x101820
+      widgets:
+        - label:
+            align: top_mid
+            y: 18
+            text: "ECLAIRAGE BAR CAVE"
+            text_color: 0xFFFFFF
+        - label:
+            id: bar_state_label
+            align: top_mid
+            y: 55
+            text: "CONNEXION..."
+            text_color: 0xFFB347
+        - button:
+            x: 40
+            y: 95
+            width: 240
+            height: 70
+            bg_color: 0x276B9E
+            widgets:
+              - label: {align: center, text: "MARCHE / ARRET"}
+            on_click:
+              - homeassistant.action:
+                  action: light.toggle
+                  data:
+                    entity_id: light.mosquitto_mqtt_broker_cave_bar
+        - label:
+            x: 24
+            y: 185
+            text: "LUMINOSITE"
+            text_color: 0xC8D2DC
+        - slider:
+            id: bar_brightness
+            x: 20
+            y: 215
+            width: 280
+            height: 28
+            min_value: 1
+            max_value: 100
+            value: 70
+            on_release:
+              - homeassistant.action:
+                  action: light.turn_on
+                  data:
+                    entity_id: light.mosquitto_mqtt_broker_cave_bar
+                  data_template:
+                    brightness_pct: "{{ brightness }}"
+                  variables:
+                    brightness: !lambda return static_cast<int>(x);
+        - label:
+            x: 24
+            y: 263
+            text: "COULEUR"
+            text_color: 0xC8D2DC
+        - button:
+            x: 20
+            y: 295
+            width: 52
+            height: 52
+            bg_color: 0xFF3030
+            on_click:
+              - homeassistant.action:
+                  action: light.turn_on
+                  data: {entity_id: light.mosquitto_mqtt_broker_cave_bar, color_name: red}
+        - button:
+            x: 77
+            y: 295
+            width: 52
+            height: 52
+            bg_color: 0x30D060
+            on_click:
+              - homeassistant.action:
+                  action: light.turn_on
+                  data: {entity_id: light.mosquitto_mqtt_broker_cave_bar, color_name: green}
+        - button:
+            x: 134
+            y: 295
+            width: 52
+            height: 52
+            bg_color: 0x3080FF
+            on_click:
+              - homeassistant.action:
+                  action: light.turn_on
+                  data: {entity_id: light.mosquitto_mqtt_broker_cave_bar, color_name: blue}
+        - button:
+            x: 191
+            y: 295
+            width: 52
+            height: 52
+            bg_color: 0xB060FF
+            on_click:
+              - homeassistant.action:
+                  action: light.turn_on
+                  data: {entity_id: light.mosquitto_mqtt_broker_cave_bar, color_name: purple}
+        - button:
+            x: 248
+            y: 295
+            width: 52
+            height: 52
+            bg_color: 0xFFF1D0
+            on_click:
+              - homeassistant.action:
+                  action: light.turn_on
+                  data: {entity_id: light.mosquitto_mqtt_broker_cave_bar, color_temp_kelvin: "2700"}
+        - button:
+            x: 10
+            y: 415
+            width: 96
+            height: 52
+            bg_color: 0x263645
+            widgets:
+              - label: {align: center, text: "SDB"}
+            on_click:
+              - lvgl.page.show: page_sdb
+        - button:
+            x: 112
+            y: 415
+            width: 96
+            height: 52
+            bg_color: 0x263645
+            widgets:
+              - label: {align: center, text: "CAVE"}
+            on_click:
+              - lvgl.page.show: page_cave
+        - button:
+            x: 214
+            y: 415
+            width: 96
+            height: 52
+            bg_color: 0x276B9E
+            widgets:
+              - label: {align: center, text: "BAR"}
