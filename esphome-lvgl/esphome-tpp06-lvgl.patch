@@ -1,0 +1,704 @@
+From 38fb8803eb74aaa227048b173c2c0f0636d76f37 Mon Sep 17 00:00:00 2001
+From: Philiphall6 <116849774+Philiphall6@users.noreply.github.com>
+Date: Tue, 17 Nov 2026 15:53:11 +0000
+Subject: [PATCH] Add native TPP06 framebuffer, touch, and LVGL port
+
+---
+ esphome/components/evdev/__init__.py          |   1 +
+ .../components/evdev/touchscreen/__init__.py  |  32 ++++
+ .../evdev/touchscreen/evdev_touchscreen.cpp   |  73 +++++++++
+ .../evdev/touchscreen/evdev_touchscreen.h     |  32 ++++
+ esphome/components/fbdev/__init__.py          |   1 +
+ esphome/components/fbdev/display.py           |  82 ++++++++++
+ esphome/components/fbdev/fbdev_display.cpp    | 140 ++++++++++++++++++
+ esphome/components/fbdev/fbdev_display.h      |  55 +++++++
+ tpp06/.gitignore                              |   5 +
+ tpp06/README.md                               |  32 ++++
+ tpp06/build.sh                                |  29 ++++
+ tpp06/lvgl.yaml                               |  96 ++++++++++++
+ tpp06/minimal.yaml                            |  14 ++
+ 13 files changed, 592 insertions(+)
+ create mode 100644 esphome/components/evdev/__init__.py
+ create mode 100644 esphome/components/evdev/touchscreen/__init__.py
+ create mode 100644 esphome/components/evdev/touchscreen/evdev_touchscreen.cpp
+ create mode 100644 esphome/components/evdev/touchscreen/evdev_touchscreen.h
+ create mode 100644 esphome/components/fbdev/__init__.py
+ create mode 100644 esphome/components/fbdev/display.py
+ create mode 100644 esphome/components/fbdev/fbdev_display.cpp
+ create mode 100644 esphome/components/fbdev/fbdev_display.h
+ create mode 100644 tpp06/.gitignore
+ create mode 100644 tpp06/README.md
+ create mode 100755 tpp06/build.sh
+ create mode 100644 tpp06/lvgl.yaml
+ create mode 100644 tpp06/minimal.yaml
+
+diff --git a/esphome/components/evdev/__init__.py b/esphome/components/evdev/__init__.py
+new file mode 100644
+index 0000000..e5de616
+--- /dev/null
++++ b/esphome/components/evdev/__init__.py
+@@ -0,0 +1 @@
++CODEOWNERS = ["@Philiphall6"]
+diff --git a/esphome/components/evdev/touchscreen/__init__.py b/esphome/components/evdev/touchscreen/__init__.py
+new file mode 100644
+index 0000000..8d34674
+--- /dev/null
++++ b/esphome/components/evdev/touchscreen/__init__.py
+@@ -0,0 +1,32 @@
++import esphome.codegen as cg
++from esphome.components import touchscreen
++import esphome.config_validation as cv
++from esphome.const import CONF_ID, PLATFORM_HOST
++from esphome.types import ConfigType
++
++CODEOWNERS = ["@Philiphall6"]
++DEPENDENCIES = ["host"]
++
++CONF_DEVICE = "device"
++
++evdev_ns = cg.esphome_ns.namespace("evdev")
++EvdevTouchscreen = evdev_ns.class_("EvdevTouchscreen", touchscreen.Touchscreen)
++
++CONFIG_SCHEMA = cv.All(
++    touchscreen.touchscreen_schema(
++        "40ms",
++        defaults={"x_min": 0, "x_max": 320, "y_min": 0, "y_max": 480},
++    ).extend(
++        {
++            cv.GenerateID(): cv.declare_id(EvdevTouchscreen),
++            cv.Optional(CONF_DEVICE, default="/dev/input/event1"): cv.string_strict,
++        }
++    ),
++    cv.only_on(PLATFORM_HOST),
++)
++
++
++async def to_code(config: ConfigType) -> None:
++    var = cg.new_Pvariable(config[CONF_ID])
++    cg.add(var.set_device(config[CONF_DEVICE]))
++    await touchscreen.register_touchscreen(var, config)
+diff --git a/esphome/components/evdev/touchscreen/evdev_touchscreen.cpp b/esphome/components/evdev/touchscreen/evdev_touchscreen.cpp
+new file mode 100644
+index 0000000..63276be
+--- /dev/null
++++ b/esphome/components/evdev/touchscreen/evdev_touchscreen.cpp
+@@ -0,0 +1,73 @@
++#include "evdev_touchscreen.h"
++
++#ifdef USE_HOST
++
++#include <cerrno>
++#include <cstring>
++#include <fcntl.h>
++#include <linux/input.h>
++#include <unistd.h>
++
++#include "esphome/core/log.h"
++
++namespace esphome::evdev {
++
++static const char *const TAG = "evdev.touchscreen";
++
++// Kernel 4.4 on the 32-bit TPP06 always sends a 16-byte input_event. Defining
++// the wire layout explicitly avoids a time_t-size mismatch with modern uClibc.
++struct InputEvent32 {
++  int32_t seconds;
++  int32_t microseconds;
++  uint16_t type;
++  uint16_t code;
++  int32_t value;
++};
++
++void EvdevTouchscreen::setup() {
++  this->fd_ = open(this->device_.c_str(), O_RDONLY | O_NONBLOCK | O_CLOEXEC);
++  if (this->fd_ < 0) {
++    ESP_LOGE(TAG, "Cannot open %s: %s", this->device_.c_str(), std::strerror(errno));
++    this->mark_failed();
++    return;
++  }
++  ESP_LOGI(TAG, "Reading Goodix events from %s", this->device_.c_str());
++}
++
++void EvdevTouchscreen::dump_config() {
++  ESP_LOGCONFIG(TAG, "Linux evdev touchscreen:");
++  ESP_LOGCONFIG(TAG, "  Device: %s", this->device_.c_str());
++}
++
++void EvdevTouchscreen::on_shutdown() {
++  if (this->fd_ >= 0) {
++    close(this->fd_);
++    this->fd_ = -1;
++  }
++}
++
++void EvdevTouchscreen::update_touches() {
++  if (this->fd_ < 0)
++    return;
++
++  InputEvent32 event{};
++  while (read(this->fd_, &event, sizeof(event)) == sizeof(event)) {
++    if (event.type != EV_ABS)
++      continue;
++    if (event.code == ABS_MT_SLOT) {
++      this->slot_ = event.value;
++    } else if (this->slot_ == 0 && event.code == ABS_MT_POSITION_X) {
++      this->x_ = event.value;
++    } else if (this->slot_ == 0 && event.code == ABS_MT_POSITION_Y) {
++      this->y_ = event.value;
++    } else if (this->slot_ == 0 && event.code == ABS_MT_TRACKING_ID) {
++      this->pressed_ = event.value >= 0;
++    }
++  }
++  if (this->pressed_)
++    this->add_raw_touch_position_(0, this->x_, this->y_);
++}
++
++}  // namespace esphome::evdev
++
++#endif
+diff --git a/esphome/components/evdev/touchscreen/evdev_touchscreen.h b/esphome/components/evdev/touchscreen/evdev_touchscreen.h
+new file mode 100644
+index 0000000..ae75385
+--- /dev/null
++++ b/esphome/components/evdev/touchscreen/evdev_touchscreen.h
+@@ -0,0 +1,32 @@
++#pragma once
++
++#ifdef USE_HOST
++
++#include <cstdint>
++#include <string>
++
++#include "esphome/components/touchscreen/touchscreen.h"
++
++namespace esphome::evdev {
++
++class EvdevTouchscreen final : public touchscreen::Touchscreen {
++ public:
++  void setup() override;
++  void dump_config() override;
++  void on_shutdown() override;
++  void set_device(const std::string &device) { this->device_ = device; }
++
++ protected:
++  void update_touches() override;
++
++  std::string device_{"/dev/input/event1"};
++  int fd_{-1};
++  int32_t x_{0};
++  int32_t y_{0};
++  int32_t slot_{0};
++  bool pressed_{false};
++};
++
++}  // namespace esphome::evdev
++
++#endif
+diff --git a/esphome/components/fbdev/__init__.py b/esphome/components/fbdev/__init__.py
+new file mode 100644
+index 0000000..e5de616
+--- /dev/null
++++ b/esphome/components/fbdev/__init__.py
+@@ -0,0 +1 @@
++CODEOWNERS = ["@Philiphall6"]
+diff --git a/esphome/components/fbdev/display.py b/esphome/components/fbdev/display.py
+new file mode 100644
+index 0000000..7d2135f
+--- /dev/null
++++ b/esphome/components/fbdev/display.py
+@@ -0,0 +1,82 @@
++import esphome.codegen as cg
++from esphome.components import display
++from esphome.components.const import BYTE_ORDER_LITTLE
++import esphome.config_validation as cv
++from esphome.const import (
++    CONF_AUTO_CLEAR_ENABLED,
++    CONF_DIMENSIONS,
++    CONF_HEIGHT,
++    CONF_ID,
++    CONF_LAMBDA,
++    CONF_PAGES,
++    CONF_ROTATION,
++    CONF_WIDTH,
++    PLATFORM_HOST,
++)
++from esphome.types import ConfigType
++
++CODEOWNERS = ["@Philiphall6"]
++DEPENDENCIES = ["host"]
++
++CONF_DEVICE = "device"
++
++fbdev_ns = cg.esphome_ns.namespace("fbdev")
++FbdevDisplay = fbdev_ns.class_("FbdevDisplay", display.Display, cg.Component)
++
++def _add_display_metadata(config: ConfigType) -> ConfigType:
++    dimensions = config[CONF_DIMENSIONS]
++    if isinstance(dimensions, dict):
++        width = dimensions[CONF_WIDTH]
++        height = dimensions[CONF_HEIGHT]
++    else:
++        width, height = dimensions
++    display.add_metadata(
++        config[CONF_ID],
++        width,
++        height,
++        byte_order=BYTE_ORDER_LITTLE,
++        has_writer=config.get(CONF_AUTO_CLEAR_ENABLED) is True
++        or config.get(CONF_PAGES) is not None
++        or config.get(CONF_LAMBDA) is not None
++        or config.get(display.CONF_SHOW_TEST_CARD) is True,
++        rotation=config.get(CONF_ROTATION, 0),
++    )
++    return config
++
++
++CONFIG_SCHEMA = cv.All(
++    display.FULL_DISPLAY_SCHEMA.extend(
++        {
++            cv.GenerateID(): cv.declare_id(FbdevDisplay),
++            cv.Optional(CONF_DEVICE, default="/dev/fb0"): cv.string_strict,
++            cv.Optional(
++                CONF_DIMENSIONS,
++                default={CONF_WIDTH: 320, CONF_HEIGHT: 480},
++            ): cv.Any(
++                cv.dimensions,
++                cv.Schema(
++                    {
++                        cv.Required(CONF_WIDTH): cv.positive_int,
++                        cv.Required(CONF_HEIGHT): cv.positive_int,
++                    }
++                ),
++            ),
++        }
++    ),
++    _add_display_metadata,
++    cv.only_on(PLATFORM_HOST),
++)
++
++
++async def to_code(config: ConfigType) -> None:
++    var = cg.new_Pvariable(config[CONF_ID])
++    await display.register_display(var, config)
++    cg.add(var.set_device(config[CONF_DEVICE]))
++    dimensions = config[CONF_DIMENSIONS]
++    if isinstance(dimensions, dict):
++        width = dimensions[CONF_WIDTH]
++        height = dimensions[CONF_HEIGHT]
++    else:
++        width, height = dimensions
++    cg.add(var.set_dimensions(width, height))
++    await display.add_writer(var, config)
+diff --git a/esphome/components/fbdev/fbdev_display.cpp b/esphome/components/fbdev/fbdev_display.cpp
+new file mode 100644
+index 0000000..85ee276
+--- /dev/null
++++ b/esphome/components/fbdev/fbdev_display.cpp
+@@ -0,0 +1,140 @@
++#include "fbdev_display.h"
++
++#ifdef USE_HOST
++
++#include <cerrno>
++#include <cstring>
++#include <fcntl.h>
++#include <linux/fb.h>
++#include <sys/ioctl.h>
++#include <sys/mman.h>
++#include <unistd.h>
++
++#include "esphome/components/display/display_color_utils.h"
++#include "esphome/core/log.h"
++
++namespace esphome::fbdev {
++
++static const char *const TAG = "fbdev";
++
++uint16_t FbdevDisplay::rgb565_to_bgr565_(uint16_t pixel) {
++  return static_cast<uint16_t>(((pixel & 0x001FU) << 11) | (pixel & 0x07E0U) | ((pixel & 0xF800U) >> 11));
++}
++
++void FbdevDisplay::setup() {
++  this->fd_ = open(this->device_.c_str(), O_RDWR | O_CLOEXEC);
++  if (this->fd_ < 0) {
++    ESP_LOGE(TAG, "Cannot open %s: %s", this->device_.c_str(), std::strerror(errno));
++    this->mark_failed();
++    return;
++  }
++
++  fb_fix_screeninfo fixed{};
++  fb_var_screeninfo variable{};
++  if (ioctl(this->fd_, FBIOGET_FSCREENINFO, &fixed) < 0 || ioctl(this->fd_, FBIOGET_VSCREENINFO, &variable) < 0) {
++    ESP_LOGE(TAG, "Cannot query %s: %s", this->device_.c_str(), std::strerror(errno));
++    this->close_();
++    this->mark_failed();
++    return;
++  }
++  if (variable.bits_per_pixel != 16 || variable.xres < this->width_ || variable.yres < this->height_) {
++    ESP_LOGE(TAG, "Unsupported framebuffer: %ux%u, %u bpp", variable.xres, variable.yres,
++             variable.bits_per_pixel);
++    this->close_();
++    this->mark_failed();
++    return;
++  }
++
++  this->stride_ = fixed.line_length;
++  this->memory_size_ = fixed.smem_len;
++  this->swap_red_blue_ = variable.red.offset == 0 && variable.blue.offset == 11;
++  void *mapped = mmap(nullptr, this->memory_size_, PROT_READ | PROT_WRITE, MAP_SHARED, this->fd_, 0);
++  if (mapped == MAP_FAILED) {
++    this->memory_ = nullptr;
++    ESP_LOGE(TAG, "Cannot map %s: %s", this->device_.c_str(), std::strerror(errno));
++    this->close_();
++    this->mark_failed();
++    return;
++  }
++  this->memory_ = static_cast<uint8_t *>(mapped);
++  ESP_LOGI(TAG, "Framebuffer %s: %ux%u, stride=%u, %s565", this->device_.c_str(), this->width_, this->height_,
++           this->stride_, this->swap_red_blue_ ? "BGR" : "RGB");
++}
++
++void FbdevDisplay::close_() {
++  if (this->memory_ != nullptr) {
++    munmap(this->memory_, this->memory_size_);
++    this->memory_ = nullptr;
++  }
++  if (this->fd_ >= 0) {
++    close(this->fd_);
++    this->fd_ = -1;
++  }
++}
++
++void FbdevDisplay::on_shutdown() { this->close_(); }
++
++void FbdevDisplay::dump_config() {
++  LOG_DISPLAY("", "Linux framebuffer", this);
++  ESP_LOGCONFIG(TAG, "  Device: %s", this->device_.c_str());
++  ESP_LOGCONFIG(TAG, "  Pixel format: %s565", this->swap_red_blue_ ? "BGR" : "RGB");
++}
++
++int FbdevDisplay::get_width() { return display::rotation_swaps_axes(this->rotation_) ? this->height_ : this->width_; }
++
++int FbdevDisplay::get_height() { return display::rotation_swaps_axes(this->rotation_) ? this->width_ : this->height_; }
++
++void FbdevDisplay::update() { this->do_update_(); }
++
++void FbdevDisplay::draw_pixel_at(int x, int y, Color color) {
++  if (this->memory_ == nullptr || this->is_point_clipped(x, y))
++    return;
++
++  if (this->rotation_ == display::DISPLAY_ROTATION_180_DEGREES) {
++    x = this->width_ - x - 1;
++    y = this->height_ - y - 1;
++  } else if (this->rotation_ == display::DISPLAY_ROTATION_90_DEGREES) {
++    int tmp = x;
++    x = this->width_ - y - 1;
++    y = tmp;
++  } else if (this->rotation_ == display::DISPLAY_ROTATION_270_DEGREES) {
++    int tmp = y;
++    y = this->height_ - x - 1;
++    x = tmp;
++  }
++
++  uint16_t pixel = display::ColorUtil::color_to_565(color);
++  if (this->swap_red_blue_)
++    pixel = rgb565_to_bgr565_(pixel);
++  auto *row = reinterpret_cast<uint16_t *>(this->memory_ + static_cast<size_t>(y) * this->stride_);
++  row[x] = pixel;
++}
++
++void FbdevDisplay::draw_pixels_internal(int x_start, int y_start, int w, int h, const uint8_t *ptr,
++                                        display::ColorBitness bitness, bool big_endian, int x_offset, int y_offset,
++                                        int x_pad) {
++  if (this->memory_ == nullptr)
++    return;
++  if (this->rotation_ != display::DISPLAY_ROTATION_0_DEGREES || bitness != display::COLOR_BITNESS_565 || big_endian) {
++    Display::draw_pixels_internal(x_start, y_start, w, h, ptr, bitness, big_endian, x_offset, y_offset, x_pad);
++    return;
++  }
++
++  const int source_stride = x_offset + w + x_pad;
++  const auto *source = reinterpret_cast<const uint16_t *>(ptr) + y_offset * source_stride + x_offset;
++  for (int y = 0; y < h; y++) {
++    auto *destination = reinterpret_cast<uint16_t *>(
++        this->memory_ + static_cast<size_t>(y_start + y) * this->stride_ + static_cast<size_t>(x_start) * 2U);
++    if (!this->swap_red_blue_) {
++      std::memcpy(destination, source, static_cast<size_t>(w) * 2U);
++    } else {
++      for (int x = 0; x < w; x++)
++        destination[x] = rgb565_to_bgr565_(source[x]);
++    }
++    source += source_stride;
++  }
++}
++
++}  // namespace esphome::fbdev
++
++#endif
+diff --git a/esphome/components/fbdev/fbdev_display.h b/esphome/components/fbdev/fbdev_display.h
+new file mode 100644
+index 0000000..f692885
+--- /dev/null
++++ b/esphome/components/fbdev/fbdev_display.h
+@@ -0,0 +1,55 @@
++#pragma once
++
++#ifdef USE_HOST
++
++#include <cstddef>
++#include <cstdint>
++#include <string>
++
++#include "esphome/components/display/display.h"
++#include "esphome/core/component.h"
++
++namespace esphome::fbdev {
++
++class FbdevDisplay final : public display::Display {
++ public:
++  void setup() override;
++  void update() override;
++  void dump_config() override;
++  void on_shutdown() override;
++
++  display::DisplayType get_display_type() override { return display::DISPLAY_TYPE_COLOR; }
++  void draw_pixel_at(int x, int y, Color color) override;
++  int get_width() override;
++  int get_height() override;
++  float get_setup_priority() const override { return setup_priority::HARDWARE; }
++
++  void set_device(const std::string &device) { this->device_ = device; }
++  void set_dimensions(uint16_t width, uint16_t height) {
++    this->width_ = width;
++    this->height_ = height;
++  }
++
++ protected:
++  void draw_pixels_internal(int x_start, int y_start, int w, int h, const uint8_t *ptr,
++                            display::ColorBitness bitness, bool big_endian, int x_offset, int y_offset,
++                            int x_pad) override;
++  int get_width_internal() override { return this->width_; }
++  int get_height_internal() override { return this->height_; }
++
++  static uint16_t rgb565_to_bgr565_(uint16_t pixel);
++  void close_();
++
++  std::string device_{"/dev/fb0"};
++  int fd_{-1};
++  uint8_t *memory_{nullptr};
++  size_t memory_size_{0};
++  uint32_t stride_{0};
++  uint16_t width_{320};
++  uint16_t height_{480};
++  bool swap_red_blue_{false};
++};
++
++}  // namespace esphome::fbdev
++
++#endif
+diff --git a/tpp06/.gitignore b/tpp06/.gitignore
+new file mode 100644
+index 0000000..d8b4157
+--- /dev/null
++++ b/tpp06/.gitignore
+@@ -0,0 +1,5 @@
++# Gitignore settings for ESPHome
++# This is an example and may include too much for your use-case.
++# You can modify this file to suit your needs.
++/.esphome/
++/secrets.yaml
+diff --git a/tpp06/README.md b/tpp06/README.md
+new file mode 100644
+index 0000000..b9ea26b
+--- /dev/null
++++ b/tpp06/README.md
+@@ -0,0 +1,32 @@
++# TPP06 native ESPHome + LVGL experiment
++
++This directory builds ESPHome's `host` platform as a static ARMv5 binary for
++the MOES/Tuya TPP06 (Anyka AK3761E). It adds two Linux-native ESPHome drivers:
++
++- `fbdev`: `/dev/fb0`, 320x480, RGB565/BGR565 detection;
++- `evdev`: `/dev/input/event1`, Goodix multitouch events.
++
++The example `lvgl.yaml` renders a colour test and a touch button with ESPHome's
++normal LVGL component. It does not install anything on the panel at boot.
++
++## Build
++
++Use the official Bootlin ARMv5 EABI/uClibc stable 2026.08-1 toolchain (GCC
++15.3 or newer is required by ESPHome's C++20 build):
++
++```sh
++export TPP06_TOOLCHAIN_PREFIX=/opt/armv5-eabi--uclibc--stable-2026.08-1/bin/arm-linux
++export ESPHOME_PYTHON=/path/to/esphome-venv/bin/python
++./tpp06/build.sh
++```
++
++The result is written to:
++
++```text
++tpp06/.esphome/build/tpp06-lvgl/.pioenvs/tpp06-lvgl/program
++```
++
++It is a static ARM EABI5, soft-float executable. Test it from `/tmp` before
++creating any persistent startup service. Stop Tuya's UI only for the duration
++of a supervised test because both programs need exclusive framebuffer and
++touchscreen access.
+diff --git a/tpp06/build.sh b/tpp06/build.sh
+new file mode 100755
+index 0000000..6fc3bb1
+--- /dev/null
++++ b/tpp06/build.sh
+@@ -0,0 +1,29 @@
++#!/bin/sh
++set -eu
++
++repo_dir=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
++toolchain_prefix=${TPP06_TOOLCHAIN_PREFIX:-}
++python_bin=${ESPHOME_PYTHON:-python3}
++
++if [ -z "$toolchain_prefix" ]; then
++  echo "Set TPP06_TOOLCHAIN_PREFIX to the ARMv5 uClibc toolchain prefix." >&2
++  echo "Example: /opt/armv5-eabi--uclibc--stable-2026.08-1/bin/arm-linux" >&2
++  exit 2
++fi
++
++for tool in gcc g++ ar objdump readelf; do
++  if [ ! -x "${toolchain_prefix}-${tool}" ]; then
++    echo "Missing compiler tool: ${toolchain_prefix}-${tool}" >&2
++    exit 2
++  fi
++done
++
++export CC="${toolchain_prefix}-gcc"
++export CXX="${toolchain_prefix}-g++"
++export AR="${toolchain_prefix}-ar"
++export OBJDUMP="${toolchain_prefix}-objdump"
++export READELF="${toolchain_prefix}-readelf"
++export ESPHOME_PCH_ENABLE=0
++
++cd "$repo_dir"
++exec "$python_bin" -m esphome compile tpp06/lvgl.yaml
+diff --git a/tpp06/lvgl.yaml b/tpp06/lvgl.yaml
+new file mode 100644
+index 0000000..ffb9684
+--- /dev/null
++++ b/tpp06/lvgl.yaml
+@@ -0,0 +1,96 @@
++esphome:
++  name: tpp06-lvgl
++  friendly_name: TPP06 ESPHome LVGL
++  build_flags:
++    - -static
++    - -march=armv5te
++    - -marm
++    - -mfloat-abi=soft
++
++host:
++  mac_address: "02:00:00:00:06:01"
++
++logger:
++  level: INFO
++
++display:
++  - platform: fbdev
++    id: tpp06_display
++    device: /dev/fb0
++    dimensions:
++      width: 320
++      height: 480
++    auto_clear_enabled: false
++    update_interval: never
++
++touchscreen:
++  - platform: evdev
++    id: tpp06_touch
++    display: tpp06_display
++    device: /dev/input/event1
++    update_interval: 20ms
++    calibration:
++      x_min: 0
++      x_max: 320
++      y_min: 0
++      y_max: 480
++
++lvgl:
++  displays: tpp06_display
++  touchscreens:
++    - touchscreen_id: tpp06_touch
++  buffer_size: 25%
++  bg_color: 0x101820
++  widgets:
++    - label:
++        id: title
++        align: top_mid
++        y: 30
++        text: "TPP06"
++        text_color: 0xFFFFFF
++    - label:
++        align: top_mid
++        y: 65
++        text: "ESPHome + LVGL"
++        text_color: 0x62D0FF
++    - obj:
++        x: 20
++        y: 120
++        width: 280
++        height: 48
++        bg_color: 0xFF0000
++        border_width: 0
++    - obj:
++        x: 20
++        y: 168
++        width: 280
++        height: 48
++        bg_color: 0x00FF00
++        border_width: 0
++    - obj:
++        x: 20
++        y: 216
++        width: 280
++        height: 48
++        bg_color: 0x0000FF
++        border_width: 0
++    - button:
++        id: touch_test
++        align: bottom_mid
++        y: -45
++        width: 240
++        height: 80
++        widgets:
++          - label:
++              id: touch_test_label
++              align: center
++              text: "TOUCHER"
++        on_press:
++          - lvgl.label.update:
++              id: touch_test_label
++              text: "TACTILE OK"
++          - logger.log: "TPP06 touchscreen press"
++        on_release:
++          - lvgl.label.update:
++              id: touch_test_label
++              text: "TOUCHER"
+diff --git a/tpp06/minimal.yaml b/tpp06/minimal.yaml
+new file mode 100644
+index 0000000..0c6da5b
+--- /dev/null
++++ b/tpp06/minimal.yaml
+@@ -0,0 +1,14 @@
++esphome:
++  name: tpp06-lvgl
++  friendly_name: TPP06 LVGL
++  build_flags:
++    - -static
++    - -march=armv5te
++    - -marm
++    - -mfloat-abi=soft
++
++host:
++  mac_address: "02:00:00:00:06:01"
++
++logger:
++  level: INFO

@@ -29,7 +29,7 @@ L'outil masque l'`AUTHKEY` et n'affiche jamais les éventuels identifiants Wi-Fi
 *Visuels de référence des deux panneaux utilisés dans le projet.*
 ---
 
-## Le projet en cinq étapes
+## Le projet en six étapes
 
 | Étape | Objectif | État |
 |:--|:--|:--|
@@ -40,6 +40,7 @@ L'outil masque l'`AUTHKEY` et n'affiche jamais les éventuels identifiants Wi-Fi
 | **03 · Local & ESPHome** | Conserver l’Anyka et préparer le remplacement des services Tuya. | 🧪 En cours |
 | **04 · ADB par Wi-Fi** | Installer par le port `8090` un accès ADB persistant sur `5555`, sans ouvrir le panneau. | 🧪 Préversion expérimentale |
 | **05 · openHASP local** | Exécuter une interface locale 320×480 sur l’écran, avec tactile et MQTT/Home Assistant. | 🧪 Premier portage validé |
+| **06 · ESPHome + LVGL natif** | Exécuter le moteur LVGL d'ESPHome directement sur Linux Anyka avec framebuffer et tactile natifs. | 🧪 Compilation ARMv5 validée |
 
 ## Commencer par l’étape 0
 
@@ -85,6 +86,17 @@ Tuya n'est pas encore remplacé au démarrage.
 - [Guide français de compilation et d'essai](docs/fr/05-openhasp-local.md)
 - [English build and test guide](docs/en/05-openhasp-local.md)
 - [Correctif reproductible pour openHASP](openhasp/openhasp-tpp06.patch)
+
+## Alternative ESPHome native avec LVGL
+
+ESPHome `host` compile maintenant en ARMv5/uClibc avec deux nouveaux pilotes
+Linux pour le framebuffer et le tactile du TPP06. Une mire LVGL 320×480 avec
+bouton tactile est prête pour l'essai final temporaire après redémarrage du
+panneau. Aucun démarrage automatique n'est encore installé.
+
+- [Guide ESPHome + LVGL natif](docs/fr/06-esphome-lvgl-natif.md)
+- [Native ESPHome + LVGL guide](docs/en/06-native-esphome-lvgl.md)
+- [Correctif reproductible ESPHome](esphome-lvgl/esphome-tpp06-lvgl.patch)
 
 ## Ce que contient le dépôt
 

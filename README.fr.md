@@ -76,6 +76,18 @@ Home Assistant par MQTT.
 BGR565, orientation portrait et détection Goodix validés. L'installation au
 démarrage et la validation physique complète du tactile restent à terminer.
 
+## Étape 6 — ESPHome + LVGL natif
+
+Compiler ESPHome `host` directement pour l'Anyka ARMv5 et utiliser LVGL avec
+des composants Linux natifs pour `/dev/fb0` et `/dev/input/event1`.
+
+- [Guide étape 6 : ESPHome + LVGL natif](docs/fr/06-esphome-lvgl-natif.md)
+- [Correctif à appliquer au dépôt ESPHome](esphome-lvgl/esphome-tpp06-lvgl.patch)
+
+**État :** configuration validée et binaire ARMv5/uClibc statique compilé. Le
+premier essai graphique et tactile sur le panneau reste à effectuer après son
+prochain redémarrage ; aucune installation permanente n'est faite.
+
 ## Références
 
 - [Matériel à identifier](docs/materiel.md)

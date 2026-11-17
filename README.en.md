@@ -75,6 +75,18 @@ Assistant over MQTT.
 BGR565 conversion, portrait orientation and Goodix detection are validated.
 Boot-time installation and complete physical touch testing remain pending.
 
+## Phase 6 — Native ESPHome + LVGL
+
+Build ESPHome's `host` platform directly for the ARMv5 Anyka and use LVGL with
+native Linux components for `/dev/fb0` and `/dev/input/event1`.
+
+- [Phase 6 guide: native ESPHome + LVGL](docs/en/06-native-esphome-lvgl.md)
+- [Patch for the upstream ESPHome repository](esphome-lvgl/esphome-tpp06-lvgl.patch)
+
+**Status:** configuration validated and a static ARMv5/uClibc binary compiled.
+The first graphics and touch test on the panel remains pending after its next
+reboot; no persistent installation has been made.
+
 ## References
 
 - [Hardware to identify — French](docs/materiel.md)
