@@ -474,9 +474,11 @@ class TuyaCutter:
         arguments = f"-c {root}" if engine == "openhasp" else ""
         command = (
             f"mkdir -p {REMOTE_TEST_BASE}; "
+            f"mkdir -p {REMOTE_TEST_BASE}/prefs; "
             f"ui_pid=$(pidof {TUYA_PROCESS}); echo \"$ui_pid\" > {REMOTE_TEST_BASE}/tuya.pid; "
             "[ -n \"$ui_pid\" ] && kill -STOP $ui_pid; "
             f"echo {engine} > {REMOTE_TEST_BASE}/engine; "
+            f"ESPHOME_PREFDIR={REMOTE_TEST_BASE}/prefs "
             f"{executable} {arguments} > {REMOTE_TEST_BASE}/{engine}.log 2>&1 & "
             f"echo $! > {REMOTE_TEST_BASE}/engine.pid; sleep 2; "
             f"kill -0 $(cat {REMOTE_TEST_BASE}/engine.pid)"
@@ -524,7 +526,8 @@ case "$1" in
           "$BASE/S99tuya-app.stock" start ) &
         ;;
       esphome)
-        ( "$BASE/esphome/esphome" >>/tmp/esphome-lvgl.log 2>&1
+        ( mkdir -p "$BASE/esphome/prefs"
+          ESPHOME_PREFDIR="$BASE/esphome/prefs" "$BASE/esphome/esphome" >>/tmp/esphome-lvgl.log 2>&1
           "$BASE/S99tuya-app.stock" start ) &
         ;;
       *) start_tuya ;;

@@ -5,10 +5,10 @@ remplace pas le processeur par un ESP32 et n'utilise pas ESPHome comme simple
 passerelle : le moteur LVGL d'ESPHome dessine directement dans le framebuffer
 et reçoit le tactile Goodix par `evdev`.
 
-> **État expérimental.** La configuration ESPHome et le binaire ARMv5 statique
-> compilent. Le test final sur l'écran réel doit encore être effectué après le
-> prochain redémarrage du panneau. Rien ne doit être installé au démarrage avant
-> plusieurs essais temporaires réussis depuis `/tmp`.
+> **Validé sur matériel le 17 novembre 2026.** Le binaire ARMv5 statique démarre
+> sur le TPP06, détecte le framebuffer 320×480 BGR565 et le tactile Goodix, puis
+> termine correctement l'initialisation ESPHome. L'installation au démarrage
+> reste expérimentale : effectuer d'abord plusieurs essais depuis `/tmp`.
 
 ## Ce qui a été adapté
 
@@ -20,6 +20,11 @@ ajoute à ESPHome :
 - un tactile `evdev` pour `/dev/input/event1` ;
 - la lecture explicite des événements Linux 32 bits de 16 octets, nécessaire
   avec le noyau 4.4 du panneau ;
+- la compatibilité avec les anciens appels système ARM 32 bits de Linux 4.4
+  (`clock_gettime`, `nanosleep` et `_newselect`) malgré la toolchain time64 ;
+- le chargement explicite des vraies fonctions `pthread` de la libc statique ;
+- un stockage des préférences dans un répertoire inscriptible choisi par
+  `ESPHOME_PREFDIR` ;
 - un exemple LVGL avec mire RVB et bouton tactile ;
 - un script reproductible de compilation croisée ARMv5/uClibc.
 
@@ -27,7 +32,7 @@ Le binaire obtenu lors de la première compilation mesure environ 2,8 Mio. Son
 SHA-256 de référence est :
 
 ```text
-cc56aebcd623e13169571e66a1c949ab75a5b7e0112b6901775bbfd5dd94fea9
+9d2d42251db95ff8564c90cb2d978cf398a214fecc04ed302f6717d78e726802
 ```
 
 ## Compiler
@@ -62,6 +67,23 @@ ${TPP06_TOOLCHAIN_PREFIX}-readelf -h -l \
 ```
 
 ## Premier essai temporaire
+
+La méthode recommandée utilise Tuya Cutter, qui suspend Tuya, place les
+préférences dans `/tmp` et garantit le retour arrière :
+
+```bash
+python3 tools/tpp06_tuya_cutter.py --yes ADRESSE_IP_DU_PANNEAU \
+  test esphome --binary \
+  tpp06/.esphome/build/tpp06-lvgl/.pioenvs/tpp06-lvgl/program
+```
+
+Arrêt sûr et reprise immédiate de Tuya :
+
+```bash
+python3 tools/tpp06_tuya_cutter.py ADRESSE_IP_DU_PANNEAU stop-test
+```
+
+La procédure manuelle équivalente est détaillée ci-dessous.
 
 1. Redémarrer le panneau pour retrouver ADB sur `5555`, puis se connecter selon
    l'[étape 4](04-adb-wifi-sans-uart.md).

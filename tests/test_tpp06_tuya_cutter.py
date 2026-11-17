@@ -77,6 +77,7 @@ class LauncherTests(unittest.TestCase):
         self.assertIn("S99tuya-app.stock", launcher)
         self.assertIn("openhasp", launcher)
         self.assertIn("esphome", launcher)
+        self.assertIn("ESPHOME_PREFDIR", launcher)
         self.assertNotIn("rm -rf /tuya", launcher)
         self.assertGreaterEqual(launcher.count('"$BASE/S99tuya-app.stock" start'), 3)
 

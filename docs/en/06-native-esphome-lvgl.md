@@ -4,10 +4,10 @@ This route runs **ESPHome itself** on the TPP06 Anyka Linux system. ESPHome's
 LVGL engine writes directly to the framebuffer and reads the Goodix touchscreen
 through Linux `evdev`; no ESP32 replacement is involved.
 
-> **Experimental status.** The ESPHome configuration and static ARMv5 binary
-> compile successfully. The final real-panel display test still requires the
-> panel's next reboot. Do not install it at boot until repeated temporary tests
-> from `/tmp` have succeeded.
+> **Hardware-tested on 17 November 2026.** The static ARMv5 program starts on
+> the TPP06, detects its 320×480 BGR565 framebuffer and Goodix touchscreen, and
+> completes ESPHome setup. Startup installation remains experimental; first run
+> several successful temporary tests from `/tmp`.
 
 The [reproducible patch](../../esphome-lvgl/esphome-tpp06-lvgl.patch) adds:
 
@@ -16,6 +16,8 @@ The [reproducible patch](../../esphome-lvgl/esphome-tpp06-lvgl.patch) adds:
 - an `/dev/input/event1` Goodix `evdev` touchscreen component;
 - the 16-byte 32-bit input-event layout required by the panel's Linux 4.4
   kernel;
+- legacy ARM32 Linux 4.4 time and select syscalls for a modern time64 toolchain;
+- explicit static `pthread` linkage and a writable `ESPHOME_PREFDIR`;
 - an LVGL colour/touch test and an ARMv5 cross-build script.
 
 It targets ESPHome revision `9bf2bbc` (`dev`, `2026.12.0-dev`) and the official
@@ -37,10 +39,19 @@ The result is
 produced a roughly 2.8 MiB static binary with SHA-256:
 
 ```text
-cc56aebcd623e13169571e66a1c949ab75a5b7e0112b6901775bbfd5dd94fea9
+9d2d42251db95ff8564c90cb2d978cf398a214fecc04ed302f6717d78e726802
 ```
 
-For the first hardware test, reconnect ADB as described in
+The recommended first test uses Tuya Cutter, which pauses Tuya, selects a
+writable temporary preferences directory, and retains a safe rollback path:
+
+```bash
+python3 tools/tpp06_tuya_cutter.py --yes PANEL_IP test esphome \
+  --binary tpp06/.esphome/build/tpp06-lvgl/.pioenvs/tpp06-lvgl/program
+python3 tools/tpp06_tuya_cutter.py PANEL_IP stop-test
+```
+
+For an equivalent manual hardware test, reconnect ADB as described in
 [Phase 4](04-adb-over-wifi-without-uart.md), copy the binary only to `/tmp`,
 pause `voice_control_ak3760e`, and run it in the foreground. Validate the red,
 green, and blue bars and the touch button. Stop it with `Ctrl+C`, immediately

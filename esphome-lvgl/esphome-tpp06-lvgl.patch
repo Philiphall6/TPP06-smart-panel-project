@@ -1,7 +1,7 @@
 From 38fb8803eb74aaa227048b173c2c0f0636d76f37 Mon Sep 17 00:00:00 2001
 From: Philiphall6 <116849774+Philiphall6@users.noreply.github.com>
 Date: Tue, 17 Nov 2026 15:53:11 +0000
-Subject: [PATCH] Add native TPP06 framebuffer, touch, and LVGL port
+Subject: [PATCH 1/2] Add native TPP06 framebuffer, touch, and LVGL port
 
 ---
  esphome/components/evdev/__init__.py          |   1 +
@@ -702,3 +702,279 @@ index 0000000..0c6da5b
 +
 +logger:
 +  level: INFO
+
+From ba22ebf7c936d704552c64817b734e68fa30308d Mon Sep 17 00:00:00 2001
+From: Philiphall6 <116849774+Philiphall6@users.noreply.github.com>
+Date: Tue, 17 Nov 2026 17:55:35 +0000
+Subject: [PATCH 2/2] Support TPP06 Linux 4.4 runtime ABI
+
+---
+ esphome/components/host/hal.cpp           | 79 +++++++++++++----------
+ esphome/components/host/preferences.cpp   | 35 ++++++++++
+ esphome/components/logger/logger_host.cpp | 10 +++
+ esphome/core/wake/wake_host.cpp           | 15 ++++-
+ tpp06/lvgl.yaml                           | 10 +++
+ 5 files changed, 112 insertions(+), 37 deletions(-)
+
+diff --git a/esphome/components/host/hal.cpp b/esphome/components/host/hal.cpp
+index caee316..79cc9bf 100644
+--- a/esphome/components/host/hal.cpp
++++ b/esphome/components/host/hal.cpp
+@@ -7,7 +7,9 @@
+ 
+ #include <ctime>
+ #include <unistd.h>
++#include <sys/syscall.h>
+ #include <cerrno>
++#include <cstdint>
+ #include <cstdlib>
+ #include <cstring>
+ 
+@@ -18,42 +20,55 @@ namespace esphome::host {}  // namespace esphome::host
+ 
+ namespace esphome {
+ 
+-// yield(), arch_init(), arch_feed_wdt(), arch_get_cpu_freq_hz() inlined in
+-// components/host/hal.h.
++namespace {
++#if defined(__arm__) && __SIZEOF_LONG__ == 4
++// Linux 4.4 on the TPP06 only provides the legacy 32-bit time syscalls. New
++// uClibc toolchains use a 64-bit time_t, whose struct timespec layout is not
++// accepted by that kernel. Use the kernel ABI explicitly on ARM32.
++struct KernelTimespec32 {
++  int32_t tv_sec;
++  int32_t tv_nsec;
++};
+ 
+-uint32_t IRAM_ATTR HOT millis() {
+-  struct timespec spec;
+-  clock_gettime(CLOCK_MONOTONIC, &spec);
+-  return static_cast<uint32_t>(spec.tv_sec * 1000ULL + spec.tv_nsec / 1000000);
++uint64_t monotonic_time_us() {
++  KernelTimespec32 spec{};
++  if (::syscall(SYS_clock_gettime, CLOCK_MONOTONIC, &spec) != 0)
++    return 0;
++  return static_cast<uint64_t>(static_cast<uint32_t>(spec.tv_sec)) * 1000000ULL +
++         static_cast<uint32_t>(spec.tv_nsec) / 1000ULL;
+ }
+-uint64_t millis_64() {
+-  struct timespec spec;
+-  clock_gettime(CLOCK_MONOTONIC, &spec);
+-  return static_cast<uint64_t>(spec.tv_sec) * 1000ULL + static_cast<uint64_t>(spec.tv_nsec) / 1000000ULL;
+-}
+-void HOT delay(uint32_t ms) {
+-  struct timespec ts;
+-  ts.tv_sec = ms / 1000;
+-  ts.tv_nsec = (ms % 1000) * 1000000;
+-  int res;
+-  do {
+-    res = nanosleep(&ts, &ts);
+-  } while (res != 0 && errno == EINTR);
++
++void sleep_us(uint64_t us) {
++  KernelTimespec32 request{static_cast<int32_t>(us / 1000000ULL), static_cast<int32_t>((us % 1000000ULL) * 1000ULL)};
++  KernelTimespec32 remaining{};
++  while (::syscall(SYS_nanosleep, &request, &remaining) != 0 && errno == EINTR)
++    request = remaining;
+ }
+-uint32_t IRAM_ATTR HOT micros() {
++#else
++uint64_t monotonic_time_us() {
+   struct timespec spec;
+   clock_gettime(CLOCK_MONOTONIC, &spec);
+-  return static_cast<uint32_t>(spec.tv_sec * 1000000ULL + spec.tv_nsec / 1000);
++  return static_cast<uint64_t>(spec.tv_sec) * 1000000ULL + static_cast<uint64_t>(spec.tv_nsec) / 1000ULL;
+ }
+-void IRAM_ATTR HOT delayMicroseconds(uint32_t us) {
+-  struct timespec ts;
+-  ts.tv_sec = us / 1000000U;
+-  ts.tv_nsec = (us % 1000000U) * 1000U;
+-  int res;
+-  do {
+-    res = nanosleep(&ts, &ts);
+-  } while (res != 0 && errno == EINTR);
++
++void sleep_us(uint64_t us) {
++  struct timespec request;
++  request.tv_sec = us / 1000000ULL;
++  request.tv_nsec = (us % 1000000ULL) * 1000ULL;
++  while (nanosleep(&request, &request) != 0 && errno == EINTR) {
++  }
+ }
++#endif
++}  // namespace
++
++// yield(), arch_init(), arch_feed_wdt(), arch_get_cpu_freq_hz() inlined in
++// components/host/hal.h.
++
++uint32_t IRAM_ATTR HOT millis() { return static_cast<uint32_t>(monotonic_time_us() / 1000ULL); }
++uint64_t millis_64() { return monotonic_time_us() / 1000ULL; }
++void HOT delay(uint32_t ms) { sleep_us(static_cast<uint64_t>(ms) * 1000ULL); }
++uint32_t IRAM_ATTR HOT micros() { return static_cast<uint32_t>(monotonic_time_us()); }
++void IRAM_ATTR HOT delayMicroseconds(uint32_t us) { sleep_us(us); }
+ void arch_restart() {
+   // Host OTA: if a re-exec is armed, swap binaries instead of exiting.
+   if (const char *target = host::get_reexec_path()) {
+@@ -69,11 +84,7 @@ void arch_restart() {
+ }
+ 
+ uint32_t arch_get_cpu_cycle_count() {
+-  struct timespec spec;
+-  clock_gettime(CLOCK_MONOTONIC, &spec);
+-  time_t seconds = spec.tv_sec;
+-  uint32_t ns = static_cast<uint32_t>(spec.tv_nsec);
+-  return static_cast<uint32_t>(seconds) * 1000000000U + ns;
++  return static_cast<uint32_t>(monotonic_time_us() * 1000ULL);
+ }
+ 
+ }  // namespace esphome
+diff --git a/esphome/components/host/preferences.cpp b/esphome/components/host/preferences.cpp
+index 0f6b03f..0775699 100644
+--- a/esphome/components/host/preferences.cpp
++++ b/esphome/components/host/preferences.cpp
+@@ -2,6 +2,8 @@
+ 
+ #include <filesystem>
+ #include <fstream>
++#include <cerrno>
++#include <sys/stat.h>
+ #include <utility>
+ #include "preferences.h"
+ #include "esphome/core/application.h"
+@@ -12,6 +14,32 @@ namespace fs = std::filesystem;
+ 
+ ESPHOME_LOG_TAG(TAG, "preferences");
+ 
++#if defined(__arm__) && __SIZEOF_LONG__ == 4
++static bool create_directories_legacy(const std::string &path) {
++  std::string current;
++  size_t start = 0;
++  if (!path.empty() && path[0] == '/') {
++    current = "/";
++    start = 1;
++  }
++  while (start <= path.size()) {
++    const size_t end = path.find('/', start);
++    const std::string part = path.substr(start, end == std::string::npos ? end : end - start);
++    if (!part.empty()) {
++      if (current.size() > 1 && current.back() != '/')
++        current += '/';
++      current += part;
++      if (::mkdir(current.c_str(), 0755) != 0 && errno != EEXIST)
++        return false;
++    }
++    if (end == std::string::npos)
++      break;
++    start = end + 1;
++  }
++  return true;
++}
++#endif
++
+ void HostPreferences::setup_() {
+   if (this->setup_complete_)
+     return;
+@@ -27,12 +55,19 @@ void HostPreferences::setup_() {
+     }
+     pref_path = std::string(home) + "/.esphome/prefs";
+   }
++#if defined(__arm__) && __SIZEOF_LONG__ == 4
++  if (!create_directories_legacy(pref_path)) {
++    ESP_LOGE(TAG, "Failed to create preferences directory: %s (%s)", pref_path.c_str(), strerror(errno));
++    return;
++  }
++#else
+   std::error_code ec;
+   fs::create_directories(pref_path, ec);
+   if (ec) {
+     ESP_LOGE(TAG, "Failed to create preferences directory: %s (%s)", pref_path.c_str(), ec.message().c_str());
+     return;
+   }
++#endif
+   this->filename_ = pref_path;
+   this->filename_.append("/");
+   this->filename_.append(App.get_name());
+diff --git a/esphome/components/logger/logger_host.cpp b/esphome/components/logger/logger_host.cpp
+index 0badaa1..c038839 100644
+--- a/esphome/components/logger/logger_host.cpp
++++ b/esphome/components/logger/logger_host.cpp
+@@ -8,11 +8,21 @@ void HOT Logger::write_msg_(const char *msg, uint16_t len) {
+   static constexpr size_t HEADROOM = 128;      // Extra space for ANSI codes, newline, etc.
+   char buffer[TIMESTAMP_LEN + ESPHOME_LOGGER_TX_BUFFER_SIZE + HEADROOM];
+ 
++#if defined(__arm__) && __SIZEOF_LONG__ == 4
++  // The TPP06 Linux 4.4 kernel predates the time64 syscalls used by current
++  // uClibc. Display monotonic uptime without passing a time64 struct to it.
++  const uint32_t seconds = millis() / 1000;
++  const uint32_t hours = (seconds / 3600) % 24;
++  const uint32_t minutes = (seconds / 60) % 60;
++  const uint32_t secs = seconds % 60;
++  size_t pos = static_cast<size_t>(snprintf(buffer, TIMESTAMP_LEN + 1, "[%02u:%02u:%02u]", hours, minutes, secs));
++#else
+   time_t rawtime;
+   ::time(&rawtime);
+   struct tm timeinfo;
+   localtime_r(&rawtime, &timeinfo);  // Thread-safe version
+   size_t pos = strftime(buffer, TIMESTAMP_LEN + 1, "[%H:%M:%S]", &timeinfo);
++#endif
+ 
+   // Copy message (with newline already included by caller)
+   size_t copy_len = std::min(static_cast<size_t>(len), sizeof(buffer) - pos);
+diff --git a/esphome/core/wake/wake_host.cpp b/esphome/core/wake/wake_host.cpp
+index e2353db..67f906c 100644
+--- a/esphome/core/wake/wake_host.cpp
++++ b/esphome/core/wake/wake_host.cpp
+@@ -12,6 +12,7 @@
+ #include <netinet/in.h>
+ #include <sys/select.h>
+ #include <sys/socket.h>
++#include <sys/syscall.h>
+ #include <unistd.h>
+ #include <vector>
+ 
+@@ -107,13 +108,21 @@ void wakeable_delay(uint32_t ms) {
+     // Copy base fd_set before each select.
+     g_read_fds = s_base_read_fds;
+ 
+-    // Convert ms to timeval.
++    // New 32-bit uClibc toolchains expose time64 select(), but Linux 4.4 on
++    // the TPP06 only implements the legacy ARM _newselect syscall. Keep the
++    // kernel ABI local to this call so normal host builds still use libc.
++#if defined(__arm__) && __SIZEOF_LONG__ == 4
++    struct KernelTimeval32 {
++      int32_t tv_sec;
++      int32_t tv_usec;
++    } tv{static_cast<int32_t>(ms / 1000), static_cast<int32_t>((ms % 1000) * 1000)};
++    int ret = static_cast<int>(::syscall(SYS__newselect, s_max_fd + 1, &g_read_fds, nullptr, nullptr, &tv));
++#else
+     struct timeval tv;
+     tv.tv_sec = ms / 1000;
+     tv.tv_usec = (ms - tv.tv_sec * 1000) * 1000;
+-
+-    // Call select with timeout.
+     int ret = ::select(s_max_fd + 1, &g_read_fds, nullptr, nullptr, &tv);
++#endif
+ 
+     // Process select() result:
+     // ret > 0: socket(s) have data ready - normal and expected
+diff --git a/tpp06/lvgl.yaml b/tpp06/lvgl.yaml
+index ffb9684..997584a 100644
+--- a/tpp06/lvgl.yaml
++++ b/tpp06/lvgl.yaml
+@@ -6,6 +6,16 @@ esphome:
+     - -march=armv5te
+     - -marm
+     - -mfloat-abi=soft
++    - -pthread
++    - -fno-threadsafe-statics
++    # Static uClibc exposes weak pthread stubs from libc. Force the real
++    # libpthread objects into the executable for std::mutex and host timing.
++    - -Wl,-u,pthread_mutex_lock
++    - -Wl,-u,pthread_mutex_init
++    - -Wl,-u,pthread_mutex_trylock
++    - -Wl,-u,pthread_mutex_unlock
++    - -Wl,-u,pthread_mutex_destroy
++    - -Wl,-u,pthread_self
+ 
+ host:
+   mac_address: "02:00:00:00:06:01"
