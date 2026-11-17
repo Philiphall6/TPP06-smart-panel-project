@@ -62,6 +62,19 @@ then connect to ADB on port `5555` with the Phase 0 root credentials.
 released as experimental. The payload replaces `/data/app` and
 `/data/customize`; do not use it on an unknown revision.
 
+## Phase 5 — Local openHASP interface
+
+Build and run openHASP directly on the panel's Anyka Linux system, providing a
+local 320×480 interface that can later exchange controls and state with Home
+Assistant over MQTT.
+
+- [Phase 5 guide: local openHASP port](docs/en/05-openhasp-local.md)
+- [Patch for the upstream openHASP repository](openhasp/openhasp-tpp06.patch)
+
+**Status:** the ARMv5/uClibc binary starts on the real panel; framebuffer,
+BGR565 conversion, portrait orientation and Goodix detection are validated.
+Boot-time installation and complete physical touch testing remain pending.
+
 ## References
 
 - [Hardware to identify — French](docs/materiel.md)

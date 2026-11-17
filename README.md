@@ -37,8 +37,9 @@ L'outil masque l'`AUTHKEY` et n'affiche jamais les éventuels identifiants Wi-Fi
 | **00b · Candidats communautaires** | Essayer la petite liste connue seulement si la récupération réseau n'est pas disponible. | ✅ Documenté |
 | **01 · Matériel & NAND** | Créer une sauvegarde vérifiée si les méthodes sans démontage échouent ou si une analyse matérielle est nécessaire. | ✅ Terminé |
 | **02 · ADB/USB ou UART** | Utiliser le mot de passe récupéré ; conserver l'UART comme solution de secours. | ✅ Validé |
-| **03 · Local & ESPHome** | Conserver l’Anyka, modifier le logiciel pour retirer Tuya et fournir un accès local à ESPHome. | 🔜 Préparé |
+| **03 · Local & ESPHome** | Conserver l’Anyka et préparer le remplacement des services Tuya. | 🧪 En cours |
 | **04 · ADB par Wi-Fi** | Installer par le port `8090` un accès ADB persistant sur `5555`, sans ouvrir le panneau. | 🧪 Préversion expérimentale |
+| **05 · openHASP local** | Exécuter une interface locale 320×480 sur l’écran, avec tactile et MQTT/Home Assistant. | 🧪 Premier portage validé |
 
 ## Commencer par l’étape 0
 
@@ -72,6 +73,18 @@ Une fois cet accès complet validé, l’étape 3 commencera :
 
 [Voir le plan de l’étape 3 en français →](docs/fr/03-suppression-tuya-esphome.md)
 [See the Phase 3 plan in English →](docs/en/03-remove-tuya-esphome.md)
+
+## Dernière étape : interface locale openHASP
+
+Un premier portage openHASP fonctionne maintenant directement sur l'Anyka du
+TPP06. Le binaire ARMv5/uClibc démarre, utilise `/dev/fb0` en 320×480, corrige
+l'ordre BGR565 du panneau et détecte le tactile Goodix sur
+`/dev/input/event1`. Les essais restent volontaires et temporaires dans `/tmp` :
+Tuya n'est pas encore remplacé au démarrage.
+
+- [Guide français de compilation et d'essai](docs/fr/05-openhasp-local.md)
+- [English build and test guide](docs/en/05-openhasp-local.md)
+- [Correctif reproductible pour openHASP](openhasp/openhasp-tpp06.patch)
 
 ## Ce que contient le dépôt
 

@@ -63,6 +63,19 @@ de passe calculé à l'étape 0.
 préversion expérimentale. Le paquet remplace `/data/app` et `/data/customize`
 et ne doit pas être utilisé sur une variante inconnue.
 
+## Étape 5 — Interface locale openHASP
+
+Compiler et exécuter openHASP directement sur le Linux Anyka du panneau afin
+d'obtenir une interface locale 320×480 et, ensuite, de relier ses commandes à
+Home Assistant par MQTT.
+
+- [Guide étape 5 : portage openHASP local](docs/fr/05-openhasp-local.md)
+- [Correctif à appliquer au dépôt openHASP](openhasp/openhasp-tpp06.patch)
+
+**État :** binaire ARMv5/uClibc démarré sur le panneau ; framebuffer, ordre
+BGR565, orientation portrait et détection Goodix validés. L'installation au
+démarrage et la validation physique complète du tactile restent à terminer.
+
 ## Références
 
 - [Matériel à identifier](docs/materiel.md)
