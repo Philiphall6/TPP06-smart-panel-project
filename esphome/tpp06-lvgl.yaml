@@ -2,9 +2,15 @@ substitutions:
   device_name: "tpp06-lvgl"
   friendly_name: "TPP06 ESPHome LVGL"
   device_mac: "02:00:00:00:06:01"
-  cover_entity: "cover.salle_de_bain"
-  cave_light_entity: "light.milight_cave"
-  bar_light_entity: "light.mosquitto_mqtt_broker_cave_bar"
+  cover_entity: "cover.tpp06_example_cover"
+  cave_light_entity: "light.tpp06_example_light_1"
+  bar_light_entity: "light.tpp06_example_light_2"
+  cover_page_title: "VOLET"
+  light_1_page_title: "ECLAIRAGE 1"
+  light_2_page_title: "ECLAIRAGE 2"
+  cover_nav_label: "VOLET"
+  light_1_nav_label: "LUM. 1"
+  light_2_nav_label: "LUM. 2"
   framebuffer_device: "/dev/fb0"
   touchscreen_device: "/dev/input/event1"
 
@@ -147,7 +153,7 @@ lvgl:
         - label:
             align: top_mid
             y: 18
-            text: "SALLE DE BAIN"
+            text: "${cover_page_title}"
             text_color: 0xFFFFFF
         - label:
             id: ha_status_label
@@ -226,7 +232,7 @@ lvgl:
             height: 52
             bg_color: 0x276B9E
             widgets:
-              - label: {align: center, text: "SDB"}
+              - label: {align: center, text: "${cover_nav_label}"}
         - button:
             x: 112
             y: 415
@@ -234,7 +240,7 @@ lvgl:
             height: 52
             bg_color: 0x263645
             widgets:
-              - label: {align: center, text: "CAVE"}
+              - label: {align: center, text: "${light_1_nav_label}"}
             on_click:
               - lvgl.page.show: page_cave
         - button:
@@ -244,7 +250,7 @@ lvgl:
             height: 52
             bg_color: 0x263645
             widgets:
-              - label: {align: center, text: "BAR"}
+              - label: {align: center, text: "${light_2_nav_label}"}
             on_click:
               - lvgl.page.show: page_bar
 
@@ -254,7 +260,7 @@ lvgl:
         - label:
             align: top_mid
             y: 18
-            text: "ECLAIRAGE CAVE"
+            text: "${light_1_page_title}"
             text_color: 0xFFFFFF
         - label:
             id: cave_state_label
@@ -360,7 +366,7 @@ lvgl:
             height: 52
             bg_color: 0x263645
             widgets:
-              - label: {align: center, text: "SDB"}
+              - label: {align: center, text: "${cover_nav_label}"}
             on_click:
               - lvgl.page.show: page_sdb
         - button:
@@ -370,7 +376,7 @@ lvgl:
             height: 52
             bg_color: 0x276B9E
             widgets:
-              - label: {align: center, text: "CAVE"}
+              - label: {align: center, text: "${light_1_nav_label}"}
         - button:
             x: 214
             y: 415
@@ -378,7 +384,7 @@ lvgl:
             height: 52
             bg_color: 0x263645
             widgets:
-              - label: {align: center, text: "BAR"}
+              - label: {align: center, text: "${light_2_nav_label}"}
             on_click:
               - lvgl.page.show: page_bar
 
@@ -388,7 +394,7 @@ lvgl:
         - label:
             align: top_mid
             y: 18
-            text: "ECLAIRAGE BAR CAVE"
+            text: "${light_2_page_title}"
             text_color: 0xFFFFFF
         - label:
             id: bar_state_label
@@ -494,7 +500,7 @@ lvgl:
             height: 52
             bg_color: 0x263645
             widgets:
-              - label: {align: center, text: "SDB"}
+              - label: {align: center, text: "${cover_nav_label}"}
             on_click:
               - lvgl.page.show: page_sdb
         - button:
@@ -504,7 +510,7 @@ lvgl:
             height: 52
             bg_color: 0x263645
             widgets:
-              - label: {align: center, text: "CAVE"}
+              - label: {align: center, text: "${light_1_nav_label}"}
             on_click:
               - lvgl.page.show: page_cave
         - button:
@@ -514,4 +520,4 @@ lvgl:
             height: 52
             bg_color: 0x276B9E
             widgets:
-              - label: {align: center, text: "BAR"}
+              - label: {align: center, text: "${light_2_nav_label}"}
