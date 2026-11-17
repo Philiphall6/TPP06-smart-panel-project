@@ -241,16 +241,21 @@ def _configure_zig_cross_compiler() -> None:
         if not zig.is_file():
             raise EsphomeError(f"TPP06 Zig compiler missing after extraction: {zig}")
 
-        ar_wrapper = cache / "zig-ar"
-        wrapper_contents = f'#!/bin/sh\nexec "{zig}" ar "$@"\n'
-        if not ar_wrapper.is_file() or ar_wrapper.read_text() != wrapper_contents:
-            ar_wrapper.write_text(wrapper_contents)
-            ar_wrapper.chmod(0o755)
+        target = "-target arm-linux-musleabi -mcpu=arm926ej_s -DTPP06_ZIG_TOOLCHAIN"
+        wrappers = {
+            "zig-cc": f'#!/bin/sh\nexec "{zig}" cc {target} "$@"\n',
+            "zig-cxx": f'#!/bin/sh\nexec "{zig}" c++ {target} "$@"\n',
+            "zig-ar": f'#!/bin/sh\nexec "{zig}" ar "$@"\n',
+        }
+        for name, contents in wrappers.items():
+            wrapper = cache / name
+            if not wrapper.is_file() or wrapper.read_text() != contents:
+                wrapper.write_text(contents)
+                wrapper.chmod(0o755)
 
-    target = "-target arm-linux-musleabi -mcpu=arm926ej_s -DTPP06_ZIG_TOOLCHAIN"
-    os.environ["CC"] = f"{zig} cc {target}"
-    os.environ["CXX"] = f"{zig} c++ {target}"
-    os.environ["AR"] = str(ar_wrapper)
+    os.environ["CC"] = str(cache / "zig-cc")
+    os.environ["CXX"] = str(cache / "zig-cxx")
+    os.environ["AR"] = str(cache / "zig-ar")
     # Zig has no objdump/readelf subcommands; they are not needed to compile.
     os.environ.pop("OBJDUMP", None)
     os.environ.pop("READELF", None)
