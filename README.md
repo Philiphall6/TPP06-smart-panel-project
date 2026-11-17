@@ -29,15 +29,16 @@ L'outil masque l'`AUTHKEY` et n'affiche jamais les éventuels identifiants Wi-Fi
 *Visuels de référence des deux panneaux utilisés dans le projet.*
 ---
 
-## Le projet en quatre étapes
+## Le projet en cinq étapes
 
 | Étape | Objectif | État |
 |:--|:--|:--|
 | **00 · Accès par le réseau** | Lire l'`AUTHKEY` sur le port local `8090`, puis calculer le mot de passe propre au panneau sans démontage. | ✅ Vérifié |
 | **00b · Candidats communautaires** | Essayer la petite liste connue seulement si la récupération réseau n'est pas disponible. | ✅ Documenté |
 | **01 · Matériel & NAND** | Créer une sauvegarde vérifiée si les méthodes sans démontage échouent ou si une analyse matérielle est nécessaire. | ✅ Terminé |
-| **02 · ADB/USB ou UART** | Utiliser en priorité ADB par USB avec le mot de passe récupéré ; conserver l'UART comme solution de secours. | 🟡 En cours |
+| **02 · ADB/USB ou UART** | Utiliser le mot de passe récupéré ; conserver l'UART comme solution de secours. | ✅ Validé |
 | **03 · Local & ESPHome** | Conserver l’Anyka, modifier le logiciel pour retirer Tuya et fournir un accès local à ESPHome. | 🔜 Préparé |
+| **04 · ADB par Wi-Fi** | Installer par le port `8090` un accès ADB persistant sur `5555`, sans ouvrir le panneau. | 🧪 Préversion expérimentale |
 
 ## Commencer par l’étape 0
 
@@ -45,11 +46,21 @@ Utiliser d'abord le [lecteur réseau AUTHKEY](docs/fr/00-acces-reseau-authkey.md
 
 Si cette méthode n'est pas disponible, essayer ensuite la [liste de mots de passe communautaires](docs/fr/00-mots-de-passe-a-essayer.md), puis envisager l'UART ou la sauvegarde NAND seulement en dernier recours.
 
-L'ordre pratique devient donc : **réseau → ADB par USB → candidats communautaires → UART/NAND en dernier recours**.
+L'ordre pratique devient donc : **récupération réseau → ADB par Wi-Fi → ADB
+par USB → candidats communautaires → UART/NAND en dernier recours**.
 
-## Prochaine étape : accès système par ADB
+## Nouveau : ADB par Wi-Fi sans démontage
 
-Le mot de passe propre au panneau étant désormais récupéré sans démontage, la prochaine session doit privilégier ADB par USB. L'UART reste une solution de diagnostic et de secours, mais n'est plus nécessaire pour obtenir le mot de passe.
+La première préversion permet maintenant d'installer ADB sur le réseau par le
+service local `8090`, sans UART. Elle est limitée au firmware TPP06/AK3761E
+testé et remplace `/data/app` ainsi que `/data/customize`. Son correctif RSA
+accepte tout client ADB du LAN : le shell garde son identifiant et son mot de
+passe, mais le port `5555` doit rester isolé et ne jamais être publié sur
+Internet.
+
+- [Tutoriel complet en français](docs/fr/04-adb-wifi-sans-uart.md)
+- [English installation guide](docs/en/04-adb-over-wifi-without-uart.md)
+- [Outil d'envoi du paquet](tools/tpp06_ota_uploader.py)
 
 Une fois cet accès complet validé, l’étape 3 commencera :
 
@@ -66,6 +77,7 @@ Une fois cet accès complet validé, l’étape 3 commencera :
 
 - guides matériels, brochages et retours d’expérience ;
 - outil réseau en lecture seule pour récupérer l'accès propre au panneau ;
+- installateur expérimental et retour arrière pour ADB par Wi-Fi ;
 - photos de la lecture de la NAND et du remontage ;
 - procédure UART réversible ;
 - feuille de route pour une intégration ESPHome locale.

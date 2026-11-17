@@ -50,6 +50,19 @@ Conserver le processeur Anyka et modifier son logiciel pour supprimer Tuya, remp
 
 **État :** à réaliser après l’accès UART et l’inventaire du logiciel existant.
 
+## Étape 4 — ADB par Wi-Fi sans UART
+
+Installer par le service de production local `8090` un overlay persistant qui
+lance ADB sur le port `5555`, puis se connecter avec le compte `root` et le mot
+de passe calculé à l'étape 0.
+
+- [Tutoriel d'installation, sécurité et retour arrière](docs/fr/04-adb-wifi-sans-uart.md)
+- [Outil d'envoi du paquet](tools/tpp06_ota_uploader.py)
+
+**État :** vérifié sur un TPP06/AK3761E avec noyau `4.4.192V2.4` ; publié en
+préversion expérimentale. Le paquet remplace `/data/app` et `/data/customize`
+et ne doit pas être utilisé sur une variante inconnue.
+
 ## Références
 
 - [Matériel à identifier](docs/materiel.md)

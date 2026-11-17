@@ -50,6 +50,18 @@ Keep the Anyka processor and modify its software to remove Tuya, replace its clo
 
 **Status:** to be completed after UART access and an inventory of the existing software.
 
+## Phase 4 — ADB over Wi-Fi without UART
+
+Install a persistent overlay through the local TCP `8090` production service,
+then connect to ADB on port `5555` with the Phase 0 root credentials.
+
+- [Installation, security, and rollback guide](docs/en/04-adb-over-wifi-without-uart.md)
+- [Payload uploader](tools/tpp06_ota_uploader.py)
+
+**Status:** validated on one TPP06/AK3761E running kernel `4.4.192V2.4` and
+released as experimental. The payload replaces `/data/app` and
+`/data/customize`; do not use it on an unknown revision.
+
 ## References
 
 - [Hardware to identify — French](docs/materiel.md)
