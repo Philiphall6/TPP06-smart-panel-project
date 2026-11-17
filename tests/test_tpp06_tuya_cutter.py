@@ -102,12 +102,19 @@ if sys.argv[1:2] == ["connect"]:
     print("connected")
 elif sys.argv[1:] == ["devices", "-l"]:
     print("List of devices attached")
-    print("192.0.2.10:5555\\tdevice product:test")
+    print("192.0.2.10:5555      device product:test")
 elif sys.argv[-1:] == ["shell"]:
-    data = sys.stdin.read()
+    print("Tuya login: ", end="", flush=True)
+    assert sys.stdin.readline().strip() == "root"
+    print("Password: ", end="", flush=True)
+    assert sys.stdin.readline().strip() == "masked"
+    print("[root@Tuya ~]$ ", end="", flush=True)
+    data = ""
+    while "tpp06_rc=$?" not in data or "exit" not in data:
+        data += sys.stdin.readline()
     marker = re.search(r"echo (__TPP06_CUTTER_[0-9a-f]+__)\\$tpp06_rc", data)
     print("command output")
-    print(marker.group(1) + "0")
+    print(marker.group(1) + "0", flush=True)
 else:
     raise SystemExit(1)
 """,
@@ -119,6 +126,14 @@ else:
         result = session.run_root("echo test")
         self.assertEqual(result.returncode, 0)
         self.assertIn("command output", result.stdout)
+
+    def test_md5_fallback_checksum(self) -> None:
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        payload = Path(directory.name) / "payload"
+        payload.write_bytes(b"TPP06")
+        remote = ("md5", hashlib.md5(b"TPP06").hexdigest())
+        self.assertTrue(PanelSession._matches_local_checksum(payload, remote))
 
 
 if __name__ == "__main__":

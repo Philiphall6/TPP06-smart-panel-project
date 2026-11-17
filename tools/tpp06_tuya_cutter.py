@@ -16,6 +16,7 @@ import os
 from pathlib import Path, PurePosixPath
 import re
 import secrets
+import select
 import shlex
 import socket
 import subprocess
@@ -47,6 +48,14 @@ def sha256_file(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as source:
         for chunk in iter(lambda: source.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def md5_file(path: Path) -> str:
+    digest = hashlib.md5()
+    with path.open("rb") as source:
+        while chunk := source.read(1024 * 1024):
             digest.update(chunk)
     return digest.hexdigest()
 
@@ -137,8 +146,8 @@ class PanelSession:
         devices = self._adb("devices", "-l").stdout.decode("utf-8", "replace")
         state = None
         for line in devices.splitlines():
-            if line.startswith(self.serial + "\t"):
-                fields = line.split()
+            fields = line.split()
+            if fields and fields[0] == self.serial:
                 state = fields[1] if len(fields) > 1 else None
         if state != "device":
             raise CutterError(
@@ -149,8 +158,6 @@ class PanelSession:
     def run_root(self, command: str, timeout: float = 30, check: bool = True) -> CommandResult:
         marker = f"__TPP06_CUTTER_{secrets.token_hex(8)}__"
         script = (
-            "root\n"
-            f"{self.password}\n"
             "export LC_ALL=C\n"
             f"{command}\n"
             "tpp06_rc=$?\n"
@@ -166,13 +173,49 @@ class PanelSession:
             )
         except FileNotFoundError as error:
             raise CutterError("ADB est introuvable dans PATH.") from error
+        output = bytearray()
+        deadline = time.monotonic() + timeout
+
+        def read_until(pattern: bytes) -> bool:
+            expression = re.compile(pattern, re.IGNORECASE)
+            while time.monotonic() < deadline:
+                remaining = max(0.0, deadline - time.monotonic())
+                readable, _, _ = select.select([process.stdout], [], [], remaining)
+                if not readable:
+                    break
+                chunk = os.read(process.stdout.fileno(), 4096)
+                if not chunk:
+                    break
+                output.extend(chunk)
+                if expression.search(output):
+                    return True
+            return False
+
         try:
-            output, _ = process.communicate(script, timeout=timeout)
-        except subprocess.TimeoutExpired as error:
-            process.kill()
+            # The TPP06 login program discards credentials sent before each
+            # prompt, so credentials must be synchronised with the prompts.
+            if not read_until(rb"login:\s*$"):
+                raise CutterError("L'invite login du panneau ne répond pas.")
+            process.stdin.write(b"root\n")
+            process.stdin.flush()
+            if not read_until(rb"password:\s*$"):
+                raise CutterError("L'invite du mot de passe root ne répond pas.")
+            process.stdin.write(self.password.encode() + b"\n")
+            process.stdin.flush()
+            if not read_until(rb"[#$]\s*$"):
+                current = output.decode("utf-8", "replace").replace("\r", "")
+                if "Login incorrect" in current:
+                    raise CutterError("Le panneau a refusé le mot de passe root calculé.")
+                raise CutterError("Le shell root du panneau ne répond pas après connexion.")
+            process.stdin.write(script)
+            process.stdin.flush()
+            if not read_until(re.escape(marker.encode()) + rb"\d+"):
+                raise CutterError("Impossible de confirmer l'exécution de la commande root.")
+        finally:
+            if process.poll() is None:
+                process.kill()
             process.communicate()
-            raise CutterError("Le shell root du panneau ne répond pas.") from error
-        text = output.decode("utf-8", "replace").replace("\r", "")
+        text = bytes(output).decode("utf-8", "replace").replace("\r", "")
         match = re.search(re.escape(marker) + r"(\d+)", text)
         if not match:
             if "Login incorrect" in text:
@@ -192,12 +235,35 @@ class PanelSession:
         matches = re.findall(r"\b[0-9a-f]{64}\b", result.stdout)
         return matches[-1] if matches else None
 
+    def remote_checksum(self, remote_path: str) -> tuple[str, str] | None:
+        quoted = shlex.quote(remote_path)
+        result = self.run_root(
+            f"sha256sum {quoted} 2>/dev/null || md5sum {quoted} 2>/dev/null",
+            check=False,
+        )
+        sha256_matches = re.findall(r"\b[0-9a-f]{64}\b", result.stdout)
+        if sha256_matches:
+            return "sha256", sha256_matches[-1]
+        md5_matches = re.findall(r"\b[0-9a-f]{32}\b", result.stdout)
+        if md5_matches:
+            return "md5", md5_matches[-1]
+        return None
+
+    @staticmethod
+    def _matches_local_checksum(local_path: Path, remote: tuple[str, str] | None) -> bool:
+        if remote is None:
+            return False
+        algorithm, expected = remote
+        actual = sha256_file(local_path) if algorithm == "sha256" else md5_file(local_path)
+        return actual == expected
+
     def upload(self, local_path: Path, remote_path: str, port: int = DEFAULT_TRANSFER_PORT) -> None:
-        expected = sha256_file(local_path)
         pushed = self._adb(
             "-s", self.serial, "push", str(local_path), remote_path, timeout=60
         )
-        if pushed.returncode == 0 and self.remote_sha256(remote_path) == expected:
+        if pushed.returncode == 0 and self._matches_local_checksum(
+            local_path, self.remote_checksum(remote_path)
+        ):
             return
 
         quoted = shlex.quote(remote_path)
@@ -221,20 +287,24 @@ class PanelSession:
             raise CutterError(f"Transfert réseau vers le panneau impossible : {last_error}")
 
         for _ in range(20):
-            if self.remote_sha256(remote_path) == expected:
+            if self._matches_local_checksum(local_path, self.remote_checksum(remote_path)):
                 return
             time.sleep(0.25)
-        raise CutterError("La somme SHA-256 du fichier transféré ne correspond pas.")
+        raise CutterError("La somme de contrôle du fichier transféré ne correspond pas.")
 
     def download(self, remote_path: str, local_path: Path, port: int = DEFAULT_TRANSFER_PORT) -> None:
-        expected = self.remote_sha256(remote_path)
+        expected = self.remote_checksum(remote_path)
         if expected is None:
             raise CutterError(f"Fichier distant absent : {remote_path}")
         local_path.parent.mkdir(parents=True, exist_ok=True)
         pulled = self._adb(
             "-s", self.serial, "pull", remote_path, str(local_path), timeout=120
         )
-        if pulled.returncode != 0 or not local_path.is_file() or sha256_file(local_path) != expected:
+        if (
+            pulled.returncode != 0
+            or not local_path.is_file()
+            or not self._matches_local_checksum(local_path, expected)
+        ):
             local_path.unlink(missing_ok=True)
             self.run_root(
                 f"(nc -l -p {port} < {shlex.quote(remote_path)}) "
@@ -252,9 +322,9 @@ class PanelSession:
                     time.sleep(0.25)
             else:
                 raise CutterError("Téléchargement réseau de la sauvegarde impossible.")
-        if sha256_file(local_path) != expected:
+        if not self._matches_local_checksum(local_path, expected):
             local_path.unlink(missing_ok=True)
-            raise CutterError("La sauvegarde reçue est corrompue (SHA-256 différent).")
+            raise CutterError("La sauvegarde reçue est corrompue (somme de contrôle différente).")
         os.chmod(local_path, 0o600)
 
 
@@ -355,9 +425,8 @@ class TuyaCutter:
         session = self.connected_session()
         remote = "/tmp/tpp06-cutter-restore.tar.gz"
         session.upload(archive, remote)
-        expected = sha256_file(archive)
-        if session.remote_sha256(remote) != expected:
-            raise CutterError("La sauvegarde distante n'a pas le bon SHA-256.")
+        if not session._matches_local_checksum(archive, session.remote_checksum(remote)):
+            raise CutterError("La sauvegarde distante n'a pas la bonne somme de contrôle.")
         session.run_root(
             f"rm -rf {REMOTE_BASE}; "
             "rm -f /data/etc/init.d/S99tuya-app; "
