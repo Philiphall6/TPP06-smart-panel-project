@@ -43,6 +43,31 @@ produced a roughly 2.8 MiB static binary with SHA-256:
 9d2d42251db95ff8564c90cb2d978cf398a214fecc04ed302f6717d78e726802
 ```
 
+## Portable Device Builder configuration
+
+The compatibility layer is provided as ESPHome `external_components`; patching
+ESPHome itself is no longer required. Import only
+[`esphome/tpp06-device-builder.yaml`](../../esphome/tpp06-device-builder.yaml)
+into the official Device Builder. Installation-specific values are collected
+in the top-level `substitutions`: device name, virtual MAC address, and the
+three Home Assistant entity IDs. The Linux drivers and LVGL interface are
+fetched from this repository.
+
+An ARMv5 cross compiler is still required. The portable remote-build helper
+sets up a reproducible builder and pairs it with Home Assistant:
+
+```bash
+chmod +x tools/tpp06_remote_builder.sh
+tools/tpp06_remote_builder.sh install \
+  armv5-eabi--uclibc--stable-2026.08-1.tar.xz
+tools/tpp06_remote_builder.sh run HOME_ASSISTANT_IP 6057
+```
+
+The helper verifies the Bootlin archive checksum, creates an isolated Python
+environment, and installs pinned ESPHome and Device Builder versions. In Home
+Assistant, open **Device Builder → Settings → Send builds**, pair the server,
+and verify the fingerprint on both sides.
+
 The recommended first test uses Tuya Cutter, which pauses Tuya, selects a
 writable temporary preferences directory, and retains a safe rollback path:
 

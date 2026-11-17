@@ -90,13 +90,16 @@ Tuya n'est pas encore remplacé au démarrage.
 
 ## Alternative ESPHome native avec LVGL
 
-ESPHome `host` compile maintenant en ARMv5/uClibc avec deux nouveaux pilotes
-Linux pour le framebuffer et le tactile du TPP06. Une mire LVGL 320×480 avec
-bouton tactile est prête pour l'essai final temporaire après redémarrage du
-panneau. Aucun démarrage automatique n'est encore installé.
+ESPHome officiel 2026.10.2 compile maintenant en ARMv5/uClibc grâce à une
+couche de composants externes pour le framebuffer et le tactile. L'interface
+LVGL, le tactile et l'API Home Assistant sont validés sur le TPP06. Le dépôt
+GitHub sert de source portable à Device Builder ; chaque maison ne conserve
+localement que ses substitutions. Aucun démarrage automatique n'est installé.
 
 - [Guide ESPHome + LVGL natif](docs/fr/06-esphome-lvgl-natif.md)
 - [Native ESPHome + LVGL guide](docs/en/06-native-esphome-lvgl.md)
+- [YAML portable Device Builder](esphome/tpp06-device-builder.yaml)
+- [Serveur de compilation ARMv5 portable](tools/tpp06_remote_builder.sh)
 - [Correctif reproductible ESPHome](esphome-lvgl/esphome-tpp06-lvgl.patch)
 
 ## Installateur réversible Tuya Cutter

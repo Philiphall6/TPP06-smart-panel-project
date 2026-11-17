@@ -10,6 +10,7 @@ captures/
 firmware/
 tpp06-backups/
 __pycache__/
+.esphome/
 
 # Secrets et clés
 secrets/

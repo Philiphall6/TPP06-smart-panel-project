@@ -1,0 +1,19 @@
+# Portable entry point for the official ESPHome Device Builder.
+# Only edit the substitutions below. The hardware support and LVGL interface
+# are downloaded from the project repository at validation/build time.
+substitutions:
+  device_name: "tpp06-lvgl"
+  friendly_name: "TPP06 ESPHome LVGL"
+  device_mac: "02:00:00:00:06:01"
+  cover_entity: "cover.salle_de_bain"
+  cave_light_entity: "light.milight_cave"
+  bar_light_entity: "light.mosquitto_mqtt_broker_cave_bar"
+  framebuffer_device: "/dev/fb0"
+  touchscreen_device: "/dev/input/event1"
+
+packages:
+  tpp06:
+    url: https://github.com/Philiphall6/TPP06-smart-panel-project
+    ref: main
+    file: esphome/tpp06-lvgl.yaml
+    refresh: 5min

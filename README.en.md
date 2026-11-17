@@ -81,11 +81,13 @@ Build ESPHome's `host` platform directly for the ARMv5 Anyka and use LVGL with
 native Linux components for `/dev/fb0` and `/dev/input/event1`.
 
 - [Phase 6 guide: native ESPHome + LVGL](docs/en/06-native-esphome-lvgl.md)
+- [Portable Device Builder YAML](esphome/tpp06-device-builder.yaml)
+- [Portable ARMv5 remote builder](tools/tpp06_remote_builder.sh)
 - [Patch for the upstream ESPHome repository](esphome-lvgl/esphome-tpp06-lvgl.patch)
 
-**Status:** configuration validated and a static ARMv5/uClibc binary compiled.
-The first graphics and touch test on the panel remains pending after its next
-reboot; no persistent installation has been made.
+**Status:** official ESPHome 2026.10.2, framebuffer, touch, Home Assistant API,
+and the LVGL interface have been validated on the panel. The portable YAML can
+be edited in Device Builder; no persistent installation has been made.
 
 ## Phase 7 — Reversible Tuya Cutter installer
 

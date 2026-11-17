@@ -82,11 +82,13 @@ Compiler ESPHome `host` directement pour l'Anyka ARMv5 et utiliser LVGL avec
 des composants Linux natifs pour `/dev/fb0` et `/dev/input/event1`.
 
 - [Guide étape 6 : ESPHome + LVGL natif](docs/fr/06-esphome-lvgl-natif.md)
+- [YAML portable pour Device Builder](esphome/tpp06-device-builder.yaml)
+- [Serveur de compilation ARMv5 portable](tools/tpp06_remote_builder.sh)
 - [Correctif à appliquer au dépôt ESPHome](esphome-lvgl/esphome-tpp06-lvgl.patch)
 
-**État :** configuration validée et binaire ARMv5/uClibc statique compilé. Le
-premier essai graphique et tactile sur le panneau reste à effectuer après son
-prochain redémarrage ; aucune installation permanente n'est faite.
+**État :** ESPHome officiel 2026.10.2, framebuffer, tactile, API Home Assistant
+et interface LVGL validés sur le panneau. Le YAML portable est éditable dans
+Device Builder ; aucune installation permanente n'est faite.
 
 ## Étape 7 — Installateur réversible Tuya Cutter
 

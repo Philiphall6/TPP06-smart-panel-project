@@ -1,6 +1,19 @@
+substitutions:
+  device_name: "tpp06-lvgl"
+  friendly_name: "TPP06 ESPHome LVGL"
+  device_mac: "02:00:00:00:06:01"
+  cover_entity: "cover.salle_de_bain"
+  cave_light_entity: "light.milight_cave"
+  bar_light_entity: "light.mosquitto_mqtt_broker_cave_bar"
+  framebuffer_device: "/dev/fb0"
+  touchscreen_device: "/dev/input/event1"
+
 esphome:
-  name: tpp06-lvgl
-  friendly_name: TPP06 ESPHome LVGL
+  name: "${device_name}"
+  friendly_name: "${friendly_name}"
+  project:
+    name: philiphall6.tpp06
+    version: "0.1.0"
   build_flags:
     - -static
     - -march=armv5te
@@ -29,7 +42,7 @@ external_components:
       - tpp06_compat
 
 host:
-  mac_address: "02:00:00:00:06:01"
+  mac_address: "${device_mac}"
 
 tpp06_compat:
 
@@ -54,10 +67,14 @@ api:
               text: "HOME ASSISTANT HORS LIGNE"
               text_color: 0xFFB347
 
+dashboard_import:
+  package_import_url: github://Philiphall6/TPP06-smart-panel-project/esphome/tpp06-device-builder.yaml@main
+  import_full_config: false
+
 text_sensor:
   - platform: homeassistant
     id: ha_cover_sdb_state
-    entity_id: cover.salle_de_bain
+    entity_id: "${cover_entity}"
     internal: true
     on_value:
       - lvgl.label.update:
@@ -71,7 +88,7 @@ text_sensor:
 
   - platform: homeassistant
     id: ha_cave_state
-    entity_id: light.milight_cave
+    entity_id: "${cave_light_entity}"
     internal: true
     on_value:
       - lvgl.label.update:
@@ -83,7 +100,7 @@ text_sensor:
 
   - platform: homeassistant
     id: ha_cave_bar_state
-    entity_id: light.mosquitto_mqtt_broker_cave_bar
+    entity_id: "${bar_light_entity}"
     internal: true
     on_value:
       - lvgl.label.update:
@@ -96,7 +113,7 @@ text_sensor:
 display:
   - platform: fbdev
     id: tpp06_display
-    device: /dev/fb0
+    device: "${framebuffer_device}"
     dimensions:
       width: 320
       height: 480
@@ -107,7 +124,7 @@ touchscreen:
   - platform: evdev
     id: tpp06_touch
     display: tpp06_display
-    device: /dev/input/event1
+    device: "${touchscreen_device}"
     update_interval: 20ms
     calibration:
       x_min: 0
@@ -168,7 +185,7 @@ lvgl:
               - homeassistant.action:
                   action: cover.open_cover
                   data:
-                    entity_id: cover.salle_de_bain
+                    entity_id: "${cover_entity}"
         - button:
             x: 117
             y: 180
@@ -181,7 +198,7 @@ lvgl:
               - homeassistant.action:
                   action: cover.stop_cover
                   data:
-                    entity_id: cover.salle_de_bain
+                    entity_id: "${cover_entity}"
         - button:
             x: 214
             y: 180
@@ -194,7 +211,7 @@ lvgl:
               - homeassistant.action:
                   action: cover.close_cover
                   data:
-                    entity_id: cover.salle_de_bain
+                    entity_id: "${cover_entity}"
         - label:
             align: center
             y: 55
@@ -255,7 +272,7 @@ lvgl:
               - homeassistant.action:
                   action: light.toggle
                   data:
-                    entity_id: light.milight_cave
+                    entity_id: "${cave_light_entity}"
         - label:
             x: 24
             y: 185
@@ -274,7 +291,7 @@ lvgl:
               - homeassistant.action:
                   action: light.turn_on
                   data:
-                    entity_id: light.milight_cave
+                    entity_id: "${cave_light_entity}"
                   data_template:
                     brightness_pct: "{{ brightness }}"
                   variables:
@@ -293,7 +310,7 @@ lvgl:
             on_click:
               - homeassistant.action:
                   action: light.turn_on
-                  data: {entity_id: light.milight_cave, color_name: red}
+                  data: {entity_id: "${cave_light_entity}", color_name: red}
         - button:
             x: 77
             y: 295
@@ -303,7 +320,7 @@ lvgl:
             on_click:
               - homeassistant.action:
                   action: light.turn_on
-                  data: {entity_id: light.milight_cave, color_name: green}
+                  data: {entity_id: "${cave_light_entity}", color_name: green}
         - button:
             x: 134
             y: 295
@@ -313,7 +330,7 @@ lvgl:
             on_click:
               - homeassistant.action:
                   action: light.turn_on
-                  data: {entity_id: light.milight_cave, color_name: blue}
+                  data: {entity_id: "${cave_light_entity}", color_name: blue}
         - button:
             x: 191
             y: 295
@@ -323,7 +340,7 @@ lvgl:
             on_click:
               - homeassistant.action:
                   action: light.turn_on
-                  data: {entity_id: light.milight_cave, color_name: purple}
+                  data: {entity_id: "${cave_light_entity}", color_name: purple}
         - button:
             x: 248
             y: 295
@@ -333,7 +350,7 @@ lvgl:
             on_click:
               - homeassistant.action:
                   action: light.turn_on
-                  data: {entity_id: light.milight_cave, color_temp_kelvin: "2700"}
+                  data: {entity_id: "${cave_light_entity}", color_temp_kelvin: "2700"}
         - button:
             x: 10
             y: 415
@@ -389,7 +406,7 @@ lvgl:
               - homeassistant.action:
                   action: light.toggle
                   data:
-                    entity_id: light.mosquitto_mqtt_broker_cave_bar
+                    entity_id: "${bar_light_entity}"
         - label:
             x: 24
             y: 185
@@ -408,7 +425,7 @@ lvgl:
               - homeassistant.action:
                   action: light.turn_on
                   data:
-                    entity_id: light.mosquitto_mqtt_broker_cave_bar
+                    entity_id: "${bar_light_entity}"
                   data_template:
                     brightness_pct: "{{ brightness }}"
                   variables:
@@ -427,7 +444,7 @@ lvgl:
             on_click:
               - homeassistant.action:
                   action: light.turn_on
-                  data: {entity_id: light.mosquitto_mqtt_broker_cave_bar, color_name: red}
+                  data: {entity_id: "${bar_light_entity}", color_name: red}
         - button:
             x: 77
             y: 295
@@ -437,7 +454,7 @@ lvgl:
             on_click:
               - homeassistant.action:
                   action: light.turn_on
-                  data: {entity_id: light.mosquitto_mqtt_broker_cave_bar, color_name: green}
+                  data: {entity_id: "${bar_light_entity}", color_name: green}
         - button:
             x: 134
             y: 295
@@ -447,7 +464,7 @@ lvgl:
             on_click:
               - homeassistant.action:
                   action: light.turn_on
-                  data: {entity_id: light.mosquitto_mqtt_broker_cave_bar, color_name: blue}
+                  data: {entity_id: "${bar_light_entity}", color_name: blue}
         - button:
             x: 191
             y: 295
@@ -457,7 +474,7 @@ lvgl:
             on_click:
               - homeassistant.action:
                   action: light.turn_on
-                  data: {entity_id: light.mosquitto_mqtt_broker_cave_bar, color_name: purple}
+                  data: {entity_id: "${bar_light_entity}", color_name: purple}
         - button:
             x: 248
             y: 295
@@ -467,7 +484,7 @@ lvgl:
             on_click:
               - homeassistant.action:
                   action: light.turn_on
-                  data: {entity_id: light.mosquitto_mqtt_broker_cave_bar, color_temp_kelvin: "2700"}
+                  data: {entity_id: "${bar_light_entity}", color_temp_kelvin: "2700"}
         - button:
             x: 10
             y: 415

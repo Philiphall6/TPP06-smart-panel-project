@@ -36,6 +36,36 @@ SHA-256 de référence est :
 9d2d42251db95ff8564c90cb2d978cf398a214fecc04ed302f6717d78e726802
 ```
 
+## Configuration portable dans Device Builder
+
+Le dépôt fournit maintenant une couche de compatibilité sous forme de
+`external_components`. Il n'est plus nécessaire de modifier le code source
+d'ESPHome. Dans le Device Builder officiel, importer uniquement
+[`esphome/tpp06-device-builder.yaml`](../../esphome/tpp06-device-builder.yaml).
+
+Les éléments propres à une maison sont regroupés dans `substitutions` en tête
+du fichier : nom, adresse MAC virtuelle et identifiants des trois entités Home
+Assistant. Le reste de la configuration, l'interface LVGL et les pilotes Linux
+sont téléchargés depuis ce dépôt. Une nouvelle installation ne demande donc
+que la modification de ces variables.
+
+Le TPP06 nécessite toujours une compilation croisée ARMv5. Le script portable
+[`tools/tpp06_remote_builder.sh`](../../tools/tpp06_remote_builder.sh) prépare
+un serveur de compilation à associer à Device Builder :
+
+```bash
+chmod +x tools/tpp06_remote_builder.sh
+tools/tpp06_remote_builder.sh install \
+  armv5-eabi--uclibc--stable-2026.08-1.tar.xz
+tools/tpp06_remote_builder.sh run ADRESSE_IP_HOME_ASSISTANT 6057
+```
+
+Le script vérifie la somme SHA-256 de l'archive Bootlin, crée son propre
+environnement Python et installe des versions déterminées d'ESPHome et Device
+Builder. Les chemins de la machine de développement ne sont pas utilisés.
+Dans Home Assistant, ouvrir **Device Builder → Settings → Send builds**, puis
+associer le serveur et vérifier l'empreinte affichée des deux côtés.
+
 ## Compiler
 
 Le correctif a été construit sur la révision ESPHome `9bf2bbc` (branche
@@ -127,6 +157,6 @@ validés plusieurs fois.
 
 ## Suite
 
-Une fois ce test validé, la configuration `tpp06/lvgl.yaml` pourra recevoir les
-pages Home Assistant, les volets et les éclairages locaux. La suppression du
-cloud Tuya restera une opération séparée et réversible.
+La configuration portable contient déjà les pages Home Assistant pour le volet
+et les deux éclairages. La suppression du cloud Tuya reste une opération
+séparée et réversible.
