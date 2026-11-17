@@ -6,11 +6,20 @@
 
 Convert the TPP06 panel into a local device with no Tuya app or cloud dependency, while preserving a recovery path throughout the work.
 
-## Phase 0 — Passwords to try
+## Phase 0 — Network access without disassembly
+
+Query the panel's local product-test service in read-only mode to recover its `AUTHKEY` and derive its `root`/ADB password. This route requires neither UART nor NAND desoldering.
+
+- [Network access and AUTHKEY tool](docs/en/00-network-authkey-access.md)
+- [Python tool](tools/tpp06_authkey_reader.py)
+
+**Status:** verified on a TPP06; its device-specific password was recovered over Wi-Fi.
+
+## Phase 0b — Community passwords to try
 
 Prepare a small community password list, then try it after connecting UART and before reading the NAND. It is not related to the serial number; a value may work across several panels. If none works, proceed with local NAND recovery.
 
-- [Phase 0 guide](docs/en/00-passwords-to-try.md)
+- [Community password list](docs/en/00-passwords-to-try.md)
 
 **Status:** list documented; one candidate matched the password recovered from this panel.
 
@@ -49,4 +58,4 @@ Keep the Anyka processor and modify its software to remove Tuya, replace its clo
 
 ## Community source
 
-Some of the hardware pointers, password list, and NAND-reading approach came from reports in the Home Assistant discussion: [Integration in HA of new mini 3.5 smart control panel TPP06](https://community.home-assistant.io/t/integration-in-ha-of-new-mini-3-5-smart-control-panel-tpp06/762516/120?page=6). The repository procedures are adapted and verified on our own panel; no device-specific dump, hash, key, or credential is published.
+Some of the hardware pointers, password list, and NAND-reading approach came from reports in the Home Assistant discussion: [Integration in HA of new mini 3.5 smart control panel TPP06](https://community.home-assistant.io/t/integration-in-ha-of-new-mini-3-5-smart-control-panel-tpp06/762516/120?page=6). Network `AUTHKEY` extraction and password derivation were discovered by [t0m1o1](https://github.com/t0m1o1), author of TPPwned. The repository procedures are adapted and verified on our own panel; no device-specific dump, hash, key, or credential is published.

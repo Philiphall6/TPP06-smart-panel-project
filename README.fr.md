@@ -6,11 +6,20 @@
 
 Transformer le panneau TPP06 en équipement local, sans application ni cloud Tuya, en conservant d’abord toutes les possibilités de retour arrière.
 
-## Étape 0 — Mots de passe à essayer
+## Étape 0 — Accès réseau sans démontage
+
+Interroger en lecture seule le service de test local du panneau afin de récupérer son `AUTHKEY` et de calculer son mot de passe `root`/ADB. Cette voie ne nécessite ni UART ni dessoudage de la NAND.
+
+- [Guide d'accès réseau et outil AUTHKEY](docs/fr/00-acces-reseau-authkey.md)
+- [Outil Python](tools/tpp06_authkey_reader.py)
+
+**État :** méthode vérifiée sur un TPP06 ; mot de passe propre au panneau récupéré par Wi-Fi.
+
+## Étape 0b — Mots de passe communautaires à essayer
 
 Préparer une petite liste communautaire, puis l’essayer après connexion de l’UART et avant toute lecture NAND. Elle n’est pas liée au numéro de série ; une même valeur peut fonctionner sur plusieurs panneaux. Si aucun candidat ne fonctionne, passer à la récupération locale par NAND.
 
-- [Guide étape 0](docs/fr/00-mots-de-passe-a-essayer.md)
+- [Liste communautaire](docs/fr/00-mots-de-passe-a-essayer.md)
 
 **État :** liste documentée ; un candidat a correspondu au mot de passe récupéré sur ce panneau.
 
@@ -49,4 +58,4 @@ Conserver le processeur Anyka et modifier son logiciel pour supprimer Tuya, remp
 
 ## Source communautaire
 
-Une partie des repères matériels, de la liste de mots de passe et de la méthode de lecture provient des retours publiés dans le sujet Home Assistant : [Integration in HA of new mini 3.5 smart control panel TPP06](https://community.home-assistant.io/t/integration-in-ha-of-new-mini-3-5-smart-control-panel-tpp06/762516/120?page=6). Les procédures du dépôt sont adaptées et vérifiées sur notre propre panneau ; aucun dump, hash, clé ou identifiant propre à un appareil n’est publié.
+Une partie des repères matériels, de la liste de mots de passe et de la méthode de lecture provient des retours publiés dans le sujet Home Assistant : [Integration in HA of new mini 3.5 smart control panel TPP06](https://community.home-assistant.io/t/integration-in-ha-of-new-mini-3-5-smart-control-panel-tpp06/762516/120?page=6). La découverte de l'extraction réseau de l'`AUTHKEY` et du calcul du mot de passe revient à [t0m1o1](https://github.com/t0m1o1), auteur du projet TPPwned. Les procédures du dépôt sont adaptées et vérifiées sur notre propre panneau ; aucun dump, hash, clé ou identifiant propre à un appareil n'est publié.
