@@ -49,6 +49,16 @@ Assistant. Le reste de la configuration, l'interface LVGL et les pilotes Linux
 sont téléchargés depuis ce dépôt. Une nouvelle installation ne demande donc
 que la modification de ces variables.
 
+Deux modes sont proposés :
+
+- `tpp06-device-builder.yaml` reste lié au modèle GitHub et reçoit ses mises à
+  jour ; il est adapté quand seules les substitutions changent ;
+- `tpp06-lvgl.yaml` est le modèle complet et librement modifiable. Le mécanisme
+  **Prendre le contrôle** utilise `import_full_config: true` et copie
+  automatiquement ce fichier complet dans Device Builder. Les pages, widgets,
+  styles, positions et actions deviennent alors locaux et éditables. Seuls les
+  pilotes matériels `external_components` continuent à venir de GitHub.
+
 Le TPP06 nécessite toujours une compilation croisée ARMv5. Le script portable
 [`tools/tpp06_remote_builder.sh`](../../tools/tpp06_remote_builder.sh) prépare
 un serveur de compilation à associer à Device Builder :

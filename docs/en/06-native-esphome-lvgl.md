@@ -53,6 +53,14 @@ in the top-level `substitutions`: device name, virtual MAC address, and the
 three Home Assistant entity IDs. The Linux drivers and LVGL interface are
 fetched from this repository.
 
+Two modes are available. `tpp06-device-builder.yaml` stays linked to the GitHub
+template and is convenient when only substitutions change. For unrestricted
+interface editing, import `tpp06-lvgl.yaml`. The advertised **Take control**
+flow uses `import_full_config: true`, so Device Builder copies the complete
+configuration locally. Pages, widgets, styles, positions, and actions can then
+be edited freely; only the hardware `external_components` remain sourced from
+GitHub.
+
 An ARMv5 cross compiler is still required. The portable remote-build helper
 sets up a reproducible builder and pairs it with Home Assistant:
 

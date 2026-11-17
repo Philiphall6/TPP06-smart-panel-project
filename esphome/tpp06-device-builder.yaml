@@ -1,6 +1,7 @@
-# Portable entry point for the official ESPHome Device Builder.
-# Only edit the substitutions below. The hardware support and LVGL interface
-# are downloaded from the project repository at validation/build time.
+# Small, automatically updated entry point for the official Device Builder.
+# Use this managed version when you only need to change the substitutions.
+# To edit the complete LVGL interface, import esphome/tpp06-lvgl.yaml instead;
+# dashboard adoption also imports that complete editable file automatically.
 substitutions:
   device_name: "tpp06-lvgl"
   friendly_name: "TPP06 ESPHome LVGL"

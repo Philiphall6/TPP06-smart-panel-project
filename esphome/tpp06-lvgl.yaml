@@ -13,7 +13,7 @@ esphome:
   friendly_name: "${friendly_name}"
   project:
     name: philiphall6.tpp06
-    version: "0.1.0"
+    version: "0.1.1"
   build_flags:
     - -static
     - -march=armv5te
@@ -68,8 +68,10 @@ api:
               text_color: 0xFFB347
 
 dashboard_import:
-  package_import_url: github://Philiphall6/TPP06-smart-panel-project/esphome/tpp06-device-builder.yaml@main
-  import_full_config: false
+  # "Take control" copies the complete LVGL configuration into Device Builder.
+  # The owner can then freely edit every page, widget and Home Assistant action.
+  package_import_url: github://Philiphall6/TPP06-smart-panel-project/esphome/tpp06-lvgl.yaml@main
+  import_full_config: true
 
 text_sensor:
   - platform: homeassistant
