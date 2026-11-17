@@ -1,5 +1,12 @@
 # Étape 6 — ESPHome + LVGL natif sur le TPP06
 
+> [!CAUTION]
+> **Ne pas installer ESPHome comme interface de démarrage.** Au 17 novembre
+> 2026, seul l'essai temporaire depuis `/tmp` est validé. L'installation
+> permanente peut démarrer ESPHome avant l'initialisation Wi-Fi et déclencher
+> une boucle de redémarrage du watchdog Tuya. La récupération nécessite alors
+> l'UART.
+
 Cette voie exécute **ESPHome lui-même** sur le Linux Anyka du TPP06. Elle ne
 remplace pas le processeur par un ESP32 et n'utilise pas ESPHome comme simple
 passerelle : le moteur LVGL d'ESPHome dessine directement dans le framebuffer
@@ -8,8 +15,8 @@ et reçoit le tactile Goodix par `evdev`.
 > **Validé sur matériel le 17 novembre 2026.** Le binaire ARMv5 statique démarre
 > sur le TPP06, détecte le framebuffer 320×480 BGR565 et le tactile Goodix, puis
 > termine correctement l'initialisation ESPHome. Le bouton LVGL répond au toucher
-> et affiche bien `TACTILE OK`. L'installation au démarrage reste expérimentale :
-> effectuer d'abord plusieurs essais depuis `/tmp`.
+> et affiche bien `TACTILE OK`. L'installation au démarrage est actuellement
+> non fonctionnelle ; rester exclusivement en essai temporaire depuis `/tmp`.
 
 ## Ce qui a été adapté
 

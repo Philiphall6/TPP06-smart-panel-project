@@ -4,6 +4,13 @@
 
 [🇫🇷 Documentation française](README.fr.md) &nbsp;·&nbsp; [🇬🇧 English documentation](README.en.md)
 
+> [!CAUTION]
+> **ESPHome n'est pas encore fonctionnel en installation permanente.** Le
+> binaire démarre en essai temporaire, mais le basculement au démarrage peut
+> empêcher l'initialisation du Wi-Fi et provoquer une boucle de démarrage liée
+> au watchdog Tuya. N'utilisez pas `install esphome` ni `switch esphome`.
+> Conservez un accès UART de secours.
+
 ## Commencer ici — accès réseau sans démontage
 
 La nouvelle **étape 0** récupère en lecture seule l'`AUTHKEY` du panneau sur le réseau local et calcule son mot de passe `root`/ADB. Elle ne nécessite ni UART, ni ouverture du boîtier, ni dessoudage de la NAND.
@@ -40,7 +47,7 @@ L'outil masque l'`AUTHKEY` et n'affiche jamais les éventuels identifiants Wi-Fi
 | **03 · Local & ESPHome** | Conserver l’Anyka et préparer le remplacement des services Tuya. | 🧪 En cours |
 | **04 · ADB par Wi-Fi** | Installer par le port `8090` un accès ADB persistant sur `5555`, sans ouvrir le panneau. | 🧪 Préversion expérimentale |
 | **05 · openHASP local** | Exécuter une interface locale 320×480 sur l’écran, avec tactile et MQTT/Home Assistant. | 🧪 Premier portage validé |
-| **06 · ESPHome + LVGL natif** | Exécuter le moteur LVGL d'ESPHome directement sur Linux Anyka avec framebuffer et tactile natifs. | 🧪 Compilation ARMv5 validée |
+| **06 · ESPHome + LVGL natif** | Exécuter le moteur LVGL d'ESPHome directement sur Linux Anyka avec framebuffer et tactile natifs. | ⚠️ Essai temporaire seulement ; démarrage permanent non fonctionnel |
 | **07 · Tuya Cutter** | Automatiser détection, sauvegarde, restauration, essais et basculement réversible entre Tuya, openHASP et ESPHome. | 🧪 Outil en validation |
 
 ## Commencer par l’étape 0

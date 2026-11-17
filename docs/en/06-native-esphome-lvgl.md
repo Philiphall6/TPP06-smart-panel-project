@@ -1,5 +1,11 @@
 # Phase 6 — Native ESPHome + LVGL on the TPP06
 
+> [!CAUTION]
+> **Do not install ESPHome as the boot interface.** As of 17 November 2026,
+> only temporary execution from `/tmp` is validated. Permanent cut-over may
+> start ESPHome before Wi-Fi initialisation and trigger a Tuya watchdog boot
+> loop; recovery then requires UART.
+
 This route runs **ESPHome itself** on the TPP06 Anyka Linux system. ESPHome's
 LVGL engine writes directly to the framebuffer and reads the Goodix touchscreen
 through Linux `evdev`; no ESP32 replacement is involved.
@@ -7,8 +13,8 @@ through Linux `evdev`; no ESP32 replacement is involved.
 > **Hardware-tested on 17 November 2026.** The static ARMv5 program starts on
 > the TPP06, detects its 320×480 BGR565 framebuffer and Goodix touchscreen, and
 > completes ESPHome setup. The LVGL button responds to touch and displays
-> `TACTILE OK`. Startup installation remains experimental; first run several
-> successful temporary tests from `/tmp`.
+> `TACTILE OK`. Boot-time installation is currently not functional; use only
+> the temporary test from `/tmp`.
 
 The [reproducible patch](../../esphome-lvgl/esphome-tpp06-lvgl.patch) adds:
 

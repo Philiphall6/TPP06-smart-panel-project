@@ -2,6 +2,12 @@
 
 [Version française](README.fr.md)
 
+> [!CAUTION]
+> **Permanent ESPHome installation is not working yet.** The ARMv5 executable
+> runs as a temporary test, but boot-time cut-over can prevent Wi-Fi setup and
+> trigger a Tuya watchdog boot loop. Do not run `install esphome` or
+> `switch esphome`, and keep UART recovery available.
+
 ## Goal
 
 Convert the TPP06 panel into a local device with no Tuya app or cloud dependency, while preserving a recovery path throughout the work.
@@ -84,9 +90,10 @@ native Linux components for `/dev/fb0` and `/dev/input/event1`.
 - [Portable Device Builder YAML](esphome/tpp06-device-builder.yaml)
 - [Patch for the upstream ESPHome repository](esphome-lvgl/esphome-tpp06-lvgl.patch)
 
-**Status:** official ESPHome 2026.10.2, framebuffer, touch, Home Assistant API,
-and the LVGL interface have been validated on the panel. The portable YAML can
-be edited in Device Builder; no persistent installation has been made.
+**Status:** compilation and temporary framebuffer/touch operation are
+validated. Permanent installation is **not functional**: Wi-Fi may not be
+initialised and the panel may enter a watchdog boot loop. Tuya Cutter blocks
+this path until a hardware-tested startup procedure is available.
 
 ## Phase 7 — Reversible Tuya Cutter installer
 

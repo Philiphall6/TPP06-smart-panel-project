@@ -88,6 +88,16 @@ class LauncherTests(unittest.TestCase):
         self.assertEqual(args.command, "test")
         self.assertEqual(args.engine, "esphome")
 
+    def test_permanent_esphome_install_is_blocked(self) -> None:
+        cutter = TuyaCutter("192.0.2.1", Path("backups"))
+        with self.assertRaisesRegex(CutterError, "Installation permanente ESPHome"):
+            cutter.install("esphome", Path("program"), None, None, True)
+
+    def test_permanent_esphome_switch_is_blocked(self) -> None:
+        cutter = TuyaCutter("192.0.2.1", Path("backups"))
+        with self.assertRaisesRegex(CutterError, "Mode de démarrage ESPHome"):
+            cutter.switch_mode("esphome", True)
+
 
 class AdbShellTests(unittest.TestCase):
     def test_connect_and_root_marker_protocol(self) -> None:

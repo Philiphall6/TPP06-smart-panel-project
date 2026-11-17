@@ -2,6 +2,12 @@
 
 [English version](README.en.md)
 
+> [!CAUTION]
+> **ESPHome n'est pas encore fonctionnel en installation permanente.** Le
+> binaire ARMv5 démarre en essai temporaire, mais le basculement au démarrage
+> peut couper le Wi-Fi et provoquer une boucle liée au watchdog Tuya.
+> N'utilisez pas `install esphome` ni `switch esphome` et gardez un accès UART.
+
 ## Objectif
 
 Transformer le panneau TPP06 en équipement local, sans application ni cloud Tuya, en conservant d’abord toutes les possibilités de retour arrière.
@@ -85,9 +91,10 @@ des composants Linux natifs pour `/dev/fb0` et `/dev/input/event1`.
 - [YAML portable pour Device Builder](esphome/tpp06-device-builder.yaml)
 - [Correctif à appliquer au dépôt ESPHome](esphome-lvgl/esphome-tpp06-lvgl.patch)
 
-**État :** ESPHome officiel 2026.10.2, framebuffer, tactile, API Home Assistant
-et interface LVGL validés sur le panneau. Le YAML portable est éditable dans
-Device Builder ; aucune installation permanente n'est faite.
+**État :** compilation et essai temporaire du framebuffer/tactile validés.
+L'installation permanente est **non fonctionnelle** : le Wi-Fi peut ne pas
+être initialisé et le panneau peut entrer en boucle de démarrage. Elle est
+bloquée dans Tuya Cutter en attendant une solution vérifiée sur matériel.
 
 ## Étape 7 — Installateur réversible Tuya Cutter
 

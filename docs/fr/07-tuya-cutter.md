@@ -1,5 +1,10 @@
 # Étape 7 — TPP06 Tuya Cutter
 
+> [!CAUTION]
+> L'installation permanente ESPHome n'est pas fonctionnelle et peut provoquer
+> une boucle de démarrage sans Wi-Fi. Utiliser uniquement `test esphome` et
+> garder l'UART disponible. `install esphome` et `switch esphome` sont bloqués.
+
 `tpp06_tuya_cutter.py` rassemble les opérations du projet dans un installateur
 réversible. On lui donne l'adresse IP du panneau ; il lit l'`AUTHKEY` par le
 port `8090`, calcule le mot de passe root uniquement en mémoire, se connecte à

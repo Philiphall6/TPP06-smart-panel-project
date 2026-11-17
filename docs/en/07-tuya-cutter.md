@@ -1,5 +1,10 @@
 # Phase 7 — TPP06 Tuya Cutter
 
+> [!CAUTION]
+> Permanent ESPHome installation is not functional and may cause a boot loop
+> without Wi-Fi. Use only `test esphome` and keep UART available.
+> `install esphome` and `switch esphome` are blocked.
+
 `tpp06_tuya_cutter.py` provides a reversible installer around the project's
 network access, backup, openHASP, and native ESPHome-LVGL work. Given the panel
 IP, it reads the `AUTHKEY` over port `8090`, derives the root password in memory,

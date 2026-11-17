@@ -390,9 +390,16 @@ class TuyaCutter:
             output = self.backup_dir / f"tpp06-{self.host}-{timestamp}.tar.gz"
         output = output.expanduser().resolve()
         remote = f"/tmp/tpp06-cutter-backup-{timestamp}.tar.gz"
+        # The writable YAFFS layout differs between TPP06 firmware revisions.
+        # In particular, untouched panels may have no /data/app or
+        # /data/customize at all. Archive only paths that actually exist; the
+        # read-only SquashFS application remains untouched and needs no copy.
         command = (
-            "set -- data/app data/customize data/etc/init.d; "
-            f"[ -e {REMOTE_BASE} ] && set -- \"$@\" data/tpp06-cutter; "
+            "set --; "
+            "for path in data/app data/customize data/etc/init.d data/tpp06-cutter; do "
+            "[ -e /$path ] && set -- \"$@\" \"$path\"; "
+            "done; "
+            "[ \"$#\" -gt 0 ] || exit 3; "
             f"tar -czf {shlex.quote(remote)} -C / \"$@\""
         )
         session.run_root(command, timeout=120)
@@ -552,6 +559,12 @@ esac
         pages: Path | None,
         assume_yes: bool,
     ) -> None:
+        if engine == "esphome":
+            raise CutterError(
+                "Installation permanente ESPHome désactivée : le démarrage peut "
+                "couper le Wi-Fi et déclencher une boucle watchdog. Utilisez "
+                "uniquement 'test esphome' avec un accès UART de secours."
+            )
         confirm_exact(
             "Installation permanente expérimentale. Tuya restera présent pour le retour arrière.",
             f"INSTALLER-{engine.upper()}",
@@ -585,6 +598,11 @@ esac
     def switch_mode(self, mode: str, assume_yes: bool) -> None:
         if mode not in MODE_NAMES:
             raise CutterError(f"Mode inconnu : {mode}")
+        if mode == "esphome":
+            raise CutterError(
+                "Mode de démarrage ESPHome désactivé : procédure permanente "
+                "non validée sur matériel."
+            )
         confirm_exact(
             f"Le prochain démarrage utilisera le mode {mode}.",
             f"MODE-{mode.upper()}",
