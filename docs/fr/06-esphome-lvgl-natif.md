@@ -1,5 +1,11 @@
 # Étape 6 — ESPHome + LVGL natif sur le TPP06
 
+> **Lecture avancée / historique des essais.** Pour la procédure actuelle,
+> commencer par le [guide débutant](DEMARRER-ICI.md). La [V5](11-interface-v5.md)
+> est maintenant installée et contrôlée sur le panneau de référence, avec
+> politique persistante. Les limites et états « non installé » ci-dessous
+> décrivent les essais antérieurs ; le cycle électrique reste non validé.
+
 > [!CAUTION]
 > **Le démarrage ESPHome reste expérimental.** L'essai temporaire depuis `/tmp`
 > est validé. Le superviseur multiboot V1 de l'étape 7 conserve désormais Tuya,

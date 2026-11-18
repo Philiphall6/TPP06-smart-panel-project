@@ -1,5 +1,11 @@
 # Phase 6 — Native ESPHome + LVGL on the TPP06
 
+> **Advanced reference / trial history.** Start with the current
+> [beginner guide](START-HERE.md). [V5](11-interface-v5.md) is now installed
+> and checked on the reference panel with persistent policy retained. Earlier
+> “not installed” statements below describe past trials; power-cycle testing
+> is still outstanding.
+
 > [!CAUTION]
 > **ESPHome boot remains experimental.** Temporary execution from `/tmp` is
 > validated. The Phase 7 multiboot V1 supervisor now retains Tuya, Wi-Fi, and

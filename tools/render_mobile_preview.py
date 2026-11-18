@@ -12,6 +12,20 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 
+# Small code-native approximations for preview only. The panel uses LVGL's
+# built-in FontAwesome glyphs, not these paths and not a downloaded font.
+SYMBOLS = {
+    "\uf015": '<path d="M3 11 12 3 21 11M6 9v12h12V9M10 21v-7h4v7"/>',
+    "\uf0c9": '<path d="M4 5h16M4 12h16M4 19h16"/>',
+    "\uf011": '<path d="M12 2v10M6 5a9 9 0 1 0 12 0"/>',
+    "\uf043": '<path d="M12 2C10 6 5 12 5 16a7 7 0 0 0 14 0c0-4-5-10-7-14Z"/>',
+    "\uf013": '<circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/><path d="M12 1v4m0 14v4M1 12h4m14 0h4M4 4l3 3m10 10 3 3M4 20l3-3M17 7l3-3"/>',
+    "\uf1eb": '<path d="M2 8a16 16 0 0 1 20 0M5 12a11 11 0 0 1 14 0M9 16a5 5 0 0 1 6 0"/><circle cx="12" cy="20" r="1"/>',
+    "\uf070": '<path d="M2 12q10-14 20 0-10 14-20 0M3 3l18 18"/>',
+    "\uf026": '<path d="M3 9h5l6-5v16l-6-5H3ZM18 9l4 6m0-6-4 6"/>',
+    "\uf054": '<path d="m9 4 8 8-8 8"/>',
+}
+
 
 class PublicLoader(yaml.SafeLoader):
     pass
@@ -30,7 +44,7 @@ def render(source: Path) -> str:
                 "mobile_home_date": "Mercredi 18 novembre 2026",
                 "mobile_home_wifi": "Wi-Fi : liaison active",
                 "mobile_diag_wifi": "Wi-Fi : liaison active",
-                "mobile_diag_version": "ESPHome 2026.10.2",
+                "mobile_diag_version": "Interface V5 / ESPHome 2026.10.2",
                 "mobile_diag_clock": "Horloge : valide",
                 "mobile_diag_uptime": "Application : 42 min",
                 "cover_state_label": "FERME", "cave_state_label": "ALLUMEE",
@@ -40,7 +54,7 @@ def render(source: Path) -> str:
     out = [f'<svg xmlns="http://www.w3.org/2000/svg" width="1072" height="{height}" viewBox="0 0 1072 {height}">',
            f'<rect width="1072" height="{height}" fill="#111218"/>',
            '<g font-family="Montserrat, DejaVu Sans, sans-serif">',
-           '<text x="24" y="28" font-size="18" fill="#F5F5F7">TPP06 / Mobile — interface LVGL native</text>',
+           '<text x="24" y="28" font-size="18" fill="#F5F5F7">TPP06 / Interface V5 — LVGL native</text>',
            '<text x="24" y="51" font-size="12" fill="#989AA6">Apercu de conception, etats fictifs. Ce n’est pas une capture du panneau.</text>']
 
     def resolve(value):
@@ -72,19 +86,34 @@ def render(source: Path) -> str:
             border = style.get("border_width", 0)
             out.append(f'<rect width="{width}" height="{height}" rx="{radius}" fill="{fill}" stroke="{stroke}" stroke-width="{border}"/>')
         elif kind == "slider":
-            fraction = 0.65 if style["id"] == "cave_brightness" else 0.01
+            minimum, maximum = style.get("min_value", 0), style.get("max_value", 100)
+            value = 65 if style["id"] == "cave_brightness" else style.get("value", minimum)
+            fraction = (value - minimum) / max(1, maximum - minimum)
             end = max(height / 2, min(width - height / 2, width * fraction))
             out.append(f'<rect width="{width}" height="{height}" rx="16" fill="{fill}"/>')
             out.append(f'<rect width="{end}" height="{height}" rx="16" fill="{color(substitutions["ui_accent"])}"/>')
             out.append(f'<circle cx="{end}" cy="{height/2}" r="{height/2+4}" fill="#F5F5F7"/>')
         elif kind == "label":
+            if str(style.get("long_mode", "")).upper() == "DOT":
+                limit = max(1, int(width / (font_size * 0.58)))
+                if len(text) > limit:
+                    text = text[:max(0, limit - 1)] + "…"
             text_color = color(style.get("text_color", substitutions["ui_text"]))
             if style.get("id") in ("ha_status_label", "cave_state_label"):
                 text_color = "#30D158"
             anchor = {"CENTER": "middle", "RIGHT": "end"}.get(str(style.get("text_align", "")).upper(), "start")
             tx = width / 2 if anchor == "middle" else width if anchor == "end" else 0
             for line_index, line in enumerate(text.splitlines()):
-                out.append(f'<text x="{tx}" y="{font_size + line_index * font_size * 1.2}" font-size="{font_size}" text-anchor="{anchor}" fill="{text_color}">{html.escape(line)}</text>')
+                baseline = font_size + line_index * font_size * 1.2
+                line_tx = tx
+                if line and line[0] in SYMBOLS:
+                    symbol = SYMBOLS[line[0]]
+                    icon_x = tx - font_size / 2 if anchor == "middle" else tx
+                    out.append(f'<g transform="translate({icon_x},{baseline-font_size}) scale({font_size/24})" fill="none" stroke="{text_color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">{symbol}</g>')
+                    line = line[1:].lstrip()
+                    line_tx += font_size + 6
+                if line:
+                    out.append(f'<text x="{line_tx}" y="{baseline}" font-size="{font_size}" text-anchor="{anchor}" fill="{text_color}">{html.escape(line)}</text>')
         for child in widget.get("widgets", []):
             child_kind, value = next(iter(child.items()))
             node(child_kind, value, width, height, page_index)

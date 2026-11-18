@@ -195,6 +195,8 @@ class LauncherTests(unittest.TestCase):
         self.assertLess(max(map(len, command.splitlines())), 512)
         self.assertIn("sh -n /tmp/S99tuya-app.tpp06-cutter", command)
         self.assertIn("profile=$(tpp06_active_wifi_profile)", command)
+        self.assertIn("echo one-shot > /data/tpp06-cutter/boot_policy", command)
+        self.assertIn("echo no > /data/tpp06-cutter/persistent_confirmed", command)
         self.assertIn('cp "$profile"', command)
         self.assertNotIn("cp /etc/wpa_supplicant.conf", command)
         self.assertLess(command.index('tpp06_profiles_equal "$profile"'),

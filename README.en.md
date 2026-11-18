@@ -1,157 +1,71 @@
-# TPP06 — Local project without Tuya
+# TPP06 — local ESPHome + LVGL
 
-[Version française](README.fr.md)
+**[Beginner guide: start here, without dismantling](docs/en/START-HERE.md)**
 
-> [!CAUTION]
-> **ESPHome multiboot is still experimental.** Supervisor V1 retains Tuya,
-> Wi-Fi, and port 8090 during learning-mode trials. Every custom selection is
-> one-shot: the next boot remains stock even after validation. This software
-> fallback is not a recovery guarantee. Offline tests pass, but power-cycle validation is
-> still required. Installation needs `--experimental-multiboot` and UART
-> recovery must remain available.
+[Project home](README.md) · [Français](README.fr.md)
 
-Independent Wi-Fi (`wpa_supplicant`/DHCP) remains experimental and requires
-explicit selection. A successful trial never enables it automatically.
+## Current status — 18 November 2026
 
-**Current validation:** touchscreen confirmed, 15-minute supervised trial
-passed, encrypted OTA passed on an isolated RAM copy without a Linux reboot.
-The real MAC, mDNS records received from the HA host and encrypted API passed
-a 150-second on-panel RAM trial. HA registration of the new identity and key
-was subsequently verified during a RAM trial. Household actions and permanent
-boot are not yet validated.
-A new five-minute RAM OTA trial of the new build verified one traced upload
-and API recovery. The previous trial's double-transfer origin remains unknown;
-Builder's **Install → Wirelessly** workflow subsequently passed in a 20-minute
-RAM trial: one transfer, 49 post-transfer API checks and automatic stop verified,
-with the flash program unchanged.
-**Display not validated in this configuration:** Tuya and ESPHome share the
-framebuffer; the observed clock belongs to Tuya. Successful OTA does not
-validate LVGL taking control of the screen.
+**V5 / project `0.1.5` is installed on the reference panel.** Its owner
+reported successful wireless installation; direct checks confirm the expected
+binary, encrypted API, connected Wi-Fi, healthy supervisor and retained
+persistent boot policy. A live framebuffer capture confirms the home page,
+icons, date and time. The illustration below contains fictional data.
 
-**Separate standalone trial on 18 November 2026:** ESPHome/LVGL subsequently
-ran for 15 minutes without the stock GUI, with independent Wi-Fi and
-51 successful encrypted API probes. Resident memory stayed at 4,792 KiB.
-Shutdown and stock recovery were scheduled; this is not a permanent install.
-One ADB sample failed during the session; that first binary did not yet include
-time synchronization. See the [detailed report](docs/en/07-tuya-cutter.md#15-minute-standalone-trial).
+![Illustrative V5 preview, not a private device screenshot](docs/images/tpp06-mobile-preview.svg)
 
-**V4 mobile interface:** [fully editable YAML](esphome/tpp06-lvgl-mobile.yaml),
-home page, date, Wi-Fi link status, menu and settings. Built in Home Assistant,
-then run in a five-minute bounded standalone trial: 16 successful encrypted
-API probes and actual framebuffer captures of the home page.
-The captures reveal a one-hour clock offset; timezone handling needs correction.
-Persistent settings and the other pages still need on-device verification.
-This is not a permanent installation. [V4 status and limitations](docs/en/06-native-esphome-lvgl.md#ios-inspired-mobile-variant).
+This is native ESPHome running on the original **Anyka ARMv5 Linux**, not an
+ESP32. Build in Home Assistant’s ESPHome Device Builder; no Mint computer or
+external compilation server is required. Edit the full YAML to change pages,
+labels, colours and Home Assistant entities. Drivers come from GitHub; secrets
+stay in each owner’s installation.
 
-The YAML remains editable and portable: GitHub-sourced components, builds in
-Home Assistant, configurable names/entities and a per-installation key in local
-`secrets.yaml`, never in GitHub. No computer is required. Example address
-`192.0.2.1` is fictional and must be replaced.
+> [!WARNING]
+> Experimental and hardware-specific, not a universal one-click installer.
+> Initial network preparation writes an overlay and can break incompatible
+> variants. Keep verified backups and physical recovery available. Software
+> restarts were tested; power loss and long-term endurance were not.
+> Never open an energised mains panel or expose its ports to the Internet.
 
-## Goal
+## Choose your path
 
-Convert the TPP06 panel into a local device with no Tuya app or cloud dependency, while preserving a recovery path throughout the work.
+1. **Already running ESPHome:** [update wirelessly](docs/en/START-HERE.md#5-update-a-panel-already-running-esphome).
+   Do not reinstall the overlay or boot supervisor for a UI update.
+2. **Stock panel:** follow [compatibility, network access, backup and preparation](docs/en/START-HERE.md).
+   First permanent standalone activation is still an advanced intervention.
+3. **No boot or network:** see [hardware recovery archives](docs/archive/README.md).
 
-## Phase 0 — Network access without disassembly
+The normal path is **network → ADB → backup → HA build → guarded trial → OTA**.
+Dismantling, UART and NAND desoldering are no longer normal tutorial steps.
+The standard Cutter installation uses one-shot selection and does not
+automatically confirm persistent mode. Its fallback is **stock Tuya**, not
+automatic rollback to the previous ESPHome binary.
 
-Query the panel's local product-test service in read-only mode to recover its `AUTHKEY` and derive its `root`/ADB password. This route requires neither UART nor NAND desoldering.
+## Documentation
 
-- [Network access and AUTHKEY tool](docs/en/00-network-authkey-access.md)
-- [Python tool](tools/tpp06_authkey_reader.py)
+- [V5 features and outstanding validation](docs/en/11-interface-v5.md)
+- [Complete editable V5 YAML](esphome/tpp06-lvgl-mobile.yaml)
+- [Network AUTHKEY access](docs/en/00-network-authkey-access.md)
+- [ADB over Wi-Fi — advanced first preparation](docs/en/04-adb-over-wifi-without-uart.md)
+- [Tuya Cutter: backups, checks and recovery](docs/en/07-tuya-cutter.md)
+- [Native ESPHome port and historical trials](docs/en/06-native-esphome-lvgl.md)
+- [openHASP — a separate experimental path](docs/en/05-openhasp-local.md)
+- [Boot logo — optional advanced NAND operation, not ESPHome OTA](docs/en/12-boot-logo.md)
 
-**Status:** verified on a TPP06; its device-specific password was recovered over Wi-Fi.
+Sleep defaults to **Never**. Physical wake, fallback while asleep, beep and
+long-term endurance remain unverified. Beep is explicitly unavailable.
 
-## Phase 0b — Community passwords to try
+Old ADB releases are **not** V5 firmware. Build your own application: compiled
+programs include private keys and entity bindings. Never publish personal
+YAML, `secrets.yaml`, firmware, backups, dumps or private screenshots.
 
-Prepare a small community password list, then try it after connecting UART and before reading the NAND. It is not related to the serial number; a value may work across several panels. If none works, proceed with local NAND recovery.
+## Hardware archives and credit
 
-- [Community password list](docs/en/00-passwords-to-try.md)
+Historical dismantling, NAND, UART and password-search documents are preserved
+in the [archive](docs/archive/README.md), with redirects at their old URLs.
 
-**Status:** list documented; one candidate matched the password recovered from this panel.
-
-## Phase 1 — Hardware and NAND
-
-Identify the board and its NAND, then create a verified backup only if Phase 0 does not provide access or hardware analysis is required.
-
-- [Phase 1 guide](docs/en/01-hardware-nand-password.md)
-- [NAND-reading log — French](docs/lecture-nand.md)
-- [Field report — English](docs/field-report-password-search.md)
-
-**Status:** NAND backup verified and the panel booted successfully after reassembly.
-
-## Phase 2 — UART and system access
-
-Open a serial console, record the boot process, then access the system with the recovered and authorised credentials.
-
-- [Phase 2 guide](docs/en/02-uart-system-access.md)
-- [Detailed UART pinout — French](docs/uart.md)
-
-**Status:** pinout identified; terminal connection remains to be made.
-
-## Phase 3 — Remove Tuya and provide ESPHome access
-
-Keep the Anyka processor and modify its software to remove Tuya, replace its cloud dependencies with a local service, and make the panel accessible through ESPHome.
-
-- [Phase 3 guide: remove Tuya and ESPHome](docs/en/03-remove-tuya-esphome.md)
-
-**Status:** to be completed after UART access and an inventory of the existing software.
-
-## Phase 4 — ADB over Wi-Fi without UART
-
-Install a persistent overlay through the local TCP `8090` production service,
-then connect to ADB on port `5555` with the Phase 0 root credentials.
-
-- [Installation, security, and rollback guide](docs/en/04-adb-over-wifi-without-uart.md)
-- [Payload uploader](tools/tpp06_ota_uploader.py)
-
-**Status:** validated on one TPP06/AK3761E running kernel `4.4.192V2.4` and
-released as experimental. The payload replaces `/data/app` and
-`/data/customize`; do not use it on an unknown revision.
-
-## Phase 5 — Local openHASP interface
-
-Build and run openHASP directly on the panel's Anyka Linux system, providing a
-local 320×480 interface that can later exchange controls and state with Home
-Assistant over MQTT.
-
-- [Phase 5 guide: local openHASP port](docs/en/05-openhasp-local.md)
-- [Patch for the upstream openHASP repository](openhasp/openhasp-tpp06.patch)
-
-**Status:** the ARMv5/uClibc binary starts on the real panel; framebuffer,
-BGR565 conversion, portrait orientation and Goodix detection are validated.
-Boot-time installation and complete physical touch testing remain pending.
-
-## Phase 6 — Native ESPHome + LVGL
-
-Build ESPHome's `host` platform directly for the ARMv5 Anyka and use LVGL with
-native Linux components for `/dev/fb0` and `/dev/input/event1`.
-
-- [Phase 6 guide: native ESPHome + LVGL](docs/en/06-native-esphome-lvgl.md)
-- [Portable Device Builder YAML](esphome/tpp06-device-builder.yaml)
-- [Patch for the upstream ESPHome repository](esphome-lvgl/esphome-tpp06-lvgl.patch)
-
-**Status:** compilation and temporary framebuffer/touch operation are
-validated. Multiboot supervisor V1 passes offline automatic-fallback tests;
-permanent installation remains behind an explicit experimental option until
-hardware power-cycle validation is complete.
-
-## Phase 7 — Reversible Tuya Cutter installer
-
-Automate device-owned credential recovery, ADB access, verified backups, and
-temporary or permanent openHASP/ESPHome-LVGL selection.
-
-- [Phase 7 guide: TPP06 Tuya Cutter](docs/en/07-tuya-cutter.md)
-- [Python installer](tools/tpp06_tuya_cutter.py)
-
-**Status:** CLI and restore protections tested offline; complete ADB validation
-is scheduled after the panel's next reboot.
-
-## References
-
-- [Hardware to identify — French](docs/materiel.md)
-- [NAND and backup — French](docs/nand.md)
-- [Board and reassembly — French](docs/remontage.md)
-
-## Community source
-
-Some of the hardware pointers, password list, and NAND-reading approach came from reports in the Home Assistant discussion: [Integration in HA of new mini 3.5 smart control panel TPP06](https://community.home-assistant.io/t/integration-in-ha-of-new-mini-3-5-smart-control-panel-tpp06/762516/120?page=6). Network `AUTHKEY` extraction and password derivation were discovered by [t0m1o1](https://github.com/t0m1o1), author of TPPwned. The repository procedures are adapted and verified on our own panel; no device-specific dump, hash, key, or credential is published.
+Thanks to [t0m1o1](https://github.com/t0m1o1), author of **TPPwned**, for the
+network AUTHKEY extraction and password derivation discovery, and to the
+[Home Assistant community](https://community.home-assistant.io/t/integration-in-ha-of-new-mini-3-5-smart-control-panel-tpp06/762516).
+Independent community project; not affiliated with MOES, Tuya, Home Assistant,
+ESPHome or LVGL.

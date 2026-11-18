@@ -170,7 +170,7 @@ class MobileConfigTests(PortableConfigTests):
         self.test_local_configuration_and_diagnostics()
         config = yaml_util.load_yaml(CORE.config_path)
         ui = config["lvgl"]
-        self.assertEqual(len(ui["pages"]), 6)
+        self.assertEqual(len(ui["pages"]), 7)
         self.assertEqual(ui["pages"][0]["id"], "page_home")
         self.assertEqual(ui["buffer_size"], "25%")
         self.assertIn("mobile", config["dashboard_import"]["package_import_url"])
@@ -217,7 +217,7 @@ class MobileConfigTests(PortableConfigTests):
         self.assertIn("/carrier", str(wifi["lambda"]))
         self.assertIn("inconnu", str(wifi["lambda"]))
         for page in ui["pages"]:
-            if page["id"] in ("page_home", "page_menu", "page_diagnostics"):
+            if page["id"] in ("page_home", "page_menu", "page_diagnostics", "page_display_settings"):
                 self.assertNotIn("homeassistant.action", str(page))
                 self.assertNotIn("reboot", str(page))
         clock = next(x for x in config["script"] if x["id"] == "tpp06_refresh_clock")
@@ -239,3 +239,31 @@ class MobileConfigTests(PortableConfigTests):
         check_bounds(ui["top_layer"]["widgets"], 320, 480)
         for page in ui["pages"]:
             check_bounds(page["widgets"], 320, 480)
+
+    def test_screen_sleep_is_opt_in_and_does_not_stop_network(self):
+        self.test_local_configuration_and_diagnostics()
+        config = yaml_util.load_yaml(CORE.config_path)
+        self.assertEqual(config["esphome"]["project"]["version"], "0.1.5")
+        ui = config["lvgl"]
+        prefs = {x["id"]: x for x in config["globals"]}
+        self.assertEqual(str(prefs["mobile_sleep_choice"]["initial_value"]), "0")
+        self.assertTrue(prefs["mobile_sleep_choice"]["restore_value"])
+        self.assertTrue(prefs["mobile_brightness"]["restore_value"])
+        self.assertTrue(ui["resume_on_input"])
+        self.assertIn("available()", str(ui["on_idle"]))
+        self.assertIn("lvgl.pause", str(ui["on_idle"]))
+        self.assertIn("set_paused(false, false)", str(ui["on_pause"]))
+        self.assertIn("wake()", str(ui["on_resume"]))
+        for hook in ("on_idle", "on_pause", "on_resume"):
+            for forbidden in ("homeassistant.action", "reboot", "system(", "exec(", "wifi.disable"):
+                self.assertNotIn(forbidden, str(ui[hook]))
+        self.assertIn("tpp06_backlight", config["external_components"][0]["components"])
+        # No false sound control, no guessed GPIO access, no extra boot splash.
+        self.assertNotIn("mobile_boot_splash", str(ui))
+        self.assertNotIn("/sys/class/gpio", str(config))
+        from esphome.components.tpp06_backlight import backlight_name
+        import esphome.config_validation as cv
+        self.assertEqual(backlight_name("backlight"), "backlight")
+        for invalid in ("../gpio", "", "/dev/mtd3", "backlight;reboot", "a/b"):
+            with self.assertRaises(cv.Invalid):
+                backlight_name(invalid)

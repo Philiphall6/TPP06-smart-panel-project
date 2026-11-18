@@ -1,4 +1,6 @@
-# iOS-inspired, portable 320 x 480 native LVGL interface.
+# V5 UI: portable 320 x 480 native LVGL interface, project 0.1.5.
+# Installed reference binary/API/home capture checked; hardware sleep/wake pending.
+# Keep sleep disabled until an on-site wake test. See docs/fr/11-interface-v5.md.
 substitutions:
   device_name: "tpp06-lvgl"
   # Use a unique device_name per panel. Keep a known IP during the first migration.
@@ -16,6 +18,7 @@ substitutions:
   network_interface: "wlan0"
   framebuffer_device: "/dev/fb0"
   touchscreen_device: "/dev/input/event1"
+  backlight_device: "backlight"
   # Palette and titles are local, editable settings; no private installation data.
   ui_background: "0x0B0C10"
   ui_card: "0x1C1D24"
@@ -33,9 +36,10 @@ esphome:
     priority: -100
     then:
       - script.execute: tpp06_refresh_menu
+      - lambda: id(panel_backlight).set_percent(id(mobile_brightness));
   project:
     name: philiphall6.tpp06
-    version: "0.1.4"
+    version: "0.1.5"
   build_flags:
     - -static
     # Keep debug/symbol tables out of the OTA payload on the small /data volume.
@@ -64,6 +68,11 @@ external_components:
       - sha256
       - tpp06_compat
       - tpp06_mdns
+      - tpp06_backlight
+
+tpp06_backlight:
+  id: panel_backlight
+  device: "${backlight_device}"
 
 host:
   use_address: "${device_address}"
@@ -273,9 +282,19 @@ touchscreen:
       y_max: 480
 
 
-# Native LVGL only: no webview, bitmap wallpaper, cloud font or new driver.
+# Native LVGL only: built-in symbol fonts, no bitmap wallpaper or cloud font.
 # This is a separate design candidate. Compile in HA and test before deployment.
 globals:
+  - id: mobile_brightness
+    type: int
+    restore_value: true
+    initial_value: '100'
+  # 0=never, 1=30s, 2=60s, 3=120s, 4=300s. Disabled until the owner
+  # has verified touch/wake on their hardware. Independent of Linux/network.
+  - id: mobile_sleep_choice
+    type: int
+    restore_value: true
+    initial_value: '0'
   # Persistence needs writable ESPHOME_PREFDIR (or HOME) on the Linux host.
   - id: mobile_clock_12h
     type: bool
@@ -330,6 +349,21 @@ script:
     then:
       - script.execute: tpp06_refresh_clock
       - lvgl.label.update:
+          id: mobile_sleep_value
+          text: !lambda |-
+            const char *choices[] = {"Jamais", "30 secondes", "1 minute", "2 minutes", "5 minutes"};
+            const int choice = id(mobile_sleep_choice);
+            if (!id(panel_backlight).available()) return std::string("Pilote indisponible");
+            return std::string(choices[choice >= 0 && choice <= 4 ? choice : 0]);
+      - lvgl.label.update:
+          id: mobile_brightness_value
+          text: !lambda |-
+            if (!id(panel_backlight).available()) return std::string("Luminosite : indisponible");
+            return str_sprintf("Luminosite : %d %%", id(mobile_brightness));
+      - lvgl.slider.update:
+          id: mobile_brightness_slider
+          value: !lambda return id(mobile_brightness);
+      - lvgl.label.update:
           id: mobile_format_value
           text: !lambda |-
             return std::string(id(mobile_clock_12h) ? "12 h / AM-PM" : "24 heures");
@@ -353,7 +387,7 @@ script:
             return str_sprintf("Application : %.0f min", seconds / 60.0f);
       - lvgl.label.update:
           id: mobile_diag_version
-          text: !lambda return std::string("ESPHome ") + id(mobile_version).state;
+          text: !lambda return std::string("Interface V5 / ESPHome ") + id(mobile_version).state;
       - lvgl.widget.update:
           id: mobile_nav_0
           bg_color: !lambda |-
@@ -386,10 +420,29 @@ interval:
       - script.execute: tpp06_refresh_menu
 
 lvgl:
+  id: mobile_ui
   displays: tpp06_display
   touchscreens:
     - touchscreen_id: tpp06_touch
   buffer_size: 25%
+  resume_on_input: true
+  on_idle:
+    - timeout: !lambda |-
+        const uint32_t delays[] = {86400000, 30000, 60000, 120000, 300000};
+        const int choice = id(mobile_sleep_choice);
+        return delays[choice >= 0 && choice <= 4 ? choice : 0];
+      then:
+        - if:
+            condition:
+              lambda: return id(mobile_sleep_choice) > 0 && id(mobile_sleep_choice) <= 4 && id(panel_backlight).available();
+            then:
+              - lvgl.pause:
+  on_pause:
+    - lambda: |-
+        if (!id(panel_backlight).sleep()) id(mobile_ui).set_paused(false, false);
+  on_resume:
+    - lambda: id(panel_backlight).wake();
+    - script.execute: tpp06_refresh_clock
   bg_color: "${ui_background}"
   default_font: montserrat_16
   theme:
@@ -450,7 +503,15 @@ lvgl:
                 bg_color: "${ui_accent}"
                 widgets:
                   - label:
-                      align: CENTER
+                      x: 0
+                      y: 5
+                      width: 54
+                      text_align: CENTER
+                      text_font: montserrat_20
+                      text: "\uF0C9"
+                  - label:
+                      x: 2
+                      y: 30
                       width: 50
                       long_mode: DOT
                       text_align: CENTER
@@ -468,7 +529,15 @@ lvgl:
                 bg_color: "${ui_card}"
                 widgets:
                   - label:
-                      align: CENTER
+                      x: 0
+                      y: 5
+                      width: 54
+                      text_align: CENTER
+                      text_font: montserrat_20
+                      text: "\uF011"
+                  - label:
+                      x: 2
+                      y: 30
                       width: 50
                       long_mode: DOT
                       text_align: CENTER
@@ -486,7 +555,15 @@ lvgl:
                 bg_color: "${ui_card}"
                 widgets:
                   - label:
-                      align: CENTER
+                      x: 0
+                      y: 5
+                      width: 54
+                      text_align: CENTER
+                      text_font: montserrat_20
+                      text: "\uF043"
+                  - label:
+                      x: 2
+                      y: 30
                       width: 50
                       long_mode: DOT
                       text_align: CENTER
@@ -504,7 +581,17 @@ lvgl:
                 bg_color: "${ui_card}"
                 widgets:
                   - label:
-                      align: CENTER
+                      x: 0
+                      y: 5
+                      width: 54
+                      text_align: CENTER
+                      text_font: montserrat_20
+                      text: "\uF013"
+                  - label:
+                      x: 0
+                      y: 30
+                      width: 54
+                      text_align: CENTER
                       text_font: montserrat_12
                       text: "Menu"
                 on_click:
@@ -519,7 +606,17 @@ lvgl:
                 bg_color: "${ui_accent}"
                 widgets:
                   - label:
-                      align: CENTER
+                      x: 0
+                      y: 5
+                      width: 54
+                      text_align: CENTER
+                      text_font: montserrat_20
+                      text: "\uF015"
+                  - label:
+                      x: 0
+                      y: 30
+                      width: 54
+                      text_align: CENTER
                       text_font: montserrat_12
                       text: "Accueil"
                 on_click:
@@ -555,6 +652,8 @@ lvgl:
             y: 132
             width: 288
             height: 136
+            bg_color: 0x112B3D
+            border_color: 0x1B4962
             widgets:
               - label:
                   id: mobile_home_clock
@@ -572,12 +671,18 @@ lvgl:
                   text: "Date en attente de HA"
               - label:
                   id: mobile_home_wifi
-                  x: 20
+                  x: 46
                   y: 98
-                  width: 248
+                  width: 222
                   text_font: montserrat_12
                   text_color: "${ui_muted}"
                   text: "Wi-Fi : en attente"
+              - label:
+                  x: 20
+                  y: 96
+                  text_font: montserrat_16
+                  text_color: 0x38BDF8
+                  text: "\uF1EB"
         - button:
             x: 16
             y: 282
@@ -590,7 +695,7 @@ lvgl:
                   y: 16
                   text_font: montserrat_12
                   text_color: "${ui_muted}"
-                  text: "CONFORT"
+                  text: "\uF0C9  CONFORT"
               - label:
                   x: 16
                   y: 48
@@ -612,7 +717,7 @@ lvgl:
                   y: 16
                   text_font: montserrat_12
                   text_color: "${ui_muted}"
-                  text: "AMBIANCE"
+                  text: "\uF043  AMBIANCE"
               - label:
                   x: 16
                   y: 48
@@ -1168,7 +1273,7 @@ lvgl:
                   y: 8
                   text_font: montserrat_12
                   text_color: "${ui_muted}"
-                  text: "ACCENT NAVIGATION"
+                  text: "\uF043  ACCENT NAVIGATION"
               - label:
                   id: mobile_accent_value
                   x: 16
@@ -1224,21 +1329,20 @@ lvgl:
                   y: 8
                   text_font: montserrat_12
                   text_color: "${ui_muted}"
-                  text: "HORLOGE EN HAUT"
+                  text: "\uF013  AFFICHAGE"
               - label:
-                  id: mobile_visibility_value
+                  id: mobile_display_link
                   x: 16
                   y: 27
                   width: 232
                   text_font: montserrat_16
-                  text: "Visible"
+                  text: "Ecran et sons"
               - label:
                   x: 260
                   y: 20
                   text: ">"
             on_click:
-              - lambda: id(mobile_clock_visible) = !id(mobile_clock_visible);
-              - script.execute: tpp06_refresh_menu
+              - lvgl.page.show: page_display_settings
         - button:
             id: mobile_setting_3
             x: 16
@@ -1266,6 +1370,128 @@ lvgl:
                   text: ">"
             on_click:
               - lvgl.page.show: page_diagnostics
+
+    - id: page_display_settings
+      bg_color: "${ui_background}"
+      on_load:
+        - globals.set:
+            id: mobile_active_nav
+            value: '3'
+        - script.execute: tpp06_refresh_menu
+      widgets:
+        - label:
+            x: 20
+            y: 60
+            width: 280
+            height: 36
+            text_font: montserrat_28
+            text: "Ecran et sons"
+        - label:
+            x: 20
+            y: 102
+            width: 280
+            text_font: montserrat_12
+            text_color: "${ui_muted}"
+            text: "En veille, toucher pour reveiller"
+        - obj:
+            styles: mobile_card
+            x: 16
+            y: 126
+            width: 288
+            height: 82
+            widgets:
+              - label:
+                  id: mobile_brightness_value
+                  x: 16
+                  y: 10
+                  width: 256
+                  text: "Luminosite : 100 %"
+              - slider:
+                  id: mobile_brightness_slider
+                  x: 24
+                  y: 45
+                  width: 240
+                  height: 20
+                  min_value: 10
+                  max_value: 100
+                  value: 100
+                  indicator:
+                    bg_color: "${ui_accent}"
+                  on_release:
+                    - lambda: |-
+                        id(mobile_brightness) = static_cast<int>(x);
+                        id(panel_backlight).set_percent(id(mobile_brightness));
+                    - script.execute: tpp06_refresh_menu
+        - button:
+            x: 16
+            y: 218
+            width: 288
+            height: 58
+            styles: mobile_card
+            widgets:
+              - label:
+                  x: 16
+                  y: 7
+                  text_font: montserrat_12
+                  text_color: "${ui_muted}"
+                  text: "\uF070  VEILLE AUTOMATIQUE"
+              - label:
+                  id: mobile_sleep_value
+                  x: 16
+                  y: 28
+                  width: 232
+                  text: "Jamais"
+              - label:
+                  x: 260
+                  y: 20
+                  text: "\uF054"
+            on_click:
+              - lambda: id(mobile_sleep_choice) = (id(mobile_sleep_choice) + 1) % 5;
+              - script.execute: tpp06_refresh_menu
+        - button:
+            x: 16
+            y: 286
+            width: 288
+            height: 48
+            styles: mobile_card
+            widgets:
+              - label:
+                  x: 16
+                  y: 7
+                  text_font: montserrat_12
+                  text_color: "${ui_muted}"
+                  text: "HORLOGE EN HAUT"
+              - label:
+                  id: mobile_visibility_value
+                  x: 16
+                  y: 24
+                  width: 232
+                  text_font: montserrat_12
+                  text: "Visible"
+            on_click:
+              - lambda: id(mobile_clock_visible) = !id(mobile_clock_visible);
+              - script.execute: tpp06_refresh_menu
+        # Do not pretend to provide sound before the buzzer driver is verified.
+        # No writes to BUZ_EN, PWM, relay or IR GPIOs in this UI candidate.
+        - obj:
+            x: 16
+            y: 344
+            width: 288
+            height: 48
+            styles: mobile_card
+            widgets:
+              - label:
+                  x: 16
+                  y: 7
+                  text_font: montserrat_12
+                  text_color: "${ui_muted}"
+                  text: "\uF026  BIP AU TOUCHER"
+              - label:
+                  x: 16
+                  y: 24
+                  width: 256
+                  text_font: montserrat_12
+                  text: "Indisponible : pilote a valider"
 
     - id: page_diagnostics
       bg_color: "${ui_background}"

@@ -16,6 +16,7 @@ PROC_ROOT=${TPP06_PROC_ROOT:-/proc}
 FRAMEBUFFER_DEVICE=${TPP06_FRAMEBUFFER_DEVICE:-/dev/fb0}
 TOUCH_DEVICE=${TPP06_TOUCH_DEVICE:-/dev/input/event1}
 WATCHDOG_DEVICE=${TPP06_WATCHDOG_DEVICE:-/dev/watchdog}
+PERSISTENT_CHECK_SECONDS=${TPP06_PERSISTENT_CHECK_SECONDS:-10}
 NETWORK_DIR=$BASE/network
 NETWORK_CONFIG=$NETWORK_DIR/wpa_supplicant.conf
 WPA_PID_FILE=$BASE/wpa_supplicant.pid
@@ -272,14 +273,69 @@ increment_failure() {
 
 fallback_stock() {
     reason=$1
+    # Disarm persistence before stopping any service: a reset during cleanup
+    # must not retry the engine that just failed.
+    if ! write_state mode tuya; then
+        log "ERROR cannot persist stock fallback selection"
+    fi
     cleanup_independent_services
     rm -f "$BASE/boot_pending" "$BASE/engine.pid"
     # A failed custom session is never retried automatically on the following
     # physical boot.  The owner must explicitly select it again.
-    write_state mode tuya
     write_state active_mode tuya-fallback
     log "FALLBACK stock reason=$reason"
     start_stock
+}
+
+persistent_health_ready() {
+    kill -0 "$engine_pid" 2>/dev/null &&
+        wifi_associated && wlan_has_address && rescue_ports_listening &&
+        netstat -lnt 2>/dev/null | grep -q ":$ESPHOME_HEALTH_PORT "
+}
+
+stop_owned_engine() {
+    # Only the child this supervisor launched, never an arbitrary saved PID.
+    kill "$engine_pid" 2>/dev/null
+    sleep 2
+    kill -KILL "$engine_pid" 2>/dev/null
+    wait "$engine_pid" 2>/dev/null
+}
+
+monitor_persistent() {
+    # An explicit local confirmation is required in addition to boot_policy.
+    # First deployment can run unarmed until an authenticated remote check.
+    unhealthy=0
+    armed=no
+    while kill -0 "$engine_pid" 2>/dev/null; do
+        if persistent_health_ready; then
+            unhealthy=0
+            if [ "$armed" = no ] &&
+               [ "$(read_value "$BASE/persistent_confirmed" no)" = yes ]; then
+                if ! write_state mode esphome; then
+                    stop_owned_engine
+                    fallback_stock persistent-selection-write-failed
+                    return
+                fi
+                armed=yes
+                log "persistent ESPHome rearmed after grace and local health checks"
+            fi
+        else
+            unhealthy=$((unhealthy + 1))
+            if [ "$unhealthy" -ge 3 ]; then
+                write_state mode tuya
+                stop_owned_engine
+                increment_failure >/dev/null
+                fallback_stock persistent-health-failed
+                return
+            fi
+        fi
+        sleep "$PERSISTENT_CHECK_SECONDS"
+    done
+    write_state mode tuya
+    wait "$engine_pid"
+    result=$?
+    increment_failure >/dev/null
+    fallback_stock "persistent-engine-exit-$result"
 }
 
 supervise() {
@@ -303,13 +359,30 @@ supervise() {
 
     # Consume the custom selection before doing anything risky.  A power cut,
     # kernel watchdog or forced reset anywhere below therefore boots stock on
-    # the next cycle. Even a healthy session is never re-armed automatically.
+    # the next cycle. Default one-shot sessions never rearm. Explicit persistent
+    # policy can rearm only after grace, local health checks and confirmation.
     if ! write_state mode tuya; then
         log "ERROR cannot persist stock boot selection; custom launch refused"
         start_stock
         return 1
     fi
     log "one-shot custom boot consumed; next reboot remains stock"
+
+    boot_policy=$(read_value "$BASE/boot_policy" one-shot)
+    case "$boot_policy" in
+        one-shot) ;;
+        persistent)
+            # Permanent operation is only supported with independent Wi-Fi.
+            # A bounded experiment must never rearm the next boot.
+            if [ "$requested" != esphome ] ||
+               [ "$(read_value "$BASE/network_mode" learning)" != isolated ] ||
+               [ "$SESSION_SECONDS" != 0 ] || [ "$ESPHOME_HEALTH_PORT" -le 0 ]; then
+                fallback_stock invalid-persistent-policy
+                return
+            fi
+            ;;
+        *) fallback_stock invalid-boot-policy; return ;;
+    esac
 
     # A pending marker means that the preceding boot did not survive the
     # grace period.  Two consecutive early failures lock the next boot to the
@@ -416,6 +489,11 @@ supervise() {
     write_state active_mode "$requested-healthy"
     log "custom engine healthy engine=$requested pid=$engine_pid"
 
+    if [ "$boot_policy" = persistent ]; then
+        monitor_persistent
+        return
+    fi
+
     if [ "$SESSION_SECONDS" -gt 0 ]; then
         while kill -0 "$engine_pid" 2>/dev/null && \
               [ "$elapsed" -lt "$SESSION_SECONDS" ]; do
@@ -440,6 +518,8 @@ supervise() {
 }
 
 stop_supervisor() {
+    # Explicit stop leaves stock selected, including after a persistent boot.
+    write_state mode tuya
     supervisor_pid=$(read_value "$BASE/supervisor.pid" '')
     engine_pid=$(read_value "$BASE/engine.pid" '')
     [ -n "$engine_pid" ] && kill "$engine_pid" 2>/dev/null
@@ -450,12 +530,32 @@ stop_supervisor() {
     write_state active_mode stopped
 }
 
+supervisor_is_running() {
+    # PIDs are reused across boots and after process exit. A saved number alone
+    # must never suppress boot of the only display/network supervisor.
+    current_boot=$(cat "$PROC_ROOT/sys/kernel/random/boot_id" 2>/dev/null)
+    [ -n "$current_boot" ] || return 1
+    [ "$(read_value "$BASE/supervisor.boot_id" '')" = "$current_boot" ] || return 1
+    old_pid=$(read_value "$BASE/supervisor.pid" '')
+    case "$old_pid" in ''|*[!0-9]*|0) return 1;; esac
+    [ -r "$PROC_ROOT/$old_pid/cmdline" ] || return 1
+    tr '\000' '\n' < "$PROC_ROOT/$old_pid/cmdline" | grep -Fxq "$0" || return 1
+    tr '\000' '\n' < "$PROC_ROOT/$old_pid/cmdline" | grep -Fxq supervise || return 1
+    kill -0 "$old_pid" 2>/dev/null
+}
+
 case "$1" in
     start)
-        old_pid=$(read_value "$BASE/supervisor.pid" '')
-        if [ -n "$old_pid" ] && kill -0 "$old_pid" 2>/dev/null; then
+        if supervisor_is_running; then
             log "supervisor already running pid=$old_pid"
             exit 0
+        fi
+        current_boot=$(cat "$PROC_ROOT/sys/kernel/random/boot_id" 2>/dev/null)
+        if [ -z "$current_boot" ] || ! write_state supervisor.boot_id "$current_boot"; then
+            log "ERROR cannot record supervisor boot identity"
+            write_state mode tuya
+            start_stock
+            exit 1
         fi
         "$0" supervise >/dev/null 2>&1 &
         echo $! >"$BASE/supervisor.pid"
@@ -471,6 +571,8 @@ case "$1" in
         echo "active=$(read_value "$BASE/active_mode" unknown)"
         echo "failures=$(read_count "$BASE/failure_count")"
         echo "network=$(read_value "$BASE/network_mode" unavailable)"
+        echo "boot_policy=$(read_value "$BASE/boot_policy" one-shot)"
+        echo "persistent_confirmed=$(read_value "$BASE/persistent_confirmed" no)"
         [ -f "$BASE/boot_pending" ] && echo "pending=yes" || echo "pending=no"
         ;;
     *) echo "Usage: $0 {start|stop|restart|status|supervise}"; exit 1 ;;

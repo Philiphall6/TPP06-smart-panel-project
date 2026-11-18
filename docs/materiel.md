@@ -1,9 +1,5 @@
-# Matériel à identifier
+# Procédure matérielle archivée
 
-Liens partagés par le propriétaire :
+Ce document historique est conservé dans les [archives matérielles](archive/hardware/materiel.md).
 
-- Boîtier : https://a.aliexpress.com/_EyJoGd4
-- Boîtier : https://a.aliexpress.com/_EyQaKYS
-- XGecu avec adaptateur : https://a.aliexpress.com/_EJkIh0q
-
-Les références exactes seront ajoutées après vérification des annonces.
+Pour l’installation courante, suivre le [guide débutant](fr/DEMARRER-ICI.md) sans démonter le panneau.

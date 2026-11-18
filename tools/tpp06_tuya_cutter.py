@@ -838,6 +838,8 @@ class TuyaCutter:
             "mv /data/etc/init.d/.S99tuya-app.staged /data/etc/init.d/S99tuya-app; "
             f"echo 0 > {REMOTE_BASE}/failure_count; "
             f"mkdir -p {REMOTE_BASE}/network; umask 077; "
+            f"echo one-shot > {REMOTE_BASE}/boot_policy; "
+            f"echo no > {REMOTE_BASE}/persistent_confirmed; "
             "if profile=$(tpp06_active_wifi_profile); then "
             f"cp \"$profile\" {REMOTE_BASE}/network/wpa_supplicant.conf.staged; "
             f"chmod 600 {REMOTE_BASE}/network/wpa_supplicant.conf.staged; "

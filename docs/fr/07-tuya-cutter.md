@@ -1,5 +1,11 @@
 # Étape 7 — TPP06 Tuya Cutter
 
+> **Référence avancée et journal chronologique.** Le [guide débutant](DEMARRER-ICI.md)
+> présente le parcours courant. La [V5](11-interface-v5.md) est installée sur le
+> panneau de référence, API chiffrée et état sain contrôlés, politique persistante
+> conservée. Les comptes rendus ci-dessous conservent leurs limites au moment
+> des essais. La première activation permanente n’est pas automatisée par `install`.
+
 > [!CAUTION]
 > Le superviseur multiboot V1 est testé hors ligne mais pas encore validé par
 > un cycle électrique complet sur le panneau. L'installation ESPHome reste
@@ -328,6 +334,41 @@ python3 tools/tpp06_tuya_cutter.py 192.0.2.1 stop-test
 ```
 
 ### Installation permanente réversible
+
+#### Politique de redémarrage persistante — option expérimentale
+
+Le superviseur conserve `boot_policy=one-shot` par défaut. L'installateur
+réinitialise explicitement cette valeur et la confirmation : une installation
+ou un essai réussi ne sélectionne jamais automatiquement le mode persistant.
+
+L'option `boot_policy=persistent` est réservée à ESPHome avec
+`network_mode=isolated`, une session non bornée et un port API vérifiable.
+À chaque démarrage, le superviseur sélectionne d'abord Tuya pour le prochain
+cycle. Après le délai de grâce et uniquement si `persistent_confirmed=yes`,
+il resélectionne ESPHome lorsque processus, Wi-Fi, IPv4 et écouteurs API/ADB/8090
+sont présents. Cette confirmation doit suivre une vérification authentifiée
+du premier démarrage ; les écouteurs seuls ne prouvent pas l'authentification.
+
+En fonctionnement, trois contrôles locaux consécutifs en échec (intervalle
+de dix secondes) arrêtent ESPHome et sélectionnent Tuya **avant** le nettoyage
+du réseau. Une sortie du processus entraîne également le secours. La perte
+de Home Assistant ou d'Internet, à elle seule, n'est pas un motif de redémarrage.
+Un arrêt explicite du superviseur laisse Tuya sélectionné.
+
+Le démarrage vérifie aussi l'identifiant du démarrage Linux et la ligne de
+commande du superviseur : un ancien PID réutilisé ne peut plus être pris pour
+un superviseur déjà actif. Les 84 tests hors ligne couvrent notamment ce cas,
+les refus de politiques incohérentes et le retour à Tuya après perte de santé.
+
+Ce mécanisme ne garantit pas le secours en cas de blocage du noyau après
+réarmement, de stockage défaillant ou de panne matérielle. Un accès physique
+de récupération reste requis. Le premier déploiement utilise séparément un
+lanceur de retour Tuya et un minuteur de secours, désarmé seulement après
+vérification distante. Aucun changement du bootloader ou de la NAND brute
+n'est nécessaire. L'activation persistante n'est pas effectuée par la commande
+`install` standard ; ne pas copier des fichiers d'état sans cette procédure.
+
+#### Installation standard : sélection ponctuelle
 
 Après plusieurs essais réussis :
 

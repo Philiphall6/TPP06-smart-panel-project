@@ -1,5 +1,12 @@
 # Phase 7 — TPP06 Tuya Cutter
 
+> **Advanced reference and chronological test log.** The
+> [beginner guide](START-HERE.md) describes the current workflow.
+> [V5](11-interface-v5.md) is installed on the reference panel, with encrypted
+> API and healthy state checked and persistent policy retained. Reports below
+> preserve the limits at the time of each trial. Standard `install` does not
+> automate first persistent standalone activation.
+
 > [!CAUTION]
 > Multiboot supervisor V1 passes offline tests but has not yet completed a full
 > power-cycle validation on the panel. Permanent ESPHome installation requires
@@ -264,3 +271,33 @@ Backups are mode `0600`, ignored by Git, and accompanied by SHA-256 metadata.
 Restores reject absolute paths, traversal, links, and files outside the allowed
 overlay scope. `AUTHKEY`, root password, Wi-Fi credentials, and device keys are
 never printed or written by the Cutter.
+
+### Persistent boot policy — experimental opt-in
+
+The supervisor defaults to `boot_policy=one-shot`. The standard installer
+explicitly resets this policy and its confirmation; installation or a
+successful trial never automatically enables persistent boot.
+
+`boot_policy=persistent` is restricted to ESPHome with `network_mode=isolated`,
+an unbounded session and a verifiable API port. Each boot initially selects
+stock for the next cycle. Only after the grace period, local process/network/
+listener checks and explicit `persistent_confirmed=yes` does the supervisor
+reselect ESPHome. First-deployment confirmation must follow an authenticated
+remote check; listening ports alone do not prove authentication.
+
+Three consecutive local health failures, checked ten seconds apart, stop
+ESPHome and select stock **before** network cleanup. Process exit also falls
+back. Loss of Home Assistant or Internet alone does not trigger a reboot.
+Explicit supervisor stop leaves stock selected.
+
+Startup also checks the Linux boot ID and supervisor command line: a reused
+PID from an earlier boot is not mistaken for a running supervisor. The 84
+offline tests cover this case, incompatible policy rejection and fallback
+after local health failures.
+
+This cannot guarantee recovery from a kernel hang after rearming, storage
+failure or hardware damage. Physical recovery access remains required. The
+first deployment separately uses a stock-only launcher and a recovery timer,
+disarmed only after remote verification. No bootloader or raw NAND modification
+is required. Standard `install` does not enable persistence; do not copy state
+files without the guarded deployment procedure.
