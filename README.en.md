@@ -21,7 +21,7 @@ validated.
 
 The YAML remains editable and portable: GitHub-sourced components, builds in
 Home Assistant, configurable names/entities and a per-installation key in local
-`secrets.yaml`, never in GitHub. No Mint computer is required. Example address
+`secrets.yaml`, never in GitHub. No computer is required. Example address
 `192.0.2.1` is fictional and must be replaced.
 
 ## Goal
