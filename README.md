@@ -22,7 +22,7 @@ modèle, mais restent à valider ensemble sur le panneau. L'installation OTA
 depuis le bouton du Builder et le démarrage permanent ne sont pas validés.
 
 **Configuration portable :** noms et entités modifiables dans le YAML,
-composants chargés depuis GitHub, aucune dépendance à un ordinateur Mint.
+composants chargés depuis GitHub, aucune dépendance à un ordinateur.
 Chaque installation crée sa clé locale dans `secrets.yaml` (jamais publiée).
 Les adresses `192.0.2.1` des exemples sont fictives et doivent être remplacées.
 
