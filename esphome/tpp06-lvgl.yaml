@@ -1,7 +1,8 @@
 substitutions:
   device_name: "tpp06-lvgl"
+  # Use a unique device_name per panel. Keep a known IP during the first migration.
+  device_address: "${device_name}.local"
   friendly_name: "TPP06 ESPHome LVGL"
-  device_mac: "02:00:00:00:06:01"
   cover_entity: "cover.tpp06_example_cover"
   cave_light_entity: "light.tpp06_example_light_1"
   bar_light_entity: "light.tpp06_example_light_2"
@@ -13,8 +14,7 @@ substitutions:
   light_2_nav_label: "LUM. 2"
   framebuffer_device: "/dev/fb0"
   touchscreen_device: "/dev/input/event1"
-  # Change this value before the first installation.
-  ota_password: "CHANGE_ME_BEFORE_INSTALL"
+  api_encryption_key: !secret tpp06_api_encryption_key
 
 esphome:
   name: "${device_name}"
@@ -24,6 +24,8 @@ esphome:
     version: "0.1.4"
   build_flags:
     - -static
+    # Keep debug/symbol tables out of the OTA payload on the small /data volume.
+    - -Wl,--strip-all
     - -pthread
     - -fno-threadsafe-statics
     - -Wl,-u,pthread_mutex_lock
@@ -47,24 +49,36 @@ external_components:
       - md5
       - sha256
       - tpp06_compat
+      - tpp06_mdns
 
 host:
-  mac_address: "${device_mac}"
+  use_address: "${device_address}"
+  network_interface: wlan0
   # The compiler is selected automatically: native Zig on ARM64 Home
   # Assistant hosts (Raspberry Pi), Bootlin GCC on x86-64 hosts.
   cross_compile: {}
 
 tpp06_compat:
 
+# The native host component only constructs records. This adapter publishes
+# those records on Linux; it does not configure Wi-Fi or change DHCP.
+mdns:
+  disabled: false
+tpp06_mdns:
+  network_interface: wlan0
+
 logger:
   level: INFO
 
 api:
   reboot_timeout: 0s
+  encryption:
+    key: "${api_encryption_key}"
   on_client_connected:
     - lvgl.label.update:
         id: ha_status_label
-        text: "HOME ASSISTANT CONNECTE"
+        # Any API client (including Device Builder logs) can trigger this.
+        text: "API CONNECTEE"
         text_color: 0x52D273
   on_client_disconnected:
     - if:
@@ -74,14 +88,14 @@ api:
         then:
           - lvgl.label.update:
               id: ha_status_label
-              text: "HOME ASSISTANT HORS LIGNE"
+              text: "API HORS LIGNE"
               text_color: 0xFFB347
 
 # The first deployment is performed by TPP06 Cutter. Once this binary is
 # running, Device Builder can update it directly over the LAN.
 ota:
   - platform: esphome
-    password: "${ota_password}"
+    encryption:
 
 dashboard_import:
   # "Take control" copies the complete LVGL configuration into Device Builder.
@@ -90,6 +104,10 @@ dashboard_import:
   import_full_config: true
 
 text_sensor:
+  - platform: version
+    name: "Version ESPHome"
+    entity_category: diagnostic
+
   - platform: homeassistant
     id: ha_cover_sdb_state
     entity_id: "${cover_entity}"
@@ -112,7 +130,9 @@ text_sensor:
       - lvgl.label.update:
           id: cave_state_label
           text: !lambda |-
-            return x == "on" ? std::string("ALLUMEE") : std::string("ETEINTE");
+            if (x == "on") return std::string("ALLUMEE");
+            if (x == "off") return std::string("ETEINTE");
+            return std::string("INDISPONIBLE");
           text_color: !lambda |-
             return x == "on" ? lv_color_hex(0x52D273) : lv_color_hex(0x9AA4B2);
 
@@ -124,9 +144,17 @@ text_sensor:
       - lvgl.label.update:
           id: bar_state_label
           text: !lambda |-
-            return x == "on" ? std::string("ALLUMEE") : std::string("ETEINTE");
+            if (x == "on") return std::string("ALLUMEE");
+            if (x == "off") return std::string("ETEINTE");
+            return std::string("INDISPONIBLE");
           text_color: !lambda |-
             return x == "on" ? lv_color_hex(0x52D273) : lv_color_hex(0x9AA4B2);
+
+sensor:
+  - platform: uptime
+    name: "Duree de fonctionnement"
+    entity_category: diagnostic
+    update_interval: 30s
 
 display:
   - platform: fbdev
@@ -169,7 +197,7 @@ lvgl:
             id: ha_status_label
             align: top_mid
             y: 52
-            text: "HOME ASSISTANT HORS LIGNE"
+            text: "API HORS LIGNE"
             text_color: 0xFFB347
         - obj:
             x: 20

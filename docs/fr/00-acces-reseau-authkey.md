@@ -36,20 +36,20 @@ mot_de_passe_root = 8 derniers caractères hexadécimaux de MD5(AUTHKEY)
 Vérifier d'abord l'adresse du panneau et le port :
 
 ```bash
-ping 192.168.1.52
-nc -vz 192.168.1.52 8090
+ping 192.0.2.1
+nc -vz 192.0.2.1 8090
 ```
 
 Exécuter ensuite l'outil depuis la racine du dépôt :
 
 ```bash
-python3 tools/tpp06_authkey_reader.py 192.168.1.52
+python3 tools/tpp06_authkey_reader.py 192.0.2.1
 ```
 
 Exemple de sortie :
 
 ```text
-Panel: 192.168.1.52:8090
+Panel: 192.0.2.1:8090
 AUTHKEY: abcd…wxyz
 Root/ADB password: 1234abcd
 No persistent write or reboot was requested.
@@ -58,7 +58,7 @@ No persistent write or reboot was requested.
 L'`AUTHKEY` est masquée par défaut. Pour une intervention locale uniquement, sa valeur complète peut être affichée avec :
 
 ```bash
-python3 tools/tpp06_authkey_reader.py 192.168.1.52 --show-authkey
+python3 tools/tpp06_authkey_reader.py 192.0.2.1 --show-authkey
 ```
 
 ## Sécurité

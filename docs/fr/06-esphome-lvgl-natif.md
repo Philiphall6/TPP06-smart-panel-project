@@ -1,11 +1,10 @@
 # Étape 6 — ESPHome + LVGL natif sur le TPP06
 
 > [!CAUTION]
-> **Ne pas installer ESPHome comme interface de démarrage.** Au 17 novembre
-> 2026, seul l'essai temporaire depuis `/tmp` est validé. L'installation
-> permanente peut démarrer ESPHome avant l'initialisation Wi-Fi et déclencher
-> une boucle de redémarrage du watchdog Tuya. La récupération nécessite alors
-> l'UART.
+> **Le démarrage ESPHome reste expérimental.** L'essai temporaire depuis `/tmp`
+> est validé. Le superviseur multiboot V1 de l'étape 7 conserve désormais Tuya,
+> le Wi-Fi et le port 8090 comme secours, mais il doit encore être validé par un
+> cycle électrique réel. Garder l'UART disponible pour ce premier essai.
 
 Cette voie exécute **ESPHome lui-même** sur le Linux Anyka du TPP06. Elle ne
 remplace pas le processeur par un ESP32 et n'utilise pas ESPHome comme simple
@@ -15,8 +14,9 @@ et reçoit le tactile Goodix par `evdev`.
 > **Validé sur matériel le 17 novembre 2026.** Le binaire ARMv5 statique démarre
 > sur le TPP06, détecte le framebuffer 320×480 BGR565 et le tactile Goodix, puis
 > termine correctement l'initialisation ESPHome. Le bouton LVGL répond au toucher
-> et affiche bien `TACTILE OK`. L'installation au démarrage est actuellement
-> non fonctionnelle ; rester exclusivement en essai temporaire depuis `/tmp`.
+> et affiche bien `TACTILE OK`. Le démarrage persistant est maintenant protégé
+> par un repli automatique et une option explicite, mais reste non validé sur
+> matériel.
 
 ## Ce qui a été adapté
 
@@ -51,7 +51,7 @@ d'ESPHome. Dans le Device Builder officiel, importer uniquement
 [`esphome/tpp06-device-builder.yaml`](../../esphome/tpp06-device-builder.yaml).
 
 Les éléments propres à une maison sont regroupés dans `substitutions` en tête
-du fichier : nom, adresse MAC virtuelle et identifiants des trois entités Home
+du fichier : nom unique, adresse du panneau (`device_address`), référence de clé privée et identifiants des trois entités Home
 Assistant. Le reste de la configuration, l'interface LVGL et les pilotes Linux
 sont téléchargés depuis ce dépôt. Une nouvelle installation ne demande donc
 que la modification de ces variables.
@@ -79,11 +79,206 @@ encore déportée. Ouvrir **Paramètres → Envoyer les compilations**, supprime
 désactiver le serveur associé, puis nettoyer les fichiers de compilation de
 l'appareil. Un chemin local normal commence par `/config/.esphome/build/...`.
 
-Avant de compiler, remplacer `CHANGE_ME_BEFORE_INSTALL` dans la substitution
-`ota_password` par un mot de passe propre à l'installation. Ne jamais publier
-ce mot de passe dans un dépôt.
+Le nouveau modèle attend `tpp06_api_encryption_key` dans `secrets.yaml` : une
+clé aléatoire de 32 octets encodée en base64, privée et propre à l'installation.
+Elle protège l'API et l'OTA. Ne jamais publier cette clé. Pour migrer un panneau
+dont l'OTA est déjà chiffrée, conserver sa clé existante pour le premier transfert.
+
+Pour une nouvelle installation uniquement, générer cette clé localement avec
+`openssl rand -base64 32`, puis enregistrer le résultat sous
+`tpp06_api_encryption_key` dans le `secrets.yaml` de Device Builder. Ne pas
+utiliser la clé de test du dépôt. Aucun secret n'est fourni par GitHub.
+
+### Déplacer la configuration vers une autre installation
+
+1. Importer le YAML public ; les composants viennent de GitHub, sans chemin
+   vers un ordinateur Mint ni répertoire de composants local requis.
+2. Choisir un nom unique par panneau, adapter les entités et les libellés.
+   Conserver l'adresse IP connue lors d'une migration ; utiliser `.local`
+   seulement après validation de la découverte depuis le nouveau serveur HA.
+3. Pour le même panneau, transférer sa clé existante de manière privée ; pour
+   un nouveau panneau, générer une nouvelle clé. Conserver aussi une sauvegarde
+   privée du YAML personnalisé et de `secrets.yaml`.
+4. Compiler dans Home Assistant avec la version ESPHome testée (2026.10.2).
+   Internet est nécessaire au téléchargement initial des composants et de la
+   chaîne de compilation. Aucun compte GitHub ni serveur Mint n'est requis.
+5. Valider en essai limité avant tout changement de démarrage. La portabilité
+   du modèle ne signifie pas que l'installation permanente est validée.
+
+Pour figer une installation reproductible, utiliser le même commit testé dans
+les références GitHub des `packages` et `external_components` au lieu de
+suivre `main`. Ne jamais publier le binaire personnalisé : il peut contenir
+la clé API/OTA et les entités de la maison, même si le code source est public.
+Le mDNS exige que les annonces multicast atteignent HA ; entre VLAN, conserver
+une adresse explicite tant que le relais mDNS n'est pas configuré et testé.
 
 ## Installation initiale et mises à jour OTA
+
+### MAC réelle et découverte mDNS — adaptation à valider sur le panneau
+
+Le nouveau modèle utilise `host.network_interface: wlan0` : la MAC est lue
+sur le panneau par ioctl, jamais sur le serveur de compilation. Il refuse une
+MAC vide/multicast et ne revient pas silencieusement à une identité fictive.
+Supprimer l'ancien `host.mac_address`, incompatible avec cette option.
+
+`tpp06_mdns` publie en IPv4 les enregistrements natifs ESPHome (MAC réelle,
+version, service API et état de chiffrement) et le nom `device_name.local`.
+Choisir un `device_name` unique par panneau. L'adaptateur surveille les changements
+d'adresse et arrête ses annonces en cas de conflit de nom, sans couper l'accès IP.
+La validation YAML, la génération de code et l'analyse syntaxique ARMv5 passent ;
+**la découverte réelle depuis HA/Builder reste à tester en RAM**. Aucun
+démarrage permanent n'est validé par ces contrôles.
+
+Lors de la migration, garder temporairement l'IP connue dans `device_address`.
+Ne passer à `${device_name}.local` qu'après résolution et découverte réussies
+depuis HA. Le changement de MAC peut créer une nouvelle identité dans HA :
+ne supprimer l'ancienne entrée qu'après vérification des liens et automatisations.
+
+### Accès IP de secours et anciennes versions
+
+Dans la version ESPHome 2026.10.2 examinée, `mdns_host.cpp` ne publie pas
+réellement les services mDNS. Le composant externe `host` ajoute donc
+`use_address` : l'adresse explicite est transmise à `CORE.address`, aux
+métadonnées de Builder et aux commandes de journaux/déploiement. Aucun fichier
+d'ESPHome installé n'est modifié. Pour les anciennes versions sans adaptateur mDNS :
+
+```yaml
+substitutions:
+  device_address: "192.0.2.1"  # Remplacer par l'adresse réelle du panneau.
+host:
+  use_address: "${device_address}"
+mdns:
+  disabled: true
+```
+
+Fusionner ces clés avec les sections existantes, sans supprimer les autres
+options `host`. Cela ne change pas la configuration Wi-Fi du panneau et ne
+crée pas de service mDNS. Une réservation DHCP évite que l'adresse change.
+Le pont de compatibilité désactive le cache de configuration validée uniquement
+pour les configurations `host.use_address`, afin que journaux et déploiement
+rechargent bien le composant externe. Le cache de compilation est conservé.
+
+Après modification, valider le YAML et actualiser Builder ; ne pas lancer une
+installation pour simplement vérifier l'adresse. Les tests locaux couvrent
+la validation, les métadonnées et le cache. Le 18 novembre 2026, Builder a
+affiché le panneau en ligne et ses journaux ont confirmé la connexion API,
+l'échange initial et la réception de messages ESPHome pendant un essai borné.
+Un transfert OTA **chiffré** du binaire HA déjà validé a depuis réussi sur une
+vraie copie en RAM : remplacement, réexécution, retour API et arrêt automatique
+confirmés, sans modification du programme en flash ni reboot Linux. Le parcours
+complet via le bouton Installer de Builder reste à vérifier. Si les
+pilotes sont fournis par une source locale, conserver le dossier de composants
+avec le YAML lors d'une migration vers une autre installation.
+
+En dehors d'un essai, ESPHome est arrêté volontairement : l'indication hors
+ligne est alors également attendue. « Non chiffré » concerne l'API sans clé
+Noise configurée, indépendamment de la sécurité OTA. Le binaire testé exigeait
+déjà une clé OTA alors que son API n'était pas chiffrée.
+
+### Contrôle API sans action sur la maison
+
+Depuis un environnement Python contenant `aioesphomeapi` (notamment celui
+d'ESPHome), pendant un essai temporaire actif :
+
+```bash
+python tools/tpp06_api_check.py IP_DU_PANNEAU
+```
+
+Ce contrôle effectue la connexion au protocole ESPHome, lit les informations
+du programme et liste les entités. Il ne commande aucun équipement, ne
+téléverse rien et ne redémarre rien. Si nécessaire, fournir la clé via la
+variable d'environnement `ESPHOME_API_KEY`, jamais dans le dépôt. Une API
+accessible ne prouve pas que Home Assistant est connecté ou autorisé à agir.
+
+Le modèle affiche désormais **API CONNECTEE**, plutôt que de confondre un
+client de logs avec Home Assistant. Il expose la version ESPHome et la durée
+de fonctionnement comme entités de diagnostic. Un état d'éclairage inconnu
+ou indisponible n'est plus affiché comme « éteint ». Ces changements exigent
+une nouvelle compilation puis un déploiement validé ; ils ne modifient pas le
+binaire déjà installé.
+
+Dans Home Assistant, vérifier séparément les options de l'intégration ESPHome
+du panneau pour autoriser les actions Home Assistant, uniquement si souhaité.
+Le diagnostic ne change pas cette permission et n'essaie pas les relais.
+
+Essai matériel supplémentaire du 18 novembre 2026 : deux lectures complètes
+du protocole API ont réussi pendant une session bornée à 120 secondes. Le
+binaire existant a annoncé zéro entité et zéro service utilisateur. Une
+connexion TCP établie depuis Home Assistant a été observée pendant l'essai ;
+cela ne valide pas les actions, qui restent désactivées dans l'intégration.
+Après l'arrêt programmé, le shell ADB a répondu, l'uptime a continué et le
+processus Tuya est resté identique. Aucun reboot n'a été envoyé.
+
+Un second essai borné à 180 secondes a ensuite confirmé la connexion et les
+journaux depuis Device Builder, ainsi que plusieurs lectures API indépendantes.
+À 65 et 125 secondes, le superviseur indiquait `esphome-healthy` et une
+connexion TCP depuis Home Assistant était établie. L'arrêt à 180 secondes
+s'est terminé par `session-complete`, sans échec comptabilisé ; le contrôle ADB
+à 186 secondes a confirmé la continuité de l'uptime et le même processus Tuya.
+Cela ne valide ni les commandes domotiques, ni l'OTA, ni un démarrage autonome.
+
+Un nouveau binaire compilé dans Home Assistant le 18 novembre 2026 (7 640 472
+octets, ARMv5TE EABI5 soft-float sans chargeur dynamique) a ensuite passé deux
+essais de 120 secondes : copie réelle en RAM, puis exécution depuis la flash.
+L'API a répondu aux contrôles à 5, 65 et 110 secondes dans chaque essai. Les
+arrêts programmés ont conservé l'uptime, ADB et le processus Tuya ; le compteur
+d'échecs est resté à zéro. Le binaire expose toujours zéro entité et zéro
+service utilisateur : les diagnostics ajoutés au modèle ne sont pas encore
+présents dans cette configuration personnelle.
+
+Le remplacement a été effectué par copie dans un fichier de staging en flash,
+vérification d'intégrité puis renommage, avec sauvegarde vérifiée de l'ancien
+exécutable sur Mint. Dix anciennes archives de journaux ont été sauvegardées
+et retirées du panneau pour garder la réserve de 2 Mio pendant le transfert.
+Après remplacement, `/data` disposait d'environ 22,8 Mio libres. Aucun reboot
+n'a été envoyé ; Tuya reste sélectionné pour le prochain démarrage. Ce
+remplacement contrôlé n'est pas une validation du protocole OTA de Builder.
+
+Le badge « en ligne » ne prouve pas à lui seul qu'ESPHome est actif : Builder
+peut considérer le système Linux joignable alors que le port API est fermé.
+L'erreur `Connection refused` sur le port 6053 après l'expiration d'un essai
+est attendue ; elle ne signifie pas que le panneau a redémarré. Vérifier
+séparément les journaux du superviseur et l'uptime avant de conclure à un crash.
+
+### Limite d'espace pour l'OTA
+
+Le backend OTA host écrit une copie `.ota.new` à côté de l'exécutable avant
+remplacement. Il faut donc de la place pour **les deux versions simultanément**.
+Le binaire de test examiné mesure environ 19,7 Mio, pour environ 8,6 Mio libres
+sur `/data` : une nouvelle copie de même taille ne peut pas y tenir.
+Le modèle ajoute `-Wl,--strip-all` afin d'exclure les tables de débogage/symboles
+du prochain binaire. Vérifier sa taille finale et l'espace libre avant toute
+OTA ; cette option ne garantit pas à elle seule que le fichier tiendra.
+Ne pas remplacer directement le programme pendant un essai distant sans
+sauvegarde et moyen de récupération.
+
+Avant un transfert vers le programme installé en flash, vérifier l'espace :
+
+```bash
+python3 tools/tpp06_tuya_cutter.py IP_DU_PANNEAU ota-space-check --binary programme
+```
+
+Ce diagnostic ne transfère et ne supprime aucun fichier. Il réserve 2 Mio,
+ne compte jamais l'ancien programme comme de l'espace libre, et refuse une
+cible active différente du programme flash attendu. Il ne bloque pas le
+bouton Installer de Builder : respecter son résultat avant toute OTA. Un
+résultat positif ne valide ni l'architecture du binaire, ni le transfert.
+
+Mesure du 18 novembre 2026 : une copie du programme existant, dépouillée des
+symboles de débogage, passe de 20 679 080 à 7 990 192 octets. Les segments
+chargeables restent identiques, hormis les références à la table des sections
+dans l'en-tête ELF. Avec 8 990 720 octets libres sur `/data`, il manque encore
+1 096 624 octets pour conserver la réserve de 2 Mio pendant le staging. Cette
+copie n'a pas été déployée ; la taille du prochain programme doit être mesurée
+après sa compilation dans Home Assistant.
+
+**Un essai temporaire par lien symbolique n'isole pas l'OTA.** Le backend host
+résout `/proc/self/exe` : une mise à jour peut donc remplacer le fichier flash
+visé par le lien. Ne pas utiliser OTA pour tester une nouvelle version dans
+ce type d'essai. Un futur essai OTA isolé nécessitera une vraie copie distincte
+et des contrôles de RAM/espace. Dans le code host examiné, le redémarrage OTA
+réexécute le programme via `execv`, pas le système Linux ; cela ne garantit
+pas le bon fonctionnement de la nouvelle version.
 
 Le bouton **Installer** de Device Builder ne peut pas installer directement le
 premier binaire dans un système Tuya intact. La compilation est néanmoins
@@ -93,7 +288,8 @@ Cutter, comme décrit ci-dessous.
 
 À partir de la version `0.1.3`, le binaire expose ensuite l'OTA ESPHome sur le
 port `8082`. Les versions suivantes peuvent donc être installées directement
-depuis Device Builder sur l'adresse IP du panneau, avec `ota_password`. Les
+depuis Device Builder sur l'adresse du panneau. Les anciennes configurations
+utilisent `ota_password` ; le nouveau modèle exige le chiffrement OTA. Les
 implémentations MD5 et SHA-256 portables incluses dans ce dépôt évitent la
 dépendance OpenSSL absente du Linux Tuya.
 
@@ -134,8 +330,11 @@ ${TPP06_TOOLCHAIN_PREFIX}-readelf -h -l \
 
 ## Premier essai temporaire
 
-La méthode recommandée utilise Tuya Cutter, qui suspend Tuya, place les
-préférences dans `/tmp` et garantit le retour arrière :
+La méthode recommandée utilise Tuya Cutter : l'essai ESPHome garde Tuya actif,
+réutilise le binaire flash si sa somme correspond et dispose d'un arrêt
+automatique à 60 secondes. Ce mécanisme n'est pas une garantie de récupération
+en cas de panne du noyau ou du matériel. Les préférences de l'essai sont
+séparées sous `/data/tpp06-cutter/esphome-test-prefs` :
 
 ```bash
 python3 tools/tpp06_tuya_cutter.py --yes ADRESSE_IP_DU_PANNEAU \
@@ -149,7 +348,9 @@ Arrêt sûr et reprise immédiate de Tuya :
 python3 tools/tpp06_tuya_cutter.py ADRESSE_IP_DU_PANNEAU stop-test
 ```
 
-La procédure manuelle équivalente est détaillée ci-dessous.
+La procédure manuelle historique ci-dessous n'est **pas équivalente** à l'essai
+borné : elle suspend Tuya et n'a pas d'arrêt automatique. Ne pas l'utiliser à
+distance sans accès physique de secours ; préférer la commande Cutter.
 
 1. Redémarrer le panneau pour retrouver ADB sur `5555`, puis se connecter selon
    l'[étape 4](04-adb-wifi-sans-uart.md).

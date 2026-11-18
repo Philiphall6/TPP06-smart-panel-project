@@ -4,9 +4,9 @@
 # dashboard adoption also imports that complete editable file automatically.
 substitutions:
   device_name: "tpp06-lvgl"
+  device_address: "${device_name}.local" # Keep a known IP for the first migration.
   friendly_name: "TPP06 ESPHome LVGL"
-  ota_password: "CHANGE_ME_BEFORE_INSTALL"
-  device_mac: "02:00:00:00:06:01"
+  api_encryption_key: !secret tpp06_api_encryption_key
   cover_entity: "cover.tpp06_example_cover"
   cave_light_entity: "light.tpp06_example_light_1"
   bar_light_entity: "light.tpp06_example_light_2"

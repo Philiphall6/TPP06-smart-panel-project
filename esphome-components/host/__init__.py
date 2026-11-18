@@ -4,6 +4,7 @@ import logging
 import os
 from pathlib import Path
 import platform
+import re
 import sys
 import tarfile
 import urllib.request
@@ -12,6 +13,7 @@ import esphome.codegen as cg
 import esphome.config_validation as cv
 from esphome.const import (
     CONF_MAC_ADDRESS,
+    CONF_USE_ADDRESS,
     KEY_CORE,
     KEY_FRAMEWORK_VERSION,
     KEY_TARGET_FRAMEWORK,
@@ -25,6 +27,7 @@ from esphome.storage_json import StorageJSON
 from esphome.types import ConfigType
 
 from .const import KEY_HOST
+from .address import install_address_bridge
 
 # force import gpio to register pin schema
 from .gpio import host_pin_to_code  # noqa: F401
@@ -40,6 +43,23 @@ CONF_URL = "url"
 CONF_SHA256 = "sha256"
 CONF_DIRECTORY = "directory"
 CONF_PREFIX = "prefix"
+CONF_NETWORK_INTERFACE = "network_interface"
+
+
+def validate_network_interface(value):
+    value = cv.string_strict(value)
+    if not re.fullmatch(r"[A-Za-z0-9_.-]{1,15}", value):
+        raise cv.Invalid("Expected a Linux interface name of 1 to 15 characters")
+    return value
+
+
+def validate_identity(config):
+    if CONF_NETWORK_INTERFACE in config and CONF_MAC_ADDRESS in config:
+        raise cv.Invalid("Use network_interface for the real MAC, or mac_address, not both")
+    if CONF_NETWORK_INTERFACE not in config and CONF_MAC_ADDRESS not in config:
+        # Preserve upstream behavior for existing non-TPP06 host configurations.
+        config[CONF_MAC_ADDRESS] = cv.mac_address("98:35:69:ab:f6:79")
+    return config
 
 DEFAULT_TOOLCHAIN_URL = (
     "https://toolchains.bootlin.com/downloads/releases/toolchains/"
@@ -69,6 +89,7 @@ CROSS_COMPILE_SCHEMA = cv.Schema(
 
 
 def set_core_data(config: ConfigType) -> ConfigType:
+    install_address_bridge()
     CORE.data[KEY_HOST] = {}
     CORE.data[KEY_CORE][KEY_TARGET_PLATFORM] = PLATFORM_HOST
     CORE.data[KEY_CORE][KEY_TARGET_FRAMEWORK] = "host"
@@ -79,10 +100,14 @@ def set_core_data(config: ConfigType) -> ConfigType:
 CONFIG_SCHEMA = cv.All(
     cv.Schema(
         {
-            cv.Optional(CONF_MAC_ADDRESS, default="98:35:69:ab:f6:79"): cv.mac_address,
+            cv.Optional(CONF_MAC_ADDRESS): cv.mac_address,
+            cv.Optional(CONF_NETWORK_INTERFACE): validate_network_interface,
             cv.Optional(CONF_CROSS_COMPILE): CROSS_COMPILE_SCHEMA,
+            # Deployment address only: never changes Linux Wi-Fi or DHCP.
+            cv.Optional(CONF_USE_ADDRESS): cv.All(cv.string_strict, cv.domain),
         }
     ),
+    validate_identity,
     # The host builds with the machine's own compiler through ninja; there
     # is no PlatformIO backend, so a CLI --toolchain must name this one
     cv.resolve_toolchain("host", (Toolchain.HOST,), Toolchain.HOST),
@@ -95,7 +120,10 @@ async def to_code(config: ConfigType) -> None:
     cg.add_define("USE_NATIVE_64BIT_TIME")
     # The prefs file finds stored preferences by key, so key migration is possible
     cg.add_define("USE_PREFERENCE_KEY_LOOKUP")
-    cg.add_define("USE_ESPHOME_HOST_MAC_ADDRESS", config[CONF_MAC_ADDRESS].parts)
+    if CONF_NETWORK_INTERFACE in config:
+        cg.add_define("USE_ESPHOME_HOST_NETWORK_INTERFACE", config[CONF_NETWORK_INTERFACE])
+    else:
+        cg.add_define("USE_ESPHOME_HOST_MAC_ADDRESS", config[CONF_MAC_ADDRESS].parts)
     cg.set_cpp_standard("gnu++20")
     cg.add_define("ESPHOME_BOARD", "host")
     cg.add_define("ESPHOME_VARIANT", "HOST")

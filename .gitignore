@@ -11,9 +11,17 @@ firmware/
 tpp06-backups/
 __pycache__/
 .esphome/
+build/
+*.elf
+program
 
 # Secrets et clés
 secrets/
+secrets.yaml
+secrets.yml
+*-personnel.yaml
+*-personal.yaml
+.env
 *.secret
 *.key
 *.pem

@@ -5,11 +5,26 @@
 [🇫🇷 Documentation française](README.fr.md) &nbsp;·&nbsp; [🇬🇧 English documentation](README.en.md)
 
 > [!CAUTION]
-> **ESPHome n'est pas encore fonctionnel en installation permanente.** Le
-> binaire démarre en essai temporaire, mais le basculement au démarrage peut
-> empêcher l'initialisation du Wi-Fi et provoquer une boucle de démarrage liée
-> au watchdog Tuya. N'utilisez pas `install esphome` ni `switch esphome`.
-> Conservez un accès UART de secours.
+> **Le multiboot ESPHome est encore expérimental.** Le superviseur V1 conserve
+> Tuya, le Wi-Fi et le port 8090 pendant les essais en mode apprentissage.
+> Chaque sélection personnalisée est ponctuelle : le prochain démarrage reste
+> Tuya même après validation. Ce secours logiciel n'est pas une garantie. Les tests hors ligne
+> passent, mais le cycle électrique réel reste à valider. L'installation exige
+> `--experimental-multiboot` et un accès UART de secours.
+
+Le Wi-Fi autonome (`wpa_supplicant`/DHCP) reste expérimental et exige une
+sélection explicite. Aucun essai réussi ne l'active automatiquement.
+
+**Validation actuelle :** tactile validé, essai supervisé de 15 minutes réussi,
+OTA chiffrée testée sur une copie isolée en RAM, sans redémarrage Linux.
+La MAC réelle, le mDNS et le chiffrement de l'API sont préparés dans le nouveau
+modèle, mais restent à valider ensemble sur le panneau. L'installation OTA
+depuis le bouton du Builder et le démarrage permanent ne sont pas validés.
+
+**Configuration portable :** noms et entités modifiables dans le YAML,
+composants chargés depuis GitHub, aucune dépendance à un ordinateur Mint.
+Chaque installation crée sa clé locale dans `secrets.yaml` (jamais publiée).
+Les adresses `192.0.2.1` des exemples sont fictives et doivent être remplacées.
 
 ## Commencer ici — accès réseau sans démontage
 
@@ -47,7 +62,7 @@ L'outil masque l'`AUTHKEY` et n'affiche jamais les éventuels identifiants Wi-Fi
 | **03 · Local & ESPHome** | Conserver l’Anyka et préparer le remplacement des services Tuya. | 🧪 En cours |
 | **04 · ADB par Wi-Fi** | Installer par le port `8090` un accès ADB persistant sur `5555`, sans ouvrir le panneau. | 🧪 Préversion expérimentale |
 | **05 · openHASP local** | Exécuter une interface locale 320×480 sur l’écran, avec tactile et MQTT/Home Assistant. | 🧪 Premier portage validé |
-| **06 · ESPHome + LVGL natif** | Exécuter le moteur LVGL d'ESPHome directement sur Linux Anyka avec framebuffer et tactile natifs. | ⚠️ Essai temporaire seulement ; démarrage permanent non fonctionnel |
+| **06 · ESPHome + LVGL natif** | Exécuter le moteur LVGL d'ESPHome directement sur Linux Anyka avec framebuffer et tactile natifs. | 🧪 Essai temporaire validé ; multiboot V1 à valider sur matériel |
 | **07 · Tuya Cutter** | Automatiser détection, sauvegarde, restauration, essais et basculement réversible entre Tuya, openHASP et ESPHome. | 🧪 Outil en validation |
 
 ## Commencer par l’étape 0
@@ -118,7 +133,7 @@ les essais temporaires ou le basculement réversible entre Tuya, openHASP et
 ESPHome-LVGL.
 
 ```bash
-python3 tools/tpp06_tuya_cutter.py 192.168.1.52
+python3 tools/tpp06_tuya_cutter.py 192.0.2.1
 ```
 
 - [Tutoriel complet Tuya Cutter](docs/fr/07-tuya-cutter.md)

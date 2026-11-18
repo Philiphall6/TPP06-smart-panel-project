@@ -3,10 +3,26 @@
 [English version](README.en.md)
 
 > [!CAUTION]
-> **ESPHome n'est pas encore fonctionnel en installation permanente.** Le
-> binaire ARMv5 démarre en essai temporaire, mais le basculement au démarrage
-> peut couper le Wi-Fi et provoquer une boucle liée au watchdog Tuya.
-> N'utilisez pas `install esphome` ni `switch esphome` et gardez un accès UART.
+> **Le multiboot ESPHome est encore expérimental.** Le superviseur V1 conserve
+> Tuya, le Wi-Fi et le port 8090 pendant les essais en mode apprentissage.
+> Chaque sélection personnalisée est ponctuelle : le prochain démarrage reste
+> Tuya même après validation. Ce secours logiciel n'est pas une garantie.
+> Le superviseur passe les tests hors ligne,
+> mais doit encore être validé par cycle électrique réel. L'installation exige
+> `--experimental-multiboot` et un accès UART de secours.
+
+Le Wi-Fi autonome (`wpa_supplicant`/DHCP) reste expérimental et exige une
+sélection explicite. Aucun essai réussi ne l'active automatiquement.
+
+**Validation actuelle :** tactile validé, essai supervisé de 15 minutes réussi
+et OTA chiffrée validée sur une copie isolée en RAM, sans redémarrage Linux.
+La nouvelle MAC réelle, le mDNS et l'API chiffrée restent à tester ensemble sur
+le panneau. Le bouton Installer du Builder et le démarrage permanent ne sont
+pas encore validés.
+
+Le YAML reste éditable et portable : composants depuis GitHub, compilation
+dans Home Assistant, noms/entités personnalisables et clé propre à chaque
+installation dans `secrets.yaml`, jamais dans GitHub. Aucun Mint imposé.
 
 ## Objectif
 
@@ -91,10 +107,10 @@ des composants Linux natifs pour `/dev/fb0` et `/dev/input/event1`.
 - [YAML portable pour Device Builder](esphome/tpp06-device-builder.yaml)
 - [Correctif à appliquer au dépôt ESPHome](esphome-lvgl/esphome-tpp06-lvgl.patch)
 
-**État :** compilation et essai temporaire du framebuffer/tactile validés.
-L'installation permanente est **non fonctionnelle** : le Wi-Fi peut ne pas
-être initialisé et le panneau peut entrer en boucle de démarrage. Elle est
-bloquée dans Tuya Cutter en attendant une solution vérifiée sur matériel.
+**État :** compilation et essai temporaire du framebuffer/tactile validés. Le
+superviseur multiboot V1 avec repli sur Tuya passe les tests hors ligne ; son
+installation permanente reste protégée par une option explicite jusqu'à la
+validation sur matériel.
 
 ## Étape 7 — Installateur réversible Tuya Cutter
 

@@ -3,10 +3,26 @@
 [Version française](README.fr.md)
 
 > [!CAUTION]
-> **Permanent ESPHome installation is not working yet.** The ARMv5 executable
-> runs as a temporary test, but boot-time cut-over can prevent Wi-Fi setup and
-> trigger a Tuya watchdog boot loop. Do not run `install esphome` or
-> `switch esphome`, and keep UART recovery available.
+> **ESPHome multiboot is still experimental.** Supervisor V1 retains Tuya,
+> Wi-Fi, and port 8090 during learning-mode trials. Every custom selection is
+> one-shot: the next boot remains stock even after validation. This software
+> fallback is not a recovery guarantee. Offline tests pass, but power-cycle validation is
+> still required. Installation needs `--experimental-multiboot` and UART
+> recovery must remain available.
+
+Independent Wi-Fi (`wpa_supplicant`/DHCP) remains experimental and requires
+explicit selection. A successful trial never enables it automatically.
+
+**Current validation:** touchscreen confirmed, 15-minute supervised trial
+passed, encrypted OTA passed on an isolated RAM copy without a Linux reboot.
+The new real MAC, mDNS and encrypted API still require combined on-panel
+validation. Builder's Install-button workflow and permanent boot are not yet
+validated.
+
+The YAML remains editable and portable: GitHub-sourced components, builds in
+Home Assistant, configurable names/entities and a per-installation key in local
+`secrets.yaml`, never in GitHub. No Mint computer is required. Example address
+`192.0.2.1` is fictional and must be replaced.
 
 ## Goal
 
@@ -91,9 +107,9 @@ native Linux components for `/dev/fb0` and `/dev/input/event1`.
 - [Patch for the upstream ESPHome repository](esphome-lvgl/esphome-tpp06-lvgl.patch)
 
 **Status:** compilation and temporary framebuffer/touch operation are
-validated. Permanent installation is **not functional**: Wi-Fi may not be
-initialised and the panel may enter a watchdog boot loop. Tuya Cutter blocks
-this path until a hardware-tested startup procedure is available.
+validated. Multiboot supervisor V1 passes offline automatic-fallback tests;
+permanent installation remains behind an explicit experimental option until
+hardware power-cycle validation is complete.
 
 ## Phase 7 — Reversible Tuya Cutter installer
 

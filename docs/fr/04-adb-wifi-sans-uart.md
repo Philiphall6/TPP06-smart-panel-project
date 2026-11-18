@@ -16,7 +16,7 @@ sur un panneau TPP06 équipé de l'Anyka `AK3761E`, identifié comme
 Après redémarrage :
 
 ```text
-192.168.1.52:5555 device product:occam model:Nexus_4 device:mako
+192.0.2.1:5555 device product:occam model:Nexus_4 device:mako
 uid=0(root) gid=0(root)
 Linux Tuya 4.4.192V2.4 ... armv5tejl GNU/Linux
 ```
