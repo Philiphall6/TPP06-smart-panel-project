@@ -39,6 +39,10 @@ stay in each owner’s installation.
 
 ## Choose your path
 
+An [experimental commissioning assistant](docs/en/13-assisted-setup.md) prepares
+the transition to primary ESPHome boot. Offline-tested only; its complete
+procedure still needs hardware validation before unassisted beginner use.
+
 1. **Already running ESPHome:** [update wirelessly](docs/en/START-HERE.md#5-update-a-panel-already-running-esphome).
    Do not reinstall the overlay or boot supervisor for a UI update.
 2. **Stock panel:** follow [compatibility, network access, backup and preparation](docs/en/START-HERE.md).

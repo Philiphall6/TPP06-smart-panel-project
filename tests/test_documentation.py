@@ -45,7 +45,10 @@ class DocumentationTests(unittest.TestCase):
 
     def test_beginner_cutter_commands_parse_without_running(self):
         import shlex
-        from tools.tpp06_tuya_cutter import build_parser
+        import sys
+        from unittest.mock import patch
+        with patch.object(sys, 'path', [str(ROOT / 'tools'), *sys.path]):
+            from tools.tpp06_tuya_cutter import build_parser
         parser = build_parser()
         for guide in ('docs/fr/DEMARRER-ICI.md', 'docs/en/START-HERE.md'):
             for line in (ROOT / guide).read_text().splitlines():

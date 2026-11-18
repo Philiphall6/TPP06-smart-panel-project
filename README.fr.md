@@ -33,6 +33,10 @@ par ce dépôt ; les noms, entités et secrets appartiennent à chaque installat
 
 ## Parcours normal
 
+Un [assistant expérimental](docs/fr/13-installation-assistee.md) prépare la
+transition vers ESPHome principal. Tests hors ligne uniquement : sa procédure
+complète reste à valider sur matériel avant un usage novice autonome.
+
 1. [Identifier son cas et préparer HA](docs/fr/DEMARRER-ICI.md).
 2. [Obtenir l’accès par le réseau](docs/fr/00-acces-reseau-authkey.md).
 3. [Préparer ADB si nécessaire](docs/fr/04-adb-wifi-sans-uart.md), puis

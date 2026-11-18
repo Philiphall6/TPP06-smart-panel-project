@@ -64,6 +64,7 @@ de sélectionner un démarrage ou de redémarrer.
 
 ## Documentation et fichiers
 
+- [Assistant de première mise en service — tests hors ligne uniquement](docs/fr/13-installation-assistee.md)
 - [Interface V5 : fonctions, validation et limites](docs/fr/11-interface-v5.md)
 - [Configuration complète V5 à personnaliser](esphome/tpp06-lvgl-mobile.yaml)
 - [Accès réseau sans démontage](docs/fr/00-acces-reseau-authkey.md)

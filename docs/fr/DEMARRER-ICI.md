@@ -101,6 +101,11 @@ inventer des paramètres Wi-Fi dans le YAML.
 
 ## 4. Préparer la V5 dans Device Builder
 
+Une [procédure assistée expérimentale](13-installation-assistee.md) peut générer
+la configuration privée et orchestrer la transition après compilation. Elle
+est testée hors ligne seulement et nécessite encore un essai matériel accompagné.
+Ce n'est pas une nouvelle étape à exécuter sur un panneau déjà sous ESPHome.
+
 1. Sauvegarder les configurations existantes de HA/Builder.
 2. Copier le contenu complet de
    [`esphome/tpp06-lvgl-mobile.yaml`](../../esphome/tpp06-lvgl-mobile.yaml)

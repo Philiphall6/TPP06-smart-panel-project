@@ -88,6 +88,11 @@ ESP32 Wi-Fi configuration for this Linux panel.
 
 ## 4. Prepare V5 in Device Builder
 
+An [experimental assisted procedure](13-assisted-setup.md) generates private
+configuration and coordinates the transition after compilation. It has only
+been tested offline and still requires an assisted hardware trial. Do not run
+first commissioning on a panel already using ESPHome.
+
 1. Back up existing HA/Builder configurations.
 2. Copy the complete
    [`esphome/tpp06-lvgl-mobile.yaml`](../../esphome/tpp06-lvgl-mobile.yaml)

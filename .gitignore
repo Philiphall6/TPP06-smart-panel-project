@@ -27,3 +27,9 @@ secrets.yml
 *.pem
 mot-de-passe*.txt
 password*.txt
+
+# Private commissioning bundles/journals (also keep the whole bundle outside Git)
+connection.json
+commission.json
+api-key.txt
+.venv-commission/
