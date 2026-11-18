@@ -16,9 +16,13 @@ sélection explicite. Aucun essai réussi ne l'active automatiquement.
 
 **Validation actuelle :** tactile validé, essai supervisé de 15 minutes réussi
 et OTA chiffrée validée sur une copie isolée en RAM, sans redémarrage Linux.
-La nouvelle MAC réelle, le mDNS et l'API chiffrée restent à tester ensemble sur
-le panneau. Le bouton Installer du Builder et le démarrage permanent ne sont
-pas encore validés.
+La MAC réelle, les annonces mDNS reçues côté HA et l'API chiffrée ont passé
+un essai de 150 secondes en RAM. L'appairage HA avec la nouvelle identité,
+le bouton Installer du Builder et le démarrage permanent ne sont pas encore
+validés.
+
+L'essai OTA du nouveau build est à refaire avec traçage de chaque envoi : deux
+transferts ont été observés, avec un délai API dépassé pendant le second.
 
 Le YAML reste éditable et portable : composants depuis GitHub, compilation
 dans Home Assistant, noms/entités personnalisables et clé propre à chaque

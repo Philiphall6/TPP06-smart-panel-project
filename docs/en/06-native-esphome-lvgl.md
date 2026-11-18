@@ -114,20 +114,42 @@ and tested.
 
 ## Initial deployment and later OTA updates
 
-### Real MAC and mDNS discovery — pending on-panel validation
+### Real MAC and mDNS discovery — initial on-panel trial passed
 
 The new template uses `host.network_interface: wlan0` to read the panel's real
 MAC through ioctl, never the build server's MAC. It rejects invalid identities
 instead of silently falling back to a shared synthetic MAC. Remove the old
 `host.mac_address`; the two options are mutually exclusive.
 
+On 18 November 2026, a 150-second trial on a real RAM copy passed four
+encrypted API connections and rejected a plaintext connection. The API MAC
+matched `wlan0`. A, PTR, SRV and TXT replies queried from the HA SSH host
+confirmed the `.local` name, API port, MAC and Noise marker. Automatic stop
+preserved Tuya, ADB and the flash program without a Linux reboot. No household
+equipment was controlled.
+
+The previous HA entry still uses the synthetic MAC and has no encryption key:
+pairing must be migrated separately. Keep that entry until entity links and
+automations have been checked. Connection warnings from old clients do not
+validate that link. The YAML can now reference GitHub components at a pinned
+commit without a local component directory. Keep a private backup before migration.
+
+A subsequent encrypted OTA trial of the new build completed its transfer, but
+the log recorded two successive updates although the test requested one.
+An API check timed out during the second transfer; a later encrypted check
+succeeded. The flash program remained unchanged and bounded stop preserved
+Tuya. The second transfer's origin is not yet confirmed, so this does not
+validate a complete isolated OTA sequence. Do not launch Builder's Install
+action while an automated OTA trial is running.
+
 `tpp06_mdns` publishes native ESPHome service records over IPv4, including the
 real MAC and encryption state, and the `device_name.local` hostname. Use a unique
 device name per panel. The adapter follows DHCP address changes and stops
 publishing on name conflicts while keeping direct IP access available.
-Schema validation, code generation, and ARMv5 syntax checks pass; **real discovery
-from HA/Builder still requires an isolated RAM trial**. These checks do not
-validate permanent boot.
+Schema validation, code generation, ARMv5 syntax checks and the bounded DNS-SD
+trial pass. HA integration pairing, Builder adoption/installation, DHCP changes,
+name conflicts and long-term stability still need validation. These checks do
+not validate permanent boot.
 
 Retain the known IP in `device_address` during migration. Switch to
 `${device_name}.local` only after resolution/discovery works from HA. Replacing

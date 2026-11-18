@@ -17,9 +17,12 @@ sélection explicite. Aucun essai réussi ne l'active automatiquement.
 
 **Validation actuelle :** tactile validé, essai supervisé de 15 minutes réussi,
 OTA chiffrée testée sur une copie isolée en RAM, sans redémarrage Linux.
-La MAC réelle, le mDNS et le chiffrement de l'API sont préparés dans le nouveau
-modèle, mais restent à valider ensemble sur le panneau. L'installation OTA
+La MAC réelle, les annonces mDNS reçues côté HA et le chiffrement de l'API
+ont passé un essai matériel limité à 150 secondes en RAM. L'appairage de
+l'intégration HA avec la nouvelle identité reste à faire. L'installation OTA
 depuis le bouton du Builder et le démarrage permanent ne sont pas validés.
+L'essai OTA du nouveau build doit être répété avec traçage de chaque envoi :
+deux transferts ont été observés, avec un délai API dépassé pendant le second.
 
 **Configuration portable :** noms et entités modifiables dans le YAML,
 composants chargés depuis GitHub, aucune dépendance à un ordinateur.

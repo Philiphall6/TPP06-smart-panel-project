@@ -10,9 +10,13 @@ private API/OTA key in `secrets.yaml`. Each installation owns its own secret.
 API encryption and OTA encryption are separate features. The tested older
 binary already required encrypted OTA despite exposing a plaintext API.
 
-Status: schema validation, code generation, and ARMv5 C++ syntax checks only.
-Discovery by Home Assistant/Device Builder on a real panel is NOT yet
-validated. Do not make this build the default boot before a bounded RAM trial.
+Status: schema validation, code generation, ARMv5 C++ syntax checks and a
+150-second real-panel RAM trial passed on 18 November 2026. Legacy-unicast A
+and multicast DNS-SD PTR/SRV/TXT queries from the HA SSH host returned the
+expected hostname, API port, real interface MAC and Noise encryption marker.
+Encrypted API reads also matched the interface MAC; plaintext was refused.
+This is not validation of HA integration pairing, Builder adoption/installation,
+DHCP changes, name collisions, long-term stability or permanent boot.
 Keep the known IP as `host.use_address` during migration, then switch to the
 unique `.local` name only after resolution is verified from Home Assistant.
 Changing from the old synthetic MAC changes HA device identity: retain the

@@ -15,9 +15,11 @@ explicit selection. A successful trial never enables it automatically.
 
 **Current validation:** touchscreen confirmed, 15-minute supervised trial
 passed, encrypted OTA passed on an isolated RAM copy without a Linux reboot.
-The new real MAC, mDNS and encrypted API still require combined on-panel
-validation. Builder's Install-button workflow and permanent boot are not yet
-validated.
+The real MAC, mDNS records received from the HA host and encrypted API passed
+a 150-second on-panel RAM trial. HA integration pairing with the new identity,
+Builder's Install-button workflow and permanent boot are not yet validated.
+The new build's OTA trial must be repeated with per-upload tracing: two
+transfers were observed, and an API check timed out during the second one.
 
 The YAML remains editable and portable: GitHub-sourced components, builds in
 Home Assistant, configurable names/entities and a per-installation key in local

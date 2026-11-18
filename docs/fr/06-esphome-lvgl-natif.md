@@ -114,20 +114,43 @@ une adresse explicite tant que le relais mDNS n'est pas configuré et testé.
 
 ## Installation initiale et mises à jour OTA
 
-### MAC réelle et découverte mDNS — adaptation à valider sur le panneau
+### MAC réelle et découverte mDNS — premier essai matériel validé
 
 Le nouveau modèle utilise `host.network_interface: wlan0` : la MAC est lue
 sur le panneau par ioctl, jamais sur le serveur de compilation. Il refuse une
 MAC vide/multicast et ne revient pas silencieusement à une identité fictive.
 Supprimer l'ancien `host.mac_address`, incompatible avec cette option.
 
+Le 18 novembre 2026, un essai de 150 secondes sur une copie réelle en RAM a
+validé quatre connexions API chiffrées et le refus d'une connexion en clair.
+La MAC de l'API correspond à `wlan0`. Depuis le système HA, les réponses A,
+PTR, SRV et TXT ont confirmé le nom `.local`, le port API, la MAC et l'annonce
+Noise. L'arrêt automatique a conservé Tuya, ADB et le programme en flash,
+sans redémarrage Linux. Aucun équipement de la maison n'a été commandé.
+
+L'ancienne entrée HA utilise encore la MAC fictive et une connexion sans clé :
+son appairage doit être migré séparément. Ne pas supprimer cette entrée avant
+de vérifier les liens d'entités et automatisations. Les avertissements de
+connexion des anciens clients ne constituent pas une validation de ce lien.
+Le YAML peut désormais référencer les composants GitHub à un commit précis,
+sans dossier de composants local. Conserver une sauvegarde privée avant migration.
+
+Un essai OTA chiffré ultérieur du nouveau build a réussi son transfert, mais
+deux mises à jour successives figurent dans le journal alors que le test n'en
+demandait qu'une. Une vérification API a expiré pendant le second transfert ;
+une vérification chiffrée ultérieure a réussi. Le programme flash est resté
+inchangé et l'arrêt limité a préservé Tuya. L'origine du second transfert
+reste à confirmer : ce test ne valide pas une séquence OTA complète isolée.
+Ne pas lancer Installer dans Builder pendant un essai OTA automatisé.
+
 `tpp06_mdns` publie en IPv4 les enregistrements natifs ESPHome (MAC réelle,
 version, service API et état de chiffrement) et le nom `device_name.local`.
 Choisir un `device_name` unique par panneau. L'adaptateur surveille les changements
 d'adresse et arrête ses annonces en cas de conflit de nom, sans couper l'accès IP.
-La validation YAML, la génération de code et l'analyse syntaxique ARMv5 passent ;
-**la découverte réelle depuis HA/Builder reste à tester en RAM**. Aucun
-démarrage permanent n'est validé par ces contrôles.
+La validation YAML, la génération de code, l'analyse syntaxique ARMv5 et l'essai
+DNS-SD limité passent. L'appairage HA, l'adoption/installation dans Builder,
+les changements DHCP, les conflits de nom et la stabilité prolongée restent
+à valider. Aucun démarrage permanent n'est validé par ces contrôles.
 
 Lors de la migration, garder temporairement l'IP connue dans `device_address`.
 Ne passer à `${device_name}.local` qu'après résolution et découverte réussies
