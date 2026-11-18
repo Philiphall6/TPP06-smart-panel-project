@@ -4,6 +4,16 @@
 
 [Project home](README.md) · [Français](README.fr.md)
 
+## The TPP06 enclosure
+
+<p align="center">
+  <img src="media/visuels-produit/01-panneau-blanc.png" alt="TPP06 with white controls" width="300">
+  &nbsp;&nbsp;
+  <img src="media/visuels-produit/02-panneau-noir.png" alt="TPP06 with black controls" width="300">
+</p>
+
+*Reference images of both enclosure variants. Appearance alone does not establish firmware compatibility.*
+
 ## Current status — 18 November 2026
 
 **V5 / project `0.1.5` is installed on the reference panel.** Its owner

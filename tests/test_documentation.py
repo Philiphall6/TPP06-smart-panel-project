@@ -8,6 +8,15 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class DocumentationTests(unittest.TestCase):
+    def test_product_images_remain_in_readmes(self):
+        images = ('media/visuels-produit/01-panneau-blanc.png',
+                  'media/visuels-produit/02-panneau-noir.png')
+        for name in ('README.md', 'README.fr.md', 'README.en.md'):
+            text = (ROOT / name).read_text()
+            for image in images:
+                self.assertIn(f'src="{image}"', text)
+                self.assertTrue((ROOT / image).is_file())
+
     def test_local_markdown_links_exist(self):
         documents = list(ROOT.glob('README*.md')) + list((ROOT / 'docs').rglob('*.md'))
         for document in documents:

@@ -4,6 +4,16 @@
 
 [Accueil du projet](README.md) · [English](README.en.md)
 
+## Le boîtier TPP06
+
+<p align="center">
+  <img src="media/visuels-produit/01-panneau-blanc.png" alt="TPP06 avec commandes blanches" width="300">
+  &nbsp;&nbsp;
+  <img src="media/visuels-produit/02-panneau-noir.png" alt="TPP06 avec commandes noires" width="300">
+</p>
+
+*Visuels de référence des deux variantes du boîtier. L’apparence seule ne garantit pas la compatibilité du firmware.*
+
 ## Ce qui fonctionne sur le panneau de référence
 
 La **V5 / `0.1.5`** est installée : binaire vérifié, API chiffrée accessible,
