@@ -16,6 +16,14 @@
 
 ## Ce qui fonctionne sur le panneau de référence
 
+Les correctifs V5 `0.1.5-colors.1` sont installés : [couleurs RGB565 et
+présentation de l'image](esphome-components/fbdev/README.md). Les
+[trois relais locaux](docs/fr/14-relais-locaux.md) fonctionnent depuis les
+touches haut/milieu/bas ; les essais sans HA/point d'accès restent à faire.
+Le logo RGB565 a été écrit et relu, mais sa couleur au prochain démarrage
+reste à confirmer. La [V6 météo](esphome/tpp06-lvgl-modern.yaml) est une
+candidate non compilée/non installée, pas le parcours débutant validé.
+
 La **V5 / `0.1.5`** est installée : binaire vérifié, API chiffrée accessible,
 Wi-Fi connecté, superviseur sain et démarrage permanent conservé. Une capture
 réelle confirme l’accueil LVGL avec icônes, date et heure. Compilation dans

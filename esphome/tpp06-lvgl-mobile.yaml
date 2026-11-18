@@ -263,6 +263,7 @@ display:
   - platform: fbdev
     id: tpp06_display
     device: "${framebuffer_device}"
+    pixel_format: RGB565  # Verified scanout; vendor fbdev metadata says BGR565.
     dimensions:
       width: 320
       height: 480

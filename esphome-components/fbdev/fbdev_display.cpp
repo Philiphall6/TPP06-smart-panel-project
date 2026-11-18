@@ -12,6 +12,7 @@
 
 #include "esphome/components/display/display_color_utils.h"
 #include "esphome/core/log.h"
+#include "esphome/core/hal.h"
 
 namespace esphome::fbdev {
 
@@ -47,7 +48,12 @@ void FbdevDisplay::setup() {
 
   this->stride_ = fixed.line_length;
   this->memory_size_ = fixed.smem_len;
-  this->swap_red_blue_ = variable.red.offset == 0 && variable.blue.offset == 11;
+  // The tested TPP06 scanout is RGB565, although its vendor fbdev metadata
+  // reports BGR565. Permit an explicit, board-configured override; preserve
+  // automatic metadata handling for other Linux framebuffers.
+  this->swap_red_blue_ = this->pixel_format_ == PixelFormat::BGR565 ||
+                        (this->pixel_format_ == PixelFormat::AUTO &&
+                         variable.red.offset == 0 && variable.blue.offset == 11);
   void *mapped = mmap(nullptr, this->memory_size_, PROT_READ | PROT_WRITE, MAP_SHARED, this->fd_, 0);
   if (mapped == MAP_FAILED) {
     this->memory_ = nullptr;
@@ -57,11 +63,48 @@ void FbdevDisplay::setup() {
     return;
   }
   this->memory_ = static_cast<uint8_t *>(mapped);
+  this->present_info_ = variable;
+  // Do not pan unrelated Linux displays or change resolution, pixel format,
+  // offsets, blanking, clocks, boot scripts or the NAND logo.
+  this->needs_pan_ = std::strncmp(fixed.id, "ak-lcd", sizeof(fixed.id)) == 0;
+  if (this->needs_pan_ && (variable.xoffset != 0 || variable.yoffset != 0)) {
+    ESP_LOGE(TAG, "Unsupported Anyka framebuffer offset: %u,%u", variable.xoffset, variable.yoffset);
+    this->close_();
+    this->mark_failed();
+    return;
+  }
   ESP_LOGI(TAG, "Framebuffer %s: %ux%u, stride=%u, %s565", this->device_.c_str(), this->width_, this->height_,
            this->stride_, this->swap_red_blue_ ? "BGR" : "RGB");
 }
 
+bool FbdevDisplay::present_() {
+  // Standard fbdev ioctl, using unchanged GET_VSCREENINFO data. In the
+  // verified ak_fb driver this calls ak_lcdc_rgb_display, selecting scanout
+  // and its colour format. Do not use FBIOPUT_VSCREENINFO or raw registers.
+  if (ioctl(this->fd_, FBIOPAN_DISPLAY, &this->present_info_) < 0) {
+    if (!this->present_failed_)
+      ESP_LOGW(TAG, "Cannot present framebuffer: %s", std::strerror(errno));
+    this->present_failed_ = true;
+    this->status_set_warning("Framebuffer presentation failed");
+    return false;
+  }
+  if (this->present_failed_) this->status_clear_warning();
+  this->present_failed_ = false;
+  return true;
+}
+
+void FbdevDisplay::loop() {
+  if (!this->needs_pan_ || !this->dirty_ || this->memory_ == nullptr) return;
+  const uint32_t now = millis();
+  // Batch LVGL tile flushes into one presentation per component loop.
+  // A failed ioctl never becomes a busy retry loop or an automatic reboot.
+  if (this->present_failed_ && static_cast<uint32_t>(now - this->last_present_attempt_) < 1000) return;
+  this->last_present_attempt_ = now;
+  if (this->present_()) this->dirty_ = false;
+}
+
 void FbdevDisplay::close_() {
+  this->dirty_ = false;
   if (this->memory_ != nullptr) {
     munmap(this->memory_, this->memory_size_);
     this->memory_ = nullptr;
@@ -78,6 +121,7 @@ void FbdevDisplay::dump_config() {
   LOG_DISPLAY("", "Linux framebuffer", this);
   ESP_LOGCONFIG(TAG, "  Device: %s", this->device_.c_str());
   ESP_LOGCONFIG(TAG, "  Pixel format: %s565", this->swap_red_blue_ ? "BGR" : "RGB");
+  ESP_LOGCONFIG(TAG, "  Anyka framebuffer presentation: %s", YESNO(this->needs_pan_));
 }
 
 int FbdevDisplay::get_width() {
@@ -118,6 +162,7 @@ void FbdevDisplay::draw_pixel_at(int x, int y, Color color) {
     pixel = rgb565_to_bgr565_(pixel);
   auto *row = reinterpret_cast<uint16_t *>(this->memory_ + static_cast<size_t>(y) * this->stride_);
   row[x] = pixel;
+  this->dirty_ = true;
 }
 
 void FbdevDisplay::draw_pixels_at(int x_start, int y_start, int w, int h, const uint8_t *ptr,
@@ -143,6 +188,7 @@ void FbdevDisplay::draw_pixels_at(int x_start, int y_start, int w, int h, const 
     }
     source += source_stride;
   }
+  this->dirty_ = true;
 }
 
 }  // namespace esphome::fbdev

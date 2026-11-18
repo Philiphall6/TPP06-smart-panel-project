@@ -33,6 +33,7 @@ class PortableConfigTests(unittest.TestCase):
             "type": "local", "path": str(root / "esphome-components"),
         }
         self.assertEqual(config["api"]["reboot_timeout"], "0s")
+        self.assertEqual(config["display"][0]["pixel_format"], "RGB565")
         self.assertIn("-Wl,--strip-all", config["esphome"]["build_flags"])
         self.assertTrue(any(x["platform"] == "version" for x in config["text_sensor"]))
         self.assertTrue(any(x["platform"] == "uptime" for x in config["sensor"]))
@@ -59,6 +60,17 @@ class PortableConfigTests(unittest.TestCase):
         self.assertEqual(metadata.address, "tpp06-lvgl.local")
         self.assertFalse(metadata.no_mdns)
         self.assertIsNone(metadata.firmware_bin_path)
+
+    def test_framebuffer_pixel_format_schema(self):
+        self.test_local_configuration_and_diagnostics()
+        from esphome.components.fbdev.display import CONFIG_SCHEMA
+        import esphome.config_validation as cv
+        for pixel_format in ("AUTO", "RGB565", "BGR565", "rgb565"):
+            result = CONFIG_SCHEMA({"id": "format_test", "pixel_format": pixel_format})
+            self.assertEqual(result["pixel_format"], pixel_format.upper())
+        self.assertEqual(CONFIG_SCHEMA({"id": "format_default"})["pixel_format"], "AUTO")
+        with self.assertRaises(cv.Invalid):
+            CONFIG_SCHEMA({"id": "format_invalid", "pixel_format": "RGB888"})
 
     def test_linux_identity_and_mdns_guards(self):
         # Initialize the external component imports using the full config test.
@@ -141,6 +153,9 @@ class PortableConfigTests(unittest.TestCase):
 
 class MobileConfigTests(PortableConfigTests):
     CONFIG_FILE = "tpp06-lvgl-mobile.yaml"
+    PAGE_COUNT = 7
+    UI_VERSION = "0.1.5"
+    IMPORT_MARKER = "mobile"
 
     def test_mobile_cpp_generation_without_compiling(self):
         self.test_local_configuration_and_diagnostics()
@@ -149,6 +164,7 @@ class MobileConfigTests(PortableConfigTests):
         from esphome.__main__ import generate_cpp_contents
         generate_cpp_contents(CORE.config)
         code = CORE.cpp_main_section
+        self.assertIn("set_pixel_format(fbdev::PixelFormat::RGB565)", code)
         self.assertIn("/sys/class/net/wlan0/carrier", code)
         self.assertIn("mobile_home_date", code)
         self.assertIn("mobile_clock_visible", code)
@@ -170,10 +186,10 @@ class MobileConfigTests(PortableConfigTests):
         self.test_local_configuration_and_diagnostics()
         config = yaml_util.load_yaml(CORE.config_path)
         ui = config["lvgl"]
-        self.assertEqual(len(ui["pages"]), 7)
+        self.assertEqual(len(ui["pages"]), self.PAGE_COUNT)
         self.assertEqual(ui["pages"][0]["id"], "page_home")
         self.assertEqual(ui["buffer_size"], "25%")
-        self.assertIn("mobile", config["dashboard_import"]["package_import_url"])
+        self.assertIn(self.IMPORT_MARKER, config["dashboard_import"]["package_import_url"])
         self.assertEqual(config["external_components"][0]["source"]["url"],
                          "https://github.com/Philiphall6/TPP06-smart-panel-project")
         self.assertNotIn("image", config)
@@ -243,7 +259,7 @@ class MobileConfigTests(PortableConfigTests):
     def test_screen_sleep_is_opt_in_and_does_not_stop_network(self):
         self.test_local_configuration_and_diagnostics()
         config = yaml_util.load_yaml(CORE.config_path)
-        self.assertEqual(config["esphome"]["project"]["version"], "0.1.5")
+        self.assertEqual(config["esphome"]["project"]["version"], self.UI_VERSION)
         ui = config["lvgl"]
         prefs = {x["id"]: x for x in config["globals"]}
         self.assertEqual(str(prefs["mobile_sleep_choice"]["initial_value"]), "0")
@@ -267,3 +283,41 @@ class MobileConfigTests(PortableConfigTests):
         for invalid in ("../gpio", "", "/dev/mtd3", "backlight;reboot", "a/b"):
             with self.assertRaises(cv.Invalid):
                 backlight_name(invalid)
+
+
+class ModernConfigTests(MobileConfigTests):
+    CONFIG_FILE = "tpp06-lvgl-modern.yaml"
+    PAGE_COUNT = 9
+    UI_VERSION = "0.1.6"
+    IMPORT_MARKER = "modern"
+
+    def test_weather_is_private_optional_read_only_and_unit_aware(self):
+        self.test_local_configuration_and_diagnostics()
+        config = yaml_util.load_yaml(CORE.config_path)
+        self.assertEqual(config["substitutions"]["weather_entity"], "weather.tpp06_example")
+        values = [x for section in ("sensor", "text_sensor") for x in config[section]
+                  if str(x.get("entity_id", "")) == "${weather_entity}"]
+        self.assertEqual(len(values), 6)
+        self.assertTrue(all(x["internal"] for x in values))
+        self.assertNotIn("homeassistant.action", str(values))
+        attrs = {x.get("attribute") for x in values}
+        self.assertEqual(attrs, {None, "temperature", "temperature_unit", "humidity",
+                                 "wind_speed", "wind_speed_unit"})
+        weather = next(x for x in config["script"] if x["id"] == "tpp06_refresh_weather")
+        self.assertIn("fresh(", str(weather))
+        self.assertIn("Donnees anciennes", str(weather))
+        self.assertIn("has_state()", str(weather))
+        self.assertNotIn("http_request", config)
+        self.assertNotIn("api_key", config["substitutions"])
+
+    def test_sound_never_enables_unverified_hardware(self):
+        self.test_local_configuration_and_diagnostics()
+        config = yaml_util.load_yaml(CORE.config_path)
+        sound = next(p for p in config["lvgl"]["pages"] if p["id"] == "page_sound")
+        button = next(x["button"] for x in sound["widgets"] if "button" in x
+                      and x["button"].get("id") == "mobile_beep_enable")
+        self.assertTrue(button["state"]["disabled"])
+        self.assertNotIn("on_click", button)
+        self.assertNotIn("/sys/class/pwm", str(config))
+        self.assertNotIn("/sys/class/gpio", str(config))
+        self.assertNotIn("homeassistant.action", str(sound))

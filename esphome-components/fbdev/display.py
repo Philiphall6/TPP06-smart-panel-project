@@ -20,9 +20,12 @@ DEPENDENCIES = ["host"]
 DOMAIN = "fbdev"
 
 CONF_DEVICE = "device"
+CONF_PIXEL_FORMAT = "pixel_format"
 
 fbdev_ns = cg.esphome_ns.namespace("fbdev")
 FbdevDisplay = fbdev_ns.class_("FbdevDisplay", display.Display, cg.Component)
+PixelFormat = fbdev_ns.enum("PixelFormat", is_class=True)
+PIXEL_FORMATS = {name: getattr(PixelFormat, name) for name in ("AUTO", "RGB565", "BGR565")}
 
 def _add_display_metadata(config: ConfigType) -> ConfigType:
     dimensions = config[CONF_DIMENSIONS]
@@ -50,6 +53,7 @@ CONFIG_SCHEMA = cv.All(
         {
             cv.GenerateID(): cv.declare_id(FbdevDisplay),
             cv.Optional(CONF_DEVICE, default="/dev/fb0"): cv.string_strict,
+            cv.Optional(CONF_PIXEL_FORMAT, default="AUTO"): cv.enum(PIXEL_FORMATS, upper=True),
             cv.Optional(
                 CONF_DIMENSIONS,
                 default={CONF_WIDTH: 320, CONF_HEIGHT: 480},
@@ -73,6 +77,7 @@ async def to_code(config: ConfigType) -> None:
     var = cg.new_Pvariable(config[CONF_ID])
     await display.register_display(var, config)
     cg.add(var.set_device(config[CONF_DEVICE]))
+    cg.add(var.set_pixel_format(config[CONF_PIXEL_FORMAT]))
     dimensions = config[CONF_DIMENSIONS]
     if isinstance(dimensions, dict):
         width = dimensions[CONF_WIDTH]

@@ -1,0 +1,36 @@
+# Optional package for the native TPP06, NOT ESP32. Not installed by default.
+# Also add tpp06_local_relays to the main external_components components list.
+# Keep control disabled until physical key/output mapping is verified on site.
+# Existing GPIO levels are preserved at startup and orderly shutdown.
+tpp06_local_relays:
+  id: panel_relays
+  control_enabled: false
+  input_device: /dev/input/event0
+  key_map: [1, 2, 3]  # F1/F2/F3 = top/middle/bottom on reference hardware; verify yours.
+  indicator_mode: follow_relay  # Or off; LEDs do not control the relay outputs.
+
+api:
+  reboot_timeout: 0s
+
+switch:
+  - platform: tpp06_local_relays
+    relays_id: panel_relays
+    id: local_relay_1
+    name: "Relais 1"
+    channel: 1
+    restore_mode: DISABLED
+    pulse_duration: 0s  # Latching switch. Optional inching example: 500ms.
+  - platform: tpp06_local_relays
+    relays_id: panel_relays
+    id: local_relay_2
+    name: "Relais 2"
+    channel: 2
+    restore_mode: DISABLED
+    pulse_duration: 0s
+  - platform: tpp06_local_relays
+    relays_id: panel_relays
+    id: local_relay_3
+    name: "Relais 3"
+    channel: 3
+    restore_mode: DISABLED
+    pulse_duration: 0s

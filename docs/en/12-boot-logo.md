@@ -4,13 +4,13 @@ The initial MOES logo is stored in the NAND partition named `logo`, not in
 the ESPHome application. Normal OTA updates can change LVGL pages, icons,
 menus and sleep behavior; they do not replace this early boot logo.
 
-Reference-panel status: Home Assistant logo programmed and fully read back,
-followed by one successful software reboot and over two minutes of encrypted
-API checks without a process change or another boot. The supervisor confirmed
-`esphome-healthy`, with Wi-Fi and recovery access available. Visual appearance,
-colour and orientation still need on-site confirmation. The application was
-V4 during that logo trial; [V5](11-interface-v5.md) was subsequently installed
-and checked separately.
+Status on 18 November 2026: the first Home Assistant logo booted but appeared
+yellow. BGR565 video metadata was misleading: physical colour bars confirmed
+RGB565 scanout. The same artwork was re-encoded as RGB565, written only to the
+`logo` partition and fully read back with byte-for-byte and checksum verification.
+No reboot was performed after this correction: **visual confirmation of the
+blue boot logo is still pending**. Checked boot partitions, launcher and ESPHome
+program were unchanged; the API and supervisor remained healthy.
 
 ## Artwork and format
 
@@ -25,16 +25,16 @@ project is not an official or certified Home Assistant product.
 On the reference panel only: 320×480 little-endian 16-bit pixels, 307,200
 payload bytes, padded with `0xff` to 512 KiB; 128 KiB erase blocks and 2 KiB
 pages. The original bytes exactly match the dumped MOES PNG after conversion.
-BGR565 was selected from the live LCD device-tree format and video driver;
-the monochrome original cannot distinguish RGB from BGR. Do not generalize
-this geometry to other hardware.
+RGB565 was confirmed by visible red/green/blue test bars despite BGR565 kernel
+metadata; the monochrome original cannot distinguish RGB from BGR. Do not
+generalize this geometry or pixel order to other hardware without verification.
 
 ## Offline preparation
 
 Render the SVG as an opaque 320×480 PNG, then use Python with Pillow:
 
 ```sh
-python tools/tpp06_logo.py logo-320x480.png logo-candidate.bin --pixel-order BGR565
+python tools/tpp06_logo.py logo-320x480.png logo-candidate.bin --pixel-order RGB565
 ```
 
 The codec has no device connection, erase, programming or reboot feature.

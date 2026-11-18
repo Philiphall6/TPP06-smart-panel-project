@@ -22,6 +22,15 @@ ce n’est pas un ESP32 et il ne faut pas lui envoyer un firmware ESP32.
 
 ## État actuel — 18 novembre 2026
 
+- **Correctifs V5 `0.1.5-colors.1` installés** : couleurs RGB565 confirmées
+  visuellement et présentation de l'image corrigée. [Détails affichage](esphome-components/fbdev/README.md).
+- **Trois relais locaux** : touches haut/milieu/bas confirmées sur les canaux
+  1/2/3, voyants synchronisés, switches exposés par l'API. Le package public
+  reste en observation par défaut ; [essais hors réseau encore à faire](docs/fr/14-relais-locaux.md).
+- [Logo de démarrage](docs/fr/12-logo-demarrage.md) réencodé en RGB565 et
+  relu après écriture ; sa couleur au prochain démarrage reste à confirmer.
+- [Interface météo V6](esphome/tpp06-lvgl-modern.yaml) publiée comme **candidate** :
+  pas encore compilée ni installée sur le panneau. Bip toujours indisponible.
 - **V5 / projet `0.1.5` installée sur le panneau de référence** après une
   installation sans fil annoncée réussie par son propriétaire. Vérifications
   directes : binaire conforme, API chiffrée accessible, Wi-Fi associé,

@@ -16,6 +16,14 @@
 
 ## Current status — 18 November 2026
 
+V5 fixes `0.1.5-colors.1` are installed: [RGB565 colours and framebuffer
+presentation](esphome-components/fbdev/README.md). [Local relays](docs/en/14-local-relays.md)
+work from the top/middle/bottom buttons; HA/AP-loss tests remain pending.
+The corrected RGB565 boot logo was written and fully read back, but visual
+confirmation at boot is pending. The [V6 weather UI](esphome/tpp06-lvgl-modern.yaml)
+is an **uncompiled, undeployed candidate**, not the validated beginner path;
+beep remains unavailable. Public relay control defaults to observation-only.
+
 **V5 / project `0.1.5` is installed on the reference panel.** Its owner
 reported successful wireless installation; direct checks confirm the expected
 binary, encrypted API, connected Wi-Fi, healthy supervisor and retained

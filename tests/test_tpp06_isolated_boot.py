@@ -94,6 +94,21 @@ class IsolatedBootTests(unittest.TestCase):
         self.mock("udhcpc", "exit 1")
         self.assertNotEqual(self.run_function("start_independent_network").returncode, 0)
 
+    def test_confirmed_local_boot_starts_without_access_point_or_lease(self):
+        for name, value in {"local_control_confirmed": "yes", "persistent_confirmed": "yes",
+                            "boot_policy": "persistent", "network_mode": "isolated"}.items():
+            (self.base/name).write_text(value+"\n")
+        self.mock("wpa_supplicant", "exit 0")  # Daemon starts, AP never appears.
+        self.mock("wpa_cli", "echo wpa_state=DISCONNECTED")
+        result = self.run_function("start_independent_network")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse((self.root/"associated").exists())
+        self.assertTrue((self.root/"dhcp-args").exists())
+        self.assertIn("recovery continues in background", (self.base/"diagnostics/multiboot.log").read_text())
+        # A real daemon launch failure is still rejected.
+        self.mock("wpa_supplicant", "exit 1")
+        self.assertNotEqual(self.run_function("start_independent_network").returncode, 0)
+
     def test_ipv4_check_rejects_unconfigured_loopback_link_local_and_invalid(self):
         for address in ("0.0.0.0", "127.0.0.1", "169.254.1.2", "224.0.0.1",
                         "192.0.2.999", "unknown", "192.0.2"):

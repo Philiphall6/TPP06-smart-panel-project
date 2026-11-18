@@ -5,13 +5,14 @@ nommée `logo`. Il ne fait pas partie du programme ESPHome. Une mise à jour
 OTA normale peut modifier les pages LVGL, les icônes, les menus et la veille,
 mais ne remplace pas ce logo initial.
 
-État du panneau de référence : logo Home Assistant programmé et relu
-intégralement, puis un redémarrage logiciel réussi et plus de deux minutes
-de contrôles API chiffrés sans changement de processus ni nouveau démarrage.
-Le superviseur a confirmé `esphome-healthy`, avec Wi-Fi et accès de secours
-disponibles. Le rendu visuel, les couleurs et l'orientation restent à confirmer
-sur place. Lors de cet essai de logo, l’interface était la V4 ; la
-[V5](11-interface-v5.md) a ensuite été installée et vérifiée séparément.
+État au 18 novembre 2026 : le premier logo Home Assistant démarrait mais
+apparaissait jaune. Les métadonnées vidéo BGR565 étaient trompeuses : une
+mire physique a confirmé un affichage RGB565. Le même visuel a été réencodé
+en RGB565, programmé dans la seule partition `logo`, puis relu intégralement
+avec comparaison octet par octet et vérification d'empreinte. Aucun redémarrage
+n'a été lancé après cette correction : **la confirmation visuelle du logo bleu
+reste à faire**. Le programme ESPHome, le lanceur et les partitions de démarrage
+contrôlées sont restés inchangés ; l'API et le superviseur sont restés sains.
 
 ## Image et format
 
@@ -29,8 +30,9 @@ Sur le panneau de référence uniquement :
 - image 320 × 480, pixels 16 bits little-endian, 307 200 octets ;
 - partition 512 Kio, reste rempli par `0xff`, blocs 128 Kio, pages 2 Kio ;
 - le logo d'origine correspond exactement au PNG MOES du dump converti ;
-- BGR565 est retenu à partir du format LCD du DT vivant et du pilote vidéo.
-  Le logo MOES monochrome seul ne permet pas de distinguer RGB de BGR.
+- **RGB565**, confirmé par une mire rouge/verte/bleue visible sur le panneau,
+  malgré les métadonnées BGR565 du pilote. Le logo MOES monochrome seul ne
+  permet pas de distinguer RGB de BGR.
 
 Ces dimensions ne sont **pas une règle pour tous les appareils**.
 
@@ -39,7 +41,7 @@ Ces dimensions ne sont **pas une règle pour tous les appareils**.
 Après rendu du SVG en PNG opaque 320 × 480, avec Python et Pillow :
 
 ```sh
-python tools/tpp06_logo.py logo-320x480.png logo-candidate.bin --pixel-order BGR565
+python tools/tpp06_logo.py logo-320x480.png logo-candidate.bin --pixel-order RGB565
 ```
 
 Ce convertisseur ne se connecte à aucun panneau. Il refuse les chemins de

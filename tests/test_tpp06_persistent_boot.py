@@ -115,6 +115,65 @@ persistent_health_ready
                     text=True, capture_output=True, timeout=5)
                 self.assertEqual(result.returncode == 0, expected)
 
+    def test_confirmed_local_policy_tolerates_wifi_and_dhcp_loss_only(self):
+        flags = {"local_control_confirmed": "yes", "persistent_confirmed": "yes",
+                 "boot_policy": "persistent", "network_mode": "isolated"}
+        for name, value in flags.items():
+            (self.base/name).write_text(value + "\n")
+        harness = '''
+engine_pid=424242
+kill() { [ "$FAIL" != process ]; }
+wifi_associated() { return 1; }
+wlan_has_address() { return 1; }
+rescue_ports_listening() { [ "$FAIL" != rescue ]; }
+netstat() { [ "$FAIL" != api ] && echo 'tcp 0 0 0.0.0.0:6053 LISTEN'; }
+persistent_health_ready
+'''
+        for failed in ("none", "process", "rescue", "api"):
+            result = subprocess.run(["sh"], input=self.functions+harness,
+                env={**self.env, "FAIL": failed}, text=True, capture_output=True, timeout=5)
+            self.assertEqual(result.returncode == 0, failed == "none")
+        # Removing ANY confirmation restores the original strict network guard.
+        for name, value in flags.items():
+            (self.base/name).write_text("no\n")
+            result = subprocess.run(["sh"], input=self.functions+harness,
+                env={**self.env, "FAIL": "none"}, text=True, capture_output=True, timeout=5)
+            self.assertNotEqual(result.returncode, 0, name)
+            (self.base/name).write_text(value + "\n")
+        result = subprocess.run(["sh"], input=self.functions+harness,
+            env={**self.env, "FAIL": "none", "TPP06_SESSION_SECONDS": "60"},
+            text=True, capture_output=True, timeout=5)
+        self.assertNotEqual(result.returncode, 0)  # Never relax bounded trials.
+
+    def test_local_network_loss_does_not_stop_or_disarm_running_engine(self):
+        for name, value in {"local_control_confirmed": "yes", "persistent_confirmed": "yes",
+                            "boot_policy": "persistent", "network_mode": "isolated"}.items():
+            (self.base/name).write_text(value+"\n")
+        harness = '''
+engine_pid=424242
+cycles=0
+kill() { [ "$cycles" -lt 6 ]; }
+sleep() { cycles=$((cycles+1)); }
+wait() { return 9; }
+sync() { :; }
+wifi_associated() { return 1; }
+wlan_has_address() { return 1; }
+rescue_ports_listening() { return 0; }
+netstat() { echo 'tcp 0 0 0.0.0.0:6053 LISTEN'; }
+write_state() { echo "$1=$2@$cycles" >> "$BASE/events"; echo "$2" > "$BASE/$1"; }
+stop_owned_engine() { echo unexpected-stop >> "$BASE/events"; }
+cleanup_independent_services() { :; }
+start_stock() { echo "fallback@$cycles" >> "$BASE/events"; }
+monitor_persistent
+'''
+        result = subprocess.run(["sh"], input=self.functions+harness, env=self.env,
+                                text=True, capture_output=True, timeout=5)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        events = (self.base/"events").read_text()
+        self.assertIn("mode=esphome@0", events)
+        self.assertNotIn("unexpected-stop", events)
+        self.assertIn("fallback@6", events)  # Genuine process death retains rescue.
+
     def test_invalid_persistent_combination_refused_before_engine_lookup(self):
         for mode, network, seconds, port in (
                 ("openhasp", "isolated", "0", "6053"),

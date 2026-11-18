@@ -34,10 +34,13 @@ class PublicLoader(yaml.SafeLoader):
 PublicLoader.add_multi_constructor("!", lambda loader, tag, node: loader.construct_scalar(node))
 
 
-def render(source: Path) -> str:
+def render(source: Path, page_ids=None) -> str:
     config = yaml.load(source.read_text(), Loader=PublicLoader)
     substitutions = config["substitutions"]
     ui = config["lvgl"]
+    modern = config["esphome"]["project"]["version"] == "0.1.6"
+    version = "V6" if modern else "V5"
+    pages = [p for p in ui["pages"] if page_ids is None or p["id"] in page_ids]
     styles = {s["id"]: s for s in ui["style_definitions"]}
     examples = {"mobile_clock": "09:41", "ha_status_label": "API CONNECTEE",
                 "mobile_home_clock": "09:41", "mobile_home_greeting": "Bonjour",
@@ -50,11 +53,18 @@ def render(source: Path) -> str:
                 "cover_state_label": "FERME", "cave_state_label": "ALLUMEE",
                 "bar_state_label": "ETEINTE", "cave_brightness_value": "65 %",
                 "bar_brightness_value": "-- %"}
-    height = 76 + ((len(ui["pages"]) + 2) // 3) * 510
+    if modern:
+        examples.update(mobile_home_date="Mercredi 18 novembre",
+                        mobile_weather_temp="18 °C", mobile_weather_detail_temp="18 °C",
+                        mobile_weather_condition="Eclaircies", mobile_weather_detail_condition="Eclaircies",
+                        mobile_weather_humidity_label="62 %", mobile_weather_wind_label="12 km/h",
+                        mobile_weather_age="Recu il y a 4 min",
+                        mobile_diag_version="Interface V6 / ESPHome 2026.10.2")
+    height = 76 + ((len(pages) + 2) // 3) * 510
     out = [f'<svg xmlns="http://www.w3.org/2000/svg" width="1072" height="{height}" viewBox="0 0 1072 {height}">',
            f'<rect width="1072" height="{height}" fill="#111218"/>',
            '<g font-family="Montserrat, DejaVu Sans, sans-serif">',
-           '<text x="24" y="28" font-size="18" fill="#F5F5F7">TPP06 / Interface V5 — LVGL native</text>',
+           f'<text x="24" y="28" font-size="18" fill="#F5F5F7">TPP06 / Interface {version} — LVGL native</text>',
            '<text x="24" y="51" font-size="12" fill="#989AA6">Apercu de conception, etats fictifs. Ce n’est pas une capture du panneau.</text>']
 
     def resolve(value):
@@ -77,6 +87,8 @@ def render(source: Path) -> str:
             x += (parent_width - width) / 2
             y += (parent_height - height) / 2
         fill = color(style.get("bg_color", 0x1C1D24))
+        if style.get("bg_opa") == "TRANSP":
+            fill = "none"
         if str(style.get("id", "")).startswith("mobile_nav_"):
             fill = color(substitutions["ui_accent"] if style["id"] == f"mobile_nav_{page_index}" else substitutions["ui_card"])
         out.append(f'<g transform="translate({x},{y})">')
@@ -119,12 +131,12 @@ def render(source: Path) -> str:
             node(child_kind, value, width, height, page_index)
         out.append('</g>')
 
-    for i, page in enumerate(ui["pages"]):
+    for i, page in enumerate(pages):
         out.append(f'<g transform="translate({24+(i%3)*352},{76+(i//3)*510})">')
         out.append(f'<rect width="320" height="480" rx="26" fill="{color(substitutions["ui_background"])}" stroke="#343641"/>')
         for child in page["widgets"] + ui["top_layer"]["widgets"]:
             kind, value = next(iter(child.items()))
-            active = {"page_home": 4, "page_sdb": 0, "page_cave": 1, "page_bar": 2}.get(page["id"], 3)
+            active = {"page_home": 4, "page_weather": 4, "page_sdb": 0, "page_cave": 1, "page_bar": 2}.get(page["id"], 3)
             node(kind, value, 320, 480, active)
         out.append('</g>')
     out.extend(['</g>', '</svg>'])
@@ -134,7 +146,9 @@ def render(source: Path) -> str:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--source", type=Path, default=ROOT / "esphome/tpp06-lvgl-mobile.yaml")
+    parser.add_argument("--pages", nargs="+", help="Optional page IDs for a focused preview")
     args = parser.parse_args()
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(render(ROOT / "esphome/tpp06-lvgl-mobile.yaml"))
+    args.output.write_text(render(args.source, args.pages))
     print(f"Design preview only (not a hardware capture): {args.output}")

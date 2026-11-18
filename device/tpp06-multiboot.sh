@@ -195,6 +195,16 @@ wifi_associated() {
     wpa_cli -iwlan0 status 2>/dev/null | grep -q '^wpa_state=COMPLETED$'
 }
 
+local_offline_policy() {
+    # Opt-in only after on-site local-controls validation. Never relax the
+    # networking gates of a first trial or an unconfirmed commissioning run.
+    [ "$(read_value "$BASE/local_control_confirmed" no)" = yes ] &&
+        [ "$(read_value "$BASE/persistent_confirmed" no)" = yes ] &&
+        [ "$(read_value "$BASE/boot_policy" one-shot)" = persistent ] &&
+        [ "$(read_value "$BASE/network_mode" learning)" = isolated ] &&
+        [ "$SESSION_SECONDS" = 0 ]
+}
+
 start_independent_network() {
     if ! network_profile_valid; then
         log "ERROR independent Wi-Fi profile is unavailable or incomplete"
@@ -232,6 +242,13 @@ start_independent_network() {
             cleanup_independent_services
             return 1
         fi
+    fi
+
+    if local_offline_policy; then
+        # Both daemons have started. WPA reconnects and DHCP retries in the
+        # background; an absent AP/lease must not delay local light switches.
+        log "local-control policy: Wi-Fi/DHCP recovery continues in background"
+        return 0
     fi
 
     elapsed=0
@@ -288,8 +305,12 @@ fallback_stock() {
 }
 
 persistent_health_ready() {
-    kill -0 "$engine_pid" 2>/dev/null &&
-        wifi_associated && wlan_has_address && rescue_ports_listening &&
+    kill -0 "$engine_pid" 2>/dev/null || return 1
+    if ! local_offline_policy; then
+        wifi_associated && wlan_has_address || return 1
+    fi
+    # Still check local processes/listeners; no ping, Internet or HA login.
+    rescue_ports_listening &&
         netstat -lnt 2>/dev/null | grep -q ":$ESPHOME_HEALTH_PORT "
 }
 
