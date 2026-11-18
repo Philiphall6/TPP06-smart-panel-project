@@ -194,6 +194,11 @@ class LauncherTests(unittest.TestCase):
         self.assertNotIn("echo esphome >", command)
         self.assertLess(max(map(len, command.splitlines())), 512)
         self.assertIn("sh -n /tmp/S99tuya-app.tpp06-cutter", command)
+        self.assertIn("profile=$(tpp06_active_wifi_profile)", command)
+        self.assertIn('cp "$profile"', command)
+        self.assertNotIn("cp /etc/wpa_supplicant.conf", command)
+        self.assertLess(command.index('tpp06_profiles_equal "$profile"'),
+                        command.index("mv /data/tpp06-cutter/network/wpa_supplicant.conf.staged"))
         self.assertLess(command.index("sh -n"), command.index("mv /data/etc/init.d/.S99"))
         subprocess.run(["sh", "-n"], input=command, text=True, check=True)
 
@@ -266,6 +271,11 @@ class MultibootScriptTests(unittest.TestCase):
         )
         self.stock.chmod(0o755)
         self.script = Path(__file__).resolve().parents[1] / "device" / "tpp06-multiboot.sh"
+        self.fake_sys = Path(self.directory.name) / "sys"
+        (self.fake_sys / "class/net/wlan0").mkdir(parents=True)
+        self.fake_proc = Path(self.directory.name) / "proc"
+        (self.fake_proc / "42/fd").mkdir(parents=True)
+        (self.fake_proc / "42/fd/3").symlink_to("/dev/null")
         self.environment = {
             **os.environ,
             "TPP06_BASE": str(self.base),
@@ -274,6 +284,12 @@ class MultibootScriptTests(unittest.TestCase):
             "TPP06_FAIL_LIMIT": "2",
             "TPP06_STOCK_READY_FILE": str(self.stock_marker),
             "TPP06_ESPHOME_HEALTH_PORT": "0",
+            "TPP06_SYS_ROOT": str(self.fake_sys),
+            "TPP06_PROC_ROOT": str(self.fake_proc),
+            "TPP06_FRAMEBUFFER_DEVICE": "/dev/null",
+            "TPP06_TOUCH_DEVICE": "/dev/null",
+            "TPP06_WATCHDOG_DEVICE": "/dev/null",
+            "TPP06_DHCP_SCRIPT": "/bin/true",
         }
 
     def _engine(self, body: str) -> None:
@@ -393,6 +409,7 @@ class MultibootScriptTests(unittest.TestCase):
 
         (fake_bin / "ifconfig").write_text(
             "#!/bin/sh\n"
+            '[ "$2" = up ] && exit 0\n'
             f"[ -f {wifi_ready} ] && echo 'inet addr:192.0.2.2'\n",
             encoding="utf-8",
         )
@@ -400,6 +417,9 @@ class MultibootScriptTests(unittest.TestCase):
             f"#!/bin/sh\ntouch {wifi_ready}\n", encoding="utf-8"
         )
         (fake_bin / "udhcpc").write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+        (fake_bin / "wpa_cli").write_text("#!/bin/sh\necho wpa_state=COMPLETED\n")
+        (fake_bin / "pidof").write_text('#!/bin/sh\n[ "$1" = ak_watchdog ] && { echo 42; exit 0; }; exit 1\n')
+        (fake_bin / "netstat").write_text("#!/bin/sh\necho 'tcp 0 0 0.0.0.0:5555 LISTEN'\necho 'tcp 0 0 0.0.0.0:8090 LISTEN'\n")
         rescue = Path(self.directory.name) / "tuya_factory"
         rescue.write_text(
             f"#!/bin/sh\necho rescue > {rescue_marker}\nsleep 30\n", encoding="utf-8"
@@ -449,6 +469,40 @@ class MultibootScriptTests(unittest.TestCase):
         self.assertEqual((self.base / "failure_count").read_text().strip(), "0")
         self.assertFalse((self.base / "engine.pid").exists())
         self.assertIn("session-complete", (self.base / "diagnostics/multiboot.log").read_text())
+
+    def test_isolated_mode_refuses_stock_or_inherited_network_without_killing_it(self) -> None:
+        for scenario in ("stock", "monitor", "address", "supplicant", "dhcp"):
+            with self.subTest(scenario=scenario):
+                marker = self.base / "engine-started"
+                self._engine(f"touch {marker}")
+                self._network_profile("isolated")
+                (self.base / "failure_count").write_text("0\n")
+                fake_bin = Path(self.directory.name) / "fake-bin"
+                fake_bin.mkdir(exist_ok=True)
+                # Claim an already-running rescue process, so this diagnostic
+                # does not spawn one. No PID file is created or process killed.
+                pid_name = {"stock": "voice_control_ak3760e", "supplicant": "wpa_supplicant",
+                            "dhcp": "udhcpc"}.get(scenario, "never")
+                (fake_bin / "pidof").write_text(
+                    '#!/bin/sh\n[ "$1" = ak_watchdog ] && { echo 42; exit 0; }\ncase "$1" in tuya_factory|' + pid_name +
+                    ') echo 424242; exit 0;; *) exit 1;; esac\n')
+                (fake_bin / "netstat").write_text("#!/bin/sh\nexit 0\n")
+                for program in ("wpa_cli", "wpa_supplicant", "udhcpc"):
+                    (fake_bin / program).write_text("#!/bin/sh\nexit 0\n")
+                (fake_bin / "ps").write_text(
+                    "#!/bin/sh\n" + ("echo /tuya/app/tuya_monitor.sh\n" if scenario == "monitor" else "exit 0\n"))
+                (fake_bin / "ifconfig").write_text(
+                    "#!/bin/sh\n" + ("echo 'inet addr:192.0.2.2'\n" if scenario == "address" else "exit 0\n"))
+                for executable in fake_bin.iterdir():
+                    executable.chmod(0o700)
+                subprocess.run(["sh", str(self.script), "supervise"],
+                               env={**self.environment, "PATH": str(fake_bin) + ":" + os.environ["PATH"]},
+                               check=True, timeout=5)
+                self.assertFalse(marker.exists())
+                self.assertEqual((self.base / "mode").read_text().strip(), "tuya")
+                self.assertEqual((self.base / "active_mode").read_text().strip(), "tuya-fallback")
+                self.assertFalse((self.base / "wpa_supplicant.pid").exists())
+                self.assertFalse((self.base / "udhcpc.pid").exists())
 
     def test_failure_after_health_check_keeps_stock_selected(self) -> None:
         self._engine("sleep 4; exit 9")

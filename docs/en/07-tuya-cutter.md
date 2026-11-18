@@ -44,6 +44,12 @@ python3 tools/tpp06_tuya_cutter.py PANEL_IP restore BACKUP.tar.gz
 python3 tools/tpp06_tuya_cutter.py PANEL_IP uninstall
 ```
 
+The ESPHome temporary test keeps Tuya running and stops automatically; it
+does not validate exclusive display ownership. The historical openHASP test
+still suspends the entire Tuya process with `SIGSTOP`, not just its GUI. That
+path is not safe for a remote trial without physical recovery access and must
+not be used as a display workaround.
+
 The tool never deletes stock Tuya partitions. A permanent cut-over stores the
 new engine under `/data/tpp06-cutter` and overrides only `S99tuya-app` in the
 writable overlay. The saved stock launcher remains selectable. Every permanent
@@ -98,9 +104,29 @@ storage corruption or a kernel/hardware failure.
 
 ### Learning and independent Wi-Fi
 
-Installation copies the active `/etc/wpa_supplicant.conf` profile to
-`/data/tpp06-cutter/network/wpa_supplicant.conf`. It stays on the panel with
-mode `0600`; the Cutter never prints the SSID or key.
+Installation reads the running `wlan0` supplicant's arguments to select its
+actual `-c` configuration, then copies it to
+`/data/tpp06-cutter/network/wpa_supplicant.conf`. It no longer assumes that
+`/etc/wpa_supplicant.conf` is active: the examined panel used a different file
+in Tuya's data directory. Selection rejects ambiguous processes, another
+interface or multiple network blocks. Failure sets network mode to
+`unavailable` instead of copying an arbitrary template. The copy is checksum
+verified before replacement and protected with mode `0600`. Comparison uses
+SHA-256 or MD5 as a fallback because some panel BusyBox builds lack `cmp`;
+this is local file comparison, not signature verification. The Cutter never
+prints the SSID, key or profile checksum.
+
+Read-only diagnostic, without restarting or changing the network:
+
+```bash
+python3 tools/tpp06_tuya_cutter.py PANEL_IP network-check
+```
+
+`SAVED_PROFILE=identical` only confirms that the copy matches the active file.
+`AUTONOMOUS_WIFI=not_verified` remains explicit: this tests neither reassociation
+nor driver startup without Tuya. The current `COMPLETED` state reported by
+[wpa_supplicant STATUS](https://w1.fi/wpa_supplicant/devel/ctrl_iface_page.html)
+does not validate a future standalone boot.
 
 The two network policies are separate; there is no automatic transition:
 
@@ -112,6 +138,103 @@ The two network policies are separate; there is no automatic transition:
 
 A successful learning session does not validate independent Wi-Fi. Do not
 select isolated mode remotely without an on-site recovery option.
+
+The corrected supervisor refuses isolated mode while the Tuya application or
+its monitor is still present. It also refuses to mistake an inherited address
+or existing Wi-Fi/DHCP processes for networking it started itself. It never
+kills those processes to bypass the refusal. These guards are tested offline;
+they do not prove hardware boot readiness.
+
+On 18 November 2026, the recovery profile was prepared from the active profile
+on the panel after private backup and verification. Active network settings,
+the flash program and installed supervisor stayed unchanged; modes remain
+`tuya` and `learning`. The new supervisor was not deployed during preparation.
+No reboot or Tuya stop was sent.
+
+#### Standalone boot prerequisites
+
+Scripts retrieved from the current firmware show that `rc.local` loads the
+display, touch and Wi-Fi drivers, brings up `wlan0`, starts ADB and launches
+`ak_watchdog` before `S99tuya-app`. The selector must preserve that ordering:
+it does not reload modules, toggle GPIOs or open `/dev/watchdog` itself.
+
+The prepared supervisor now requires:
+
+- the `wlan0` interface and display, touch and watchdog devices;
+- an `ak_watchdog` process holding an open watchdog descriptor;
+- network tools and the stock DHCP event script;
+- `wpa_state=COMPLETED` association **and** a usable IPv4 address;
+- both local listeners, ADB `5555` and recovery `8090`, before ESPHome starts.
+
+The DHCP event script is passed explicitly to `udhcpc`. Failure to bring up
+`wlan0` aborts the attempt. An unspecified, loopback or link-local address is
+not accepted as a ready lease. These checks are necessary, not sufficient:
+a listening port is not proof of remote authenticated access, and an open
+watchdog descriptor does not prove long-term keepalive operation.
+
+At that stage, all 69 offline tests passed. Read-only hardware checks also passed on the panel in
+its current Tuya state. A separate RAM trial verified only **refusal** of
+isolated mode while Tuya is active: no custom engine launched, network
+processes unchanged, flash program, Wi-Fi profile and installed supervisor
+unchanged. The sentinel program in that trial was not ESPHome. This validates
+neither standalone boot nor fallback following an actual network failure.
+A hardware handover trial still requires on-site recovery; no reboot was
+performed for these checks.
+
+#### Short standalone trial on 18 November 2026
+
+A separate trial then started ESPHome after a software reboot without starting
+the stock Tuya GUI. A temporary launcher restored the original launcher
+**before** attempting the trial; global selections remained `tuya` and
+`learning`. The Home Assistant-built binary was copied into a separate trial
+directory without replacing the installed program.
+
+Independent Wi-Fi associated and obtained an IPv4 address. ADB and port `8090`
+remained accessible during the session. All 18 encrypted API probes succeeded.
+A framebuffer capture shows the LVGL interface rather than the Tuya clock;
+ESPHome held the display and touch device open without a competing stock GUI
+process. No touches or household actions were sent during this remote check.
+
+The supervisor stopped ESPHome after 120 seconds and triggered stock fallback.
+An independent timer then requested a reboot after 210 seconds through the
+already-restored original launcher. A client-side ADB connection had become
+`offline` after this reboot: disconnecting/reconnecting that specific transport
+restored access without an additional panel reboot. A separate final check
+confirmed 93 seconds of stock stability, associated Wi-Fi, and original file
+checksums restored or unchanged.
+
+This is a **short trial**, not a permanent installation or power-cut validation.
+It does not validate recovery from a kernel hang, long-term stability, household
+actions, or OTA in standalone mode. Logs, profiles, keys and captures stay
+private. The trial timer is not a hardware recovery guarantee.
+
+#### 15-minute standalone trial
+
+The same Home Assistant-built binary was then tested for a 900-second session,
+with an independent return-by-reboot timer set to 990 seconds. No OTA transfer
+or household action was sent. The original launcher was restored before the
+trial supervisor started.
+
+Observations show a single ESPHome process on the same boot, constant resident
+memory of **4,792 KiB**, and **51 successful encrypted probes**. Beginning and
+end framebuffer captures show the same LVGL interface. This is not a new
+physical touchscreen test.
+
+One ADB sample failed during the session; the following sample found the same
+process without a reboot. An additional API probe failed during shutdown:
+the sampled uptime and supervisor log place it at the scheduled 900-second
+expiry. These observation failures are retained in the report rather than
+described as an entirely successful set of probes.
+
+Stock fallback and the recovery reboot were observed, followed by 90 seconds
+of verified stock stability. Checksums confirmed that the four tracked
+original files were restored or unchanged. The standalone system
+clock remained in 1970 in that first binary. Subsequent v3/V4 trials added
+HA time synchronization; V4 revealed a timezone offset, documented in the
+[mobile interface report](06-native-esphome-lvgl.md#ios-inspired-mobile-variant). An additional HA-side
+mDNS check was not performed because the SSH tool's Docker access was
+protected; that protection was not changed. Long-term endurance, standalone
+OTA, household actions and power cuts remain outside this validation.
 
 A missing profile, DHCP failure, or absent ESPHome API triggers the stock
 fallback. `status` reports `NETWORK=learning`, `isolated`, or `unavailable`.

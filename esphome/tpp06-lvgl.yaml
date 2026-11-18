@@ -70,6 +70,19 @@ tpp06_mdns:
 logger:
   level: INFO
 
+# Synchronize Linux time through the encrypted HA API, without Tuya/NTP.
+# Leave timezone unset so Home Assistant supplies the installation's timezone.
+# Before HA connects, the clock can still be invalid after a cold boot.
+time:
+  - platform: homeassistant
+    id: tpp06_ha_time
+    on_time_sync:
+      - if:
+          condition:
+            time.has_time:
+          then:
+            - logger.log: "Home Assistant time synchronized"
+
 api:
   reboot_timeout: 0s
   encryption:

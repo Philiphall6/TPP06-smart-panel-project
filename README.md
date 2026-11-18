@@ -18,11 +18,32 @@ sélection explicite. Aucun essai réussi ne l'active automatiquement.
 **Validation actuelle :** tactile validé, essai supervisé de 15 minutes réussi,
 OTA chiffrée testée sur une copie isolée en RAM, sans redémarrage Linux.
 La MAC réelle, les annonces mDNS reçues côté HA et le chiffrement de l'API
-ont passé un essai matériel limité à 150 secondes en RAM. L'appairage de
-l'intégration HA avec la nouvelle identité reste à faire. L'installation OTA
-depuis le bouton du Builder et le démarrage permanent ne sont pas validés.
-L'essai OTA du nouveau build doit être répété avec traçage de chaque envoi :
-deux transferts ont été observés, avec un délai API dépassé pendant le second.
+ont passé un essai matériel limité à 150 secondes en RAM. L'enregistrement de
+la nouvelle identité et de la clé dans HA a ensuite été vérifié en essai RAM.
+Les commandes domotiques et le démarrage permanent restent à valider.
+Un nouvel essai OTA du nouveau build, limité à cinq minutes en RAM, a validé
+un seul envoi tracé et le retour de l'API. L'origine des deux transferts d'un
+ancien essai reste inconnue. Le parcours **Installer → Sans fil** du Builder a
+ensuite réussi lors d'un essai RAM de 20 minutes : un transfert, 49 contrôles API
+après transfert et arrêt automatique vérifiés, programme flash inchangé.
+**Affichage non validé dans cette configuration :** Tuya et ESPHome partagent
+le framebuffer ; l'horloge observée appartient à Tuya. Une OTA réussie ne
+valide pas la prise de contrôle de l'écran par LVGL.
+
+**Essai autonome séparé du 18 novembre 2026 :** ESPHome/LVGL a ensuite tenu
+15 minutes sans l'application graphique Tuya, avec Wi-Fi autonome et
+51 contrôles API chiffrés réussis. Mémoire résidente constante : 4 792 Kio.
+L'arrêt était programmé, avec retour à Tuya ; ce n'est pas une installation
+permanente. Un relevé ADB a échoué pendant la session ; ce premier binaire
+n'intégrait pas encore la synchronisation horaire. Voir le [bilan détaillé](docs/fr/07-tuya-cutter.md#essai-autonome-prolongé-de-15-minutes).
+
+**Interface mobile V4 :** [YAML entièrement éditable](esphome/tpp06-lvgl-mobile.yaml),
+accueil, date, état de liaison Wi-Fi, menu et paramètres. Compilée dans Home
+Assistant, puis exécutée lors d'un essai autonome limité à cinq minutes :
+16 contrôles API chiffrés réussis et accueil observé par captures réelles.
+Un décalage d'une heure apparaît entre les captures : le fuseau reste à corriger.
+Les réglages persistants et les autres pages restent à vérifier sur le panneau.
+Ce n'est pas une installation permanente. [État et limites de V4](docs/fr/06-esphome-lvgl-natif.md#variante-mobile-inspirée-dios).
 
 **Configuration portable :** noms et entités modifiables dans le YAML,
 composants chargés depuis GitHub, aucune dépendance à un ordinateur.

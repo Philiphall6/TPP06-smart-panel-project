@@ -16,10 +16,32 @@ explicit selection. A successful trial never enables it automatically.
 **Current validation:** touchscreen confirmed, 15-minute supervised trial
 passed, encrypted OTA passed on an isolated RAM copy without a Linux reboot.
 The real MAC, mDNS records received from the HA host and encrypted API passed
-a 150-second on-panel RAM trial. HA integration pairing with the new identity,
-Builder's Install-button workflow and permanent boot are not yet validated.
-The new build's OTA trial must be repeated with per-upload tracing: two
-transfers were observed, and an API check timed out during the second one.
+a 150-second on-panel RAM trial. HA registration of the new identity and key
+was subsequently verified during a RAM trial. Household actions and permanent
+boot are not yet validated.
+A new five-minute RAM OTA trial of the new build verified one traced upload
+and API recovery. The previous trial's double-transfer origin remains unknown;
+Builder's **Install → Wirelessly** workflow subsequently passed in a 20-minute
+RAM trial: one transfer, 49 post-transfer API checks and automatic stop verified,
+with the flash program unchanged.
+**Display not validated in this configuration:** Tuya and ESPHome share the
+framebuffer; the observed clock belongs to Tuya. Successful OTA does not
+validate LVGL taking control of the screen.
+
+**Separate standalone trial on 18 November 2026:** ESPHome/LVGL subsequently
+ran for 15 minutes without the stock GUI, with independent Wi-Fi and
+51 successful encrypted API probes. Resident memory stayed at 4,792 KiB.
+Shutdown and stock recovery were scheduled; this is not a permanent install.
+One ADB sample failed during the session; that first binary did not yet include
+time synchronization. See the [detailed report](docs/en/07-tuya-cutter.md#15-minute-standalone-trial).
+
+**V4 mobile interface:** [fully editable YAML](esphome/tpp06-lvgl-mobile.yaml),
+home page, date, Wi-Fi link status, menu and settings. Built in Home Assistant,
+then run in a five-minute bounded standalone trial: 16 successful encrypted
+API probes and actual framebuffer captures of the home page.
+The captures reveal a one-hour clock offset; timezone handling needs correction.
+Persistent settings and the other pages still need on-device verification.
+This is not a permanent installation. [V4 status and limitations](docs/en/06-native-esphome-lvgl.md#ios-inspired-mobile-variant).
 
 The YAML remains editable and portable: GitHub-sourced components, builds in
 Home Assistant, configurable names/entities and a per-installation key in local

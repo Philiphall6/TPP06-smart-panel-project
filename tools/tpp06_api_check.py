@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Read-only ESPHome protocol check; never uploads, reboots or calls actions."""
+"""ESPHome protocol check; never uploads, reboots or calls household actions.
+
+Protocol libraries may automatically answer device time requests, including
+the observer's timezone. A probe is therefore not a passive clock observer.
+"""
 from __future__ import annotations
 
 import argparse

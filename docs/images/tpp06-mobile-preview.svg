@@ -1,0 +1,543 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1072" height="1096" viewBox="0 0 1072 1096">
+<rect width="1072" height="1096" fill="#111218"/>
+<g font-family="Montserrat, DejaVu Sans, sans-serif">
+<text x="24" y="28" font-size="18" fill="#F5F5F7">TPP06 / Mobile — interface LVGL native</text>
+<text x="24" y="51" font-size="12" fill="#989AA6">Apercu de conception, etats fictifs. Ce n’est pas une capture du panneau.</text>
+<g transform="translate(24,76)">
+<rect width="320" height="480" rx="26" fill="#0B0C10" stroke="#343641"/>
+<g transform="translate(20,62)">
+<text x="0" y="28.0" font-size="28" text-anchor="start" fill="#F5F5F7">Bonjour</text>
+</g>
+<g transform="translate(20,102)">
+<text x="0" y="12.0" font-size="12" text-anchor="start" fill="#989AA6">La maison, au bout des doigts</text>
+</g>
+<g transform="translate(16,132)">
+<rect width="288" height="136" rx="24" fill="#1C1D24" stroke="#2D2F38" stroke-width="1"/>
+<g transform="translate(20,14)">
+<text x="0" y="28.0" font-size="28" text-anchor="start" fill="#F5F5F7">09:41</text>
+</g>
+<g transform="translate(20,56)">
+<text x="0" y="16.0" font-size="16" text-anchor="start" fill="#F5F5F7">Mercredi 18 novembre 2026</text>
+</g>
+<g transform="translate(20,98)">
+<text x="0" y="12.0" font-size="12" text-anchor="start" fill="#989AA6">Wi-Fi : liaison active</text>
+</g>
+</g>
+<g transform="translate(16,282)">
+<rect width="138" height="100" rx="24" fill="#1C1D24" stroke="#2D2F38" stroke-width="1"/>
+<g transform="translate(16,16)">
+<text x="0" y="12.0" font-size="12" text-anchor="start" fill="#989AA6">CONFORT</text>
+</g>
+<g transform="translate(16,48)">
+<text x="0" y="20.0" font-size="20" text-anchor="start" fill="#F5F5F7">Volet</text>
+</g>
+</g>
+<g transform="translate(166,282)">
+<rect width="138" height="100" rx="24" fill="#1C1D24" stroke="#2D2F38" stroke-width="1"/>
+<g transform="translate(16,16)">
+<text x="0" y="12.0" font-size="12" text-anchor="start" fill="#989AA6">AMBIANCE</text>
+</g>
+<g transform="translate(16,48)">
+<text x="0" y="20.0" font-size="20" text-anchor="start" fill="#F5F5F7">Lumieres</text>
+</g>
+</g>
+<g transform="translate(20,22)">
+<text x="0" y="12.0" font-size="12" text-anchor="start" fill="#30D158">API CONNECTEE</text>
+</g>
+<g transform="translate(188,20)">
+<text x="112" y="16.0" font-size="16" text-anchor="end" fill="#F5F5F7">09:41</text>
+</g>
+<g transform="translate(12,410)">
+<rect width="296" height="58" rx="29" fill="#1C1D24" stroke="#2D2F38" stroke-width="1"/>
+<g transform="translate(62,4)">
+<rect width="54" height="48" rx="24" fill="#1C1D24" stroke="#2D2F38" stroke-width="0"/>
+<g transform="translate(2.0,16.2)">
+<text x="25.0" y="12.0" font-size="12" text-anchor="middle" fill="#F5F5F7">Volet</text>
+</g>
+</g>
+<g transform="translate(120,4)">
+<rect width="54" height="48" rx="24" fill="#1C1D24" stroke="#2D2F38" stroke-width="0"/>
+<g transform="translate(2.0,16.2)">
+<text x="25.0" y="12.0" font-size="12" text-anchor="middle" fill="#F5F5F7">Lum. 1</text>
+</g>
+</g>
+<g transform="translate(178,4)">
+<rect width="54" height="48" rx="24" fill="#1C1D24" stroke="#2D2F38" stroke-width="0"/>
+<g transform="translate(2.0,16.2)">
+<text x="25.0" y="12.0" font-size="12" text-anchor="middle" fill="#F5F5F7">Lum. 2</text>
+</g>
+</g>
+<g transform="translate(236,4)">
+<rect width="54" height="48" rx="24" fill="#1C1D24" stroke="#2D2F38" stroke-width="0"/>
+<g transform="translate(12.120000000000001,16.2)">
+<text x="0" y="12.0" font-size="12" text-anchor="start" fill="#F5F5F7">Menu</text>
+</g>
+</g>
+<g transform="translate(4,4)">
+<rect width="54" height="48" rx="24" fill="#0A84FF" stroke="#2D2F38" stroke-width="0"/>
+<g transform="translate(0.9600000000000009,16.2)">
+<text x="0" y="12.0" font-size="12" text-anchor="start" fill="#F5F5F7">Accueil</text>
+</g>
+</g>
+</g>
+</g>
+<g transform="translate(376,76)">
+<rect width="320" height="480" rx="26" fill="#0B0C10" stroke="#343641"/>
+<g transform="translate(20,60)">
+<text x="0" y="28.0" font-size="28" text-anchor="start" fill="#F5F5F7">Volet</text>
+</g>
+<g transform="translate(20,102)">
+<text x="0" y="12.0" font-size="12" text-anchor="start" fill="#989AA6">Un geste pour ouvrir votre espace</text>
+</g>
+<g transform="translate(16,136)">
+<rect width="288" height="238" rx="24" fill="#1C1D24" stroke="#2D2F38" stroke-width="1"/>
+<g transform="translate(20,20)">
+<text x="0" y="12.0" font-size="12" text-anchor="start" fill="#989AA6">ETAT DU VOLET</text>
+</g>
+<g transform="translate(20,46)">
+<text x="0" y="24.0" font-size="24" text-anchor="start" fill="#F5F5F7">FERME</text>
+</g>
+<g transform="translate(20,96)">
+<rect width="248" height="2" rx="0" fill="#343641" stroke="#2D2F38" stroke-width="0"/>
+</g>
+<g transform="translate(12,118)">
+<rect width="84" height="96" rx="22" fill="#0A84FF" stroke="#2D2F38" stroke-width="0"/>
+<g transform="translate(19.68,40.2)">
+<text x="0" y="12.0" font-size="12" text-anchor="start" fill="#F5F5F7">OUVRIR</text>
+</g>
+</g>
+<g transform="translate(102,118)">
+<rect width="84" height="96" rx="22" fill="#343641" stroke="#2D2F38" stroke-width="0"/>
+<g transform="translate(27.12,40.2)">
+<text x="0" y="12.0" font-size="12" text-anchor="start" fill="#F5F5F7">STOP</text>
+</g>
+</g>
+<g transform="translate(192,118)">
+<rect width="84" height="96" rx="22" fill="#0A84FF" stroke="#2D2F38" stroke-width="0"/>
+<g transform="translate(19.68,40.2)">
+<text x="0" y="12.0" font-size="12" text-anchor="start" fill="#F5F5F7">FERMER</text>
+</g>
+</g>
+</g>
+<g transform="translate(20,387)">
+<text x="140.0" y="12.0" font-size="12" text-anchor="middle" fill="#989AA6">Commandes via Home Assistant</text>
+</g>
+<g transform="translate(20,22)">
+<text x="0" y="12.0" font-size="12" text-anchor="start" fill="#30D158">API CONNECTEE</text>
+</g>
+<g transform="translate(188,20)">
+<text x="112" y="16.0" font-size="16" text-anchor="end" fill="#F5F5F7">09:41</text>
+</g>
+<g transform="translate(12,410)">
+<rect width="296" height="58" rx="29" fill="#1C1D24" stroke="#2D2F38" stroke-width="1"/>
+<g transform="translate(62,4)">
+<rect width="54" height="48" rx="24" fill="#0A84FF" stroke="#2D2F38" stroke-width="0"/>
+<g transform="translate(2.0,16.2)">
+<text x="25.0" y="12.0" font-size="12" text-anchor="middle" fill="#F5F5F7">Volet</text>
+</g>
+</g>
+<g transform="translate(120,4)">
+<rect width="54" height="48" rx="24" fill="#1C1D24" stroke="#2D2F38" stroke-width="0"/>
+<g transform="translate(2.0,16.2)">
+<text x="25.0" y="12.0" font-size="12" text-anchor="middle" fill="#F5F5F7">Lum. 1</text>
+</g>
+</g>
+<g transform="translate(178,4)">
+<rect width="54" height="48" rx="24" fill="#1C1D24" stroke="#2D2F38" stroke-width="0"/>
+<g transform="translate(2.0,16.2)">
+<text x="25.0" y="12.0" font-size="12" text-anchor="middle" fill="#F5F5F7">Lum. 2</text>
+</g>
+</g>
+<g transform="translate(236,4)">
+<rect width="54" height="48" rx="24" fill="#1C1D24" stroke="#2D2F38" stroke-width="0"/>
+<g transform="translate(12.120000000000001,16.2)">
+<text x="0" y="12.0" font-size="12" text-anchor="start" fill="#F5F5F7">Menu</text>
+</g>
+</g>
+<g transform="translate(4,4)">
+<rect width="54" height="48" rx="24" fill="#1C1D24" stroke="#2D2F38" stroke-width="0"/>
+<g transform="translate(0.9600000000000009,16.2)">
+<text x="0" y="12.0" font-size="12" text-anchor="start" fill="#F5F5F7">Accueil</text>
+</g>
+</g>
+</g>
+</g>
+<g transform="translate(728,76)">
+<rect width="320" height="480" rx="26" fill="#0B0C10" stroke="#343641"/>
+<g transform="translate(20,60)">
+<text x="0" y="28.0" font-size="28" text-anchor="start" fill="#F5F5F7">Lumiere 1</text>
+</g>
+<g transform="translate(20,102)">
+<text x="0" y="12.0" font-size="12" text-anchor="start" fill="#989AA6">Votre eclairage, a portee de main</text>
+</g>
+<g transform="translate(16,136)">
+<rect width="288" height="76" rx="24" fill="#1C1D24" stroke="#2D2F38" stroke-width="0"/>
+<g transform="translate(20,12)">
+<text x="0" y="24.0" font-size="24" text-anchor="start" fill="#30D158">ALLUMEE</text>
+</g>
+<g transform="translate(20,46)">
+<text x="0" y="12.0" font-size="12" text-anchor="start" fill="#989AA6">TOUCHER POUR BASCULER</text>
+</g>
+</g>
+<g transform="translate(16,224)">
+<rect width="288" height="98" rx="24" fill="#1C1D24" stroke="#2D2F38" stroke-width="1"/>
+<g transform="translate(20,14)">
+<text x="0" y="12.0" font-size="12" text-anchor="start" fill="#989AA6">LUMINOSITE</text>
+</g>
+<g transform="translate(210,12)">
+<text x="58" y="16.0" font-size="16" text-anchor="end" fill="#F5F5F7">65 %</text>
+</g>
+<g transform="translate(20,44)">
+<rect width="248" height="32" rx="16" fill="#343641"/>
+<rect width="161.20000000000002" height="32" rx="16" fill="#0A84FF"/>
+<circle cx="161.20000000000002" cy="16.0" r="20.0" fill="#F5F5F7"/>
+</g>
+</g>
+<g transform="translate(20,332)">
+<text x="0" y="12.0" font-size="12" text-anchor="start" fill="#989AA6">AMBIANCE</text>
+</g>
+<g transform="translate(16,354)">
+<rect width="48" height="44" rx="22" fill="#D93D45" stroke="#2D2F38" stroke-width="0"/>
+<g transform="translate(20.28,14.2)">
+<text x="0" y="12.0" font-size="12" text-anchor="start" fill="#F5F5F7">R</text>
+</g>
+</g>
+<g transform="translate(76,354)">
+<rect width="48" height="44" rx="22" fill="#30D158" stroke="#2D2F38" stroke-width="0"/>
+<g transform="translate(20.28,14.2)">
+<text x="0" y="12.0" font-size="12" text-anchor="start" fill="#111218">V</text>
+</g>
+</g>
+<g transform="translate(136,354)">
+<rect width="48" height="44" rx="22" fill="#0A84FF" stroke="#2D2F38" stroke-width="0"/>
+<g transform="translate(20.28,14.2)">
+<text x="0" y="12.0" font-size="12" text-anchor="start" fill="#F5F5F7">B</text>
+</g>
+</g>
+<g transform="translate(196,354)">
+<rect width="48" height="44" rx="22" fill="#BF5AF2" stroke="#2D2F38" stroke-width="0"/>
+<g transform="translate(20.28,14.2)">
+<text x="0" y="12.0" font-size="12" text-anchor="start" fill="#F5F5F7">P</text>
+</g>
+</g>
+<g transform="translate(256,354)">
+<rect width="48" height="44" rx="22" fill="#FFE4AE" stroke="#2D2F38" stroke-width="0"/>
+<g transform="translate(5.399999999999999,14.2)">
+<text x="0" y="12.0" font-size="12" text-anchor="start" fill="#111218">2700K</text>
+</g>
+</g>
+<g transform="translate(20,22)">
+<text x="0" y="12.0" font-size="12" text-anchor="start" fill="#30D158">API CONNECTEE</text>
+</g>
+<g transform="translate(188,20)">
+<text x="112" y="16.0" font-size="16" text-anchor="end" fill="#F5F5F7">09:41</text>
+</g>
+<g transform="translate(12,410)">
+<rect width="296" height="58" rx="29" fill="#1C1D24" stroke="#2D2F38" stroke-width="1"/>
+<g transform="translate(62,4)">
+<rect width="54" height="48" rx="24" fill="#1C1D24" stroke="#2D2F38" stroke-width="0"/>
+<g transform="translate(2.0,16.2)">
+<text x="25.0" y="12.0" font-size="12" text-anchor="middle" fill="#F5F5F7">Volet</text>
+</g>
+</g>
+<g transform="translate(120,4)">
+<rect width="54" height="48" rx="24" fill="#0A84FF" stroke="#2D2F38" stroke-width="0"/>
+<g transform="translate(2.0,16.2)">
+<text x="25.0" y="12.0" font-size="12" text-anchor="middle" fill="#F5F5F7">Lum. 1</text>
+</g>
+</g>
+<g transform="translate(178,4)">
+<rect width="54" height="48" rx="24" fill="#1C1D24" stroke="#2D2F38" stroke-width="0"/>
+<g transform="translate(2.0,16.2)">
+<text x="25.0" y="12.0" font-size="12" text-anchor="middle" fill="#F5F5F7">Lum. 2</text>
+</g>
+</g>
+<g transform="translate(236,4)">
+<rect width="54" height="48" rx="24" fill="#1C1D24" stroke="#2D2F38" stroke-width="0"/>
+<g transform="translate(12.120000000000001,16.2)">
+<text x="0" y="12.0" font-size="12" text-anchor="start" fill="#F5F5F7">Menu</text>
+</g>
+</g>
+<g transform="translate(4,4)">
+<rect width="54" height="48" rx="24" fill="#1C1D24" stroke="#2D2F38" stroke-width="0"/>
+<g transform="translate(0.9600000000000009,16.2)">
+<text x="0" y="12.0" font-size="12" text-anchor="start" fill="#F5F5F7">Accueil</text>
+</g>
+</g>
+</g>
+</g>
+<g transform="translate(24,586)">
+<rect width="320" height="480" rx="26" fill="#0B0C10" stroke="#343641"/>
+<g transform="translate(20,60)">
+<text x="0" y="28.0" font-size="28" text-anchor="start" fill="#F5F5F7">Lumiere 2</text>
+</g>
+<g transform="translate(20,102)">
+<text x="0" y="12.0" font-size="12" text-anchor="start" fill="#989AA6">Votre eclairage, a portee de main</text>
+</g>
+<g transform="translate(16,136)">
+<rect width="288" height="76" rx="24" fill="#1C1D24" stroke="#2D2F38" stroke-width="0"/>
+<g transform="translate(20,12)">
+<text x="0" y="24.0" font-size="24" text-anchor="start" fill="#989AA6">ETEINTE</text>
+</g>
+<g transform="translate(20,46)">
+<text x="0" y="12.0" font-size="12" text-anchor="start" fill="#989AA6">TOUCHER POUR BASCULER</text>
+</g>
+</g>
+<g transform="translate(16,224)">
+<rect width="288" height="98" rx="24" fill="#1C1D24" stroke="#2D2F38" stroke-width="1"/>
+<g transform="translate(20,14)">
+<text x="0" y="12.0" font-size="12" text-anchor="start" fill="#989AA6">LUMINOSITE</text>
+</g>
+<g transform="translate(210,12)">
+<text x="58" y="16.0" font-size="16" text-anchor="end" fill="#F5F5F7">-- %</text>
+</g>
+<g transform="translate(20,44)">
+<rect width="248" height="32" rx="16" fill="#343641"/>
+<rect width="16.0" height="32" rx="16" fill="#0A84FF"/>
+<circle cx="16.0" cy="16.0" r="20.0" fill="#F5F5F7"/>
+</g>
+</g>
+<g transform="translate(20,332)">
+<text x="0" y="12.0" font-size="12" text-anchor="start" fill="#989AA6">AMBIANCE</text>
+</g>
+<g transform="translate(16,354)">
+<rect width="48" height="44" rx="22" fill="#D93D45" stroke="#2D2F38" stroke-width="0"/>
+<g transform="translate(20.28,14.2)">
+<text x="0" y="12.0" font-size="12" text-anchor="start" fill="#F5F5F7">R</text>
+</g>
+</g>
+<g transform="translate(76,354)">
+<rect width="48" height="44" rx="22" fill="#30D158" stroke="#2D2F38" stroke-width="0"/>
+<g transform="translate(20.28,14.2)">
+<text x="0" y="12.0" font-size="12" text-anchor="start" fill="#111218">V</text>
+</g>
+</g>
+<g transform="translate(136,354)">
+<rect width="48" height="44" rx="22" fill="#0A84FF" stroke="#2D2F38" stroke-width="0"/>
+<g transform="translate(20.28,14.2)">
+<text x="0" y="12.0" font-size="12" text-anchor="start" fill="#F5F5F7">B</text>
+</g>
+</g>
+<g transform="translate(196,354)">
+<rect width="48" height="44" rx="22" fill="#BF5AF2" stroke="#2D2F38" stroke-width="0"/>
+<g transform="translate(20.28,14.2)">
+<text x="0" y="12.0" font-size="12" text-anchor="start" fill="#F5F5F7">P</text>
+</g>
+</g>
+<g transform="translate(256,354)">
+<rect width="48" height="44" rx="22" fill="#FFE4AE" stroke="#2D2F38" stroke-width="0"/>
+<g transform="translate(5.399999999999999,14.2)">
+<text x="0" y="12.0" font-size="12" text-anchor="start" fill="#111218">2700K</text>
+</g>
+</g>
+<g transform="translate(20,22)">
+<text x="0" y="12.0" font-size="12" text-anchor="start" fill="#30D158">API CONNECTEE</text>
+</g>
+<g transform="translate(188,20)">
+<text x="112" y="16.0" font-size="16" text-anchor="end" fill="#F5F5F7">09:41</text>
+</g>
+<g transform="translate(12,410)">
+<rect width="296" height="58" rx="29" fill="#1C1D24" stroke="#2D2F38" stroke-width="1"/>
+<g transform="translate(62,4)">
+<rect width="54" height="48" rx="24" fill="#1C1D24" stroke="#2D2F38" stroke-width="0"/>
+<g transform="translate(2.0,16.2)">
+<text x="25.0" y="12.0" font-size="12" text-anchor="middle" fill="#F5F5F7">Volet</text>
+</g>
+</g>
+<g transform="translate(120,4)">
+<rect width="54" height="48" rx="24" fill="#1C1D24" stroke="#2D2F38" stroke-width="0"/>
+<g transform="translate(2.0,16.2)">
+<text x="25.0" y="12.0" font-size="12" text-anchor="middle" fill="#F5F5F7">Lum. 1</text>
+</g>
+</g>
+<g transform="translate(178,4)">
+<rect width="54" height="48" rx="24" fill="#0A84FF" stroke="#2D2F38" stroke-width="0"/>
+<g transform="translate(2.0,16.2)">
+<text x="25.0" y="12.0" font-size="12" text-anchor="middle" fill="#F5F5F7">Lum. 2</text>
+</g>
+</g>
+<g transform="translate(236,4)">
+<rect width="54" height="48" rx="24" fill="#1C1D24" stroke="#2D2F38" stroke-width="0"/>
+<g transform="translate(12.120000000000001,16.2)">
+<text x="0" y="12.0" font-size="12" text-anchor="start" fill="#F5F5F7">Menu</text>
+</g>
+</g>
+<g transform="translate(4,4)">
+<rect width="54" height="48" rx="24" fill="#1C1D24" stroke="#2D2F38" stroke-width="0"/>
+<g transform="translate(0.9600000000000009,16.2)">
+<text x="0" y="12.0" font-size="12" text-anchor="start" fill="#F5F5F7">Accueil</text>
+</g>
+</g>
+</g>
+</g>
+<g transform="translate(376,586)">
+<rect width="320" height="480" rx="26" fill="#0B0C10" stroke="#343641"/>
+<g transform="translate(20,60)">
+<text x="0" y="28.0" font-size="28" text-anchor="start" fill="#F5F5F7">Parametres</text>
+</g>
+<g transform="translate(20,102)">
+<text x="0" y="12.0" font-size="12" text-anchor="start" fill="#989AA6">Votre panneau, a votre facon</text>
+</g>
+<g transform="translate(16,126)">
+<rect width="288" height="58" rx="24" fill="#1C1D24" stroke="#2D2F38" stroke-width="1"/>
+<g transform="translate(16,8)">
+<text x="0" y="12.0" font-size="12" text-anchor="start" fill="#989AA6">ACCENT NAVIGATION</text>
+</g>
+<g transform="translate(16,27)">
+<text x="0" y="16.0" font-size="16" text-anchor="start" fill="#F5F5F7">Couleur du YAML</text>
+</g>
+<g transform="translate(260,20)">
+<text x="0" y="16.0" font-size="16" text-anchor="start" fill="#F5F5F7">&gt;</text>
+</g>
+</g>
+<g transform="translate(16,194)">
+<rect width="288" height="58" rx="24" fill="#1C1D24" stroke="#2D2F38" stroke-width="1"/>
+<g transform="translate(16,8)">
+<text x="0" y="12.0" font-size="12" text-anchor="start" fill="#989AA6">FORMAT DE L&#x27;HEURE</text>
+</g>
+<g transform="translate(16,27)">
+<text x="0" y="16.0" font-size="16" text-anchor="start" fill="#F5F5F7">24 heures</text>
+</g>
+<g transform="translate(260,20)">
+<text x="0" y="16.0" font-size="16" text-anchor="start" fill="#F5F5F7">&gt;</text>
+</g>
+</g>
+<g transform="translate(16,262)">
+<rect width="288" height="58" rx="24" fill="#1C1D24" stroke="#2D2F38" stroke-width="1"/>
+<g transform="translate(16,8)">
+<text x="0" y="12.0" font-size="12" text-anchor="start" fill="#989AA6">HORLOGE EN HAUT</text>
+</g>
+<g transform="translate(16,27)">
+<text x="0" y="16.0" font-size="16" text-anchor="start" fill="#F5F5F7">Visible</text>
+</g>
+<g transform="translate(260,20)">
+<text x="0" y="16.0" font-size="16" text-anchor="start" fill="#F5F5F7">&gt;</text>
+</g>
+</g>
+<g transform="translate(16,330)">
+<rect width="288" height="58" rx="24" fill="#1C1D24" stroke="#2D2F38" stroke-width="1"/>
+<g transform="translate(16,8)">
+<text x="0" y="12.0" font-size="12" text-anchor="start" fill="#989AA6">SYSTEME</text>
+</g>
+<g transform="translate(16,27)">
+<text x="0" y="16.0" font-size="16" text-anchor="start" fill="#F5F5F7">Diagnostics</text>
+</g>
+<g transform="translate(260,20)">
+<text x="0" y="16.0" font-size="16" text-anchor="start" fill="#F5F5F7">&gt;</text>
+</g>
+</g>
+<g transform="translate(20,22)">
+<text x="0" y="12.0" font-size="12" text-anchor="start" fill="#30D158">API CONNECTEE</text>
+</g>
+<g transform="translate(188,20)">
+<text x="112" y="16.0" font-size="16" text-anchor="end" fill="#F5F5F7">09:41</text>
+</g>
+<g transform="translate(12,410)">
+<rect width="296" height="58" rx="29" fill="#1C1D24" stroke="#2D2F38" stroke-width="1"/>
+<g transform="translate(62,4)">
+<rect width="54" height="48" rx="24" fill="#1C1D24" stroke="#2D2F38" stroke-width="0"/>
+<g transform="translate(2.0,16.2)">
+<text x="25.0" y="12.0" font-size="12" text-anchor="middle" fill="#F5F5F7">Volet</text>
+</g>
+</g>
+<g transform="translate(120,4)">
+<rect width="54" height="48" rx="24" fill="#1C1D24" stroke="#2D2F38" stroke-width="0"/>
+<g transform="translate(2.0,16.2)">
+<text x="25.0" y="12.0" font-size="12" text-anchor="middle" fill="#F5F5F7">Lum. 1</text>
+</g>
+</g>
+<g transform="translate(178,4)">
+<rect width="54" height="48" rx="24" fill="#1C1D24" stroke="#2D2F38" stroke-width="0"/>
+<g transform="translate(2.0,16.2)">
+<text x="25.0" y="12.0" font-size="12" text-anchor="middle" fill="#F5F5F7">Lum. 2</text>
+</g>
+</g>
+<g transform="translate(236,4)">
+<rect width="54" height="48" rx="24" fill="#0A84FF" stroke="#2D2F38" stroke-width="0"/>
+<g transform="translate(12.120000000000001,16.2)">
+<text x="0" y="12.0" font-size="12" text-anchor="start" fill="#F5F5F7">Menu</text>
+</g>
+</g>
+<g transform="translate(4,4)">
+<rect width="54" height="48" rx="24" fill="#1C1D24" stroke="#2D2F38" stroke-width="0"/>
+<g transform="translate(0.9600000000000009,16.2)">
+<text x="0" y="12.0" font-size="12" text-anchor="start" fill="#F5F5F7">Accueil</text>
+</g>
+</g>
+</g>
+</g>
+<g transform="translate(728,586)">
+<rect width="320" height="480" rx="26" fill="#0B0C10" stroke="#343641"/>
+<g transform="translate(20,60)">
+<text x="0" y="28.0" font-size="28" text-anchor="start" fill="#F5F5F7">Diagnostics</text>
+</g>
+<g transform="translate(20,102)">
+<text x="0" y="12.0" font-size="12" text-anchor="start" fill="#989AA6">Lecture seule / aucun redemarrage</text>
+</g>
+<g transform="translate(16,136)">
+<rect width="288" height="190" rx="24" fill="#1C1D24" stroke="#2D2F38" stroke-width="1"/>
+<g transform="translate(16,18)">
+<text x="0" y="16.0" font-size="16" text-anchor="start" fill="#F5F5F7">ESPHome 2026.10.2</text>
+</g>
+<g transform="translate(16,52)">
+<text x="0" y="16.0" font-size="16" text-anchor="start" fill="#F5F5F7">Application : 42 min</text>
+</g>
+<g transform="translate(16,86)">
+<text x="0" y="16.0" font-size="16" text-anchor="start" fill="#F5F5F7">Horloge : valide</text>
+</g>
+<g transform="translate(16,120)">
+<text x="0" y="12.0" font-size="12" text-anchor="start" fill="#F5F5F7">Wi-Fi : liaison active</text>
+</g>
+<g transform="translate(16,148)">
+<text x="0" y="12.0" font-size="12" text-anchor="start" fill="#989AA6">API connectee ne signifie pas</text>
+<text x="0" y="26.4" font-size="12" text-anchor="start" fill="#989AA6">forcement HA connecte.</text>
+</g>
+</g>
+<g transform="translate(16,334)">
+<rect width="288" height="54" rx="24" fill="#1C1D24" stroke="#2D2F38" stroke-width="0"/>
+<g transform="translate(39.84,16.6)">
+<text x="0" y="16.0" font-size="16" text-anchor="start" fill="#F5F5F7">Retour aux parametres</text>
+</g>
+</g>
+<g transform="translate(20,22)">
+<text x="0" y="12.0" font-size="12" text-anchor="start" fill="#30D158">API CONNECTEE</text>
+</g>
+<g transform="translate(188,20)">
+<text x="112" y="16.0" font-size="16" text-anchor="end" fill="#F5F5F7">09:41</text>
+</g>
+<g transform="translate(12,410)">
+<rect width="296" height="58" rx="29" fill="#1C1D24" stroke="#2D2F38" stroke-width="1"/>
+<g transform="translate(62,4)">
+<rect width="54" height="48" rx="24" fill="#1C1D24" stroke="#2D2F38" stroke-width="0"/>
+<g transform="translate(2.0,16.2)">
+<text x="25.0" y="12.0" font-size="12" text-anchor="middle" fill="#F5F5F7">Volet</text>
+</g>
+</g>
+<g transform="translate(120,4)">
+<rect width="54" height="48" rx="24" fill="#1C1D24" stroke="#2D2F38" stroke-width="0"/>
+<g transform="translate(2.0,16.2)">
+<text x="25.0" y="12.0" font-size="12" text-anchor="middle" fill="#F5F5F7">Lum. 1</text>
+</g>
+</g>
+<g transform="translate(178,4)">
+<rect width="54" height="48" rx="24" fill="#1C1D24" stroke="#2D2F38" stroke-width="0"/>
+<g transform="translate(2.0,16.2)">
+<text x="25.0" y="12.0" font-size="12" text-anchor="middle" fill="#F5F5F7">Lum. 2</text>
+</g>
+</g>
+<g transform="translate(236,4)">
+<rect width="54" height="48" rx="24" fill="#0A84FF" stroke="#2D2F38" stroke-width="0"/>
+<g transform="translate(12.120000000000001,16.2)">
+<text x="0" y="12.0" font-size="12" text-anchor="start" fill="#F5F5F7">Menu</text>
+</g>
+</g>
+<g transform="translate(4,4)">
+<rect width="54" height="48" rx="24" fill="#1C1D24" stroke="#2D2F38" stroke-width="0"/>
+<g transform="translate(0.9600000000000009,16.2)">
+<text x="0" y="12.0" font-size="12" text-anchor="start" fill="#F5F5F7">Accueil</text>
+</g>
+</g>
+</g>
+</g>
+</g>
+</svg>

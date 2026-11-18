@@ -89,6 +89,113 @@ Pour une nouvelle installation uniquement, générer cette clé localement avec
 `tpp06_api_encryption_key` dans le `secrets.yaml` de Device Builder. Ne pas
 utiliser la clé de test du dépôt. Aucun secret n'est fourni par GitHub.
 
+### Heure sans le cloud Tuya
+
+Le modèle utilise le composant ESPHome standard
+[`time: platform: homeassistant`](https://esphome.io/components/time/homeassistant/).
+L'heure arrive par l'API chiffrée existante ; aucun serveur NTP, accès cloud
+Tuya ou identifiant supplémentaire n'est ajouté. Le fuseau n'est pas fixé dans
+le YAML public : Home Assistant fournit celui de l'installation.
+
+Après un démarrage à froid, l'horloge Linux peut rester en 1970 tant que Home
+Assistant ne s'est pas connecté. Un client de journaux connecté ne prouve pas
+que HA a fourni l'heure. Ne pas utiliser cette heure pour une action planifiée
+sans vérifier `time.has_time`. `api.reboot_timeout: 0s` reste conservé :
+l'absence de HA ne doit pas provoquer un redémarrage en boucle.
+
+Le binaire v3 compilé dans Home Assistant a ensuite été testé pendant une
+session autonome de 300 secondes : heure correcte avant la première connexion
+API de diagnostic, neuf contrôles chiffrés réussis, mémoire résidente observée
+constante à 4 932 Kio. La surveillance ADB du conteneur étant hors ligne, elle
+a été reprise via Mint ; les premières minutes ne disposent donc pas de
+relevés détaillés. Le retour automatique à Tuya, les sommes de contrôle des
+fichiers d'origine et 90 secondes de stabilité après retour ont été vérifiés.
+Ce test ne valide pas encore l'OTA autonome ou l'installation permanente.
+Le binaire de l'essai précédent de 15 minutes ne contenait pas cet ajout.
+Les délais du superviseur reposent sur des attentes relatives, et ceux du
+HAL host sur `CLOCK_MONOTONIC`, pas sur l'heure civile à synchroniser.
+
+### Variante mobile, inspirée d'iOS
+
+Le fichier complet [tpp06-lvgl-mobile.yaml](../../esphome/tpp06-lvgl-mobile.yaml)
+propose une interface alternative native 320 × 480 : cartes sombres arrondies,
+navigation fixe, accueil avec date et salutation, volet, deux pages d'éclairage,
+paramètres et diagnostics. Il conserve
+les pilotes, le chiffrement API/OTA et les identifiants de commandes du modèle
+classique. Les boutons font au minimum 44 × 44 pixels ; les valeurs de
+luminosité sont lues depuis HA, sans envoyer de commande lors d'une mise à jour
+d'état. Les commandes de couleur nécessitent une lampe qui les supporte.
+
+L'onglet **Accueil** est la page de démarrage. La date française et l'heure
+proviennent de l'horloge synchronisée avec HA ; avant synchronisation, elles
+restent en attente. Les raccourcis ouvrent les pages, sans action immédiate sur
+les équipements. L'état Wi-Fi lit uniquement le fichier Linux `carrier` de
+`network_interface` (par défaut `wlan0`) : liaison active, sans liaison ou
+inconnue. Ce n'est ni une mesure de puissance du signal, ni une vérification
+d'Internet ou de la connexion HA ; aucun SSID, mot de passe ou IP n'est exposé.
+
+L'onglet **Menu** permet de choisir le format 12/24 h, masquer l'horloge de
+la barre supérieure (celle de l'accueil reste visible), et choisir l'accent
+de navigation violet ou la couleur `ui_accent` du YAML. Ces trois préférences
+utilisent le stockage ESPHome ; le lanceur doit conserver un
+`ESPHOME_PREFDIR` accessible en écriture. Le superviseur du projet le fournit.
+La page Diagnostics affiche la version, la durée de fonctionnement de
+l'application (pas celle de Linux), la validité de l'horloge et la liaison
+Wi-Fi. Le statut API global peut également refléter un client de journaux.
+Aucun réglage réseau, redémarrage ou effacement n'est exécuté par ces pages.
+La persistance des réglages et le rendu des pages autres que l'accueil restent
+à confirmer lors d'un essai matériel.
+
+![Aperçu conceptuel, pas une capture du panneau](../images/tpp06-mobile-preview.svg)
+
+**V4 compilée dans Home Assistant et testée temporairement, pas installée de
+façon permanente.** Le 18 novembre 2026, une configuration personnelle dérivée
+de ce modèle, avec les pilotes épinglés, a effectué une session autonome
+limitée à 300 secondes, sans interface Tuya concurrente. Les 16 contrôles API
+chiffrés ont réussi ; la mémoire résidente observée est restée à 5 352 Kio.
+Les captures réelles de début et de fin montrent l'accueil, la date et la
+liaison Wi-Fi, sans chevauchement visible. Aucun toucher, commande domotique
+ou transfert OTA n'a été envoyé pendant cet essai.
+
+Le journal confirme l'arrêt programmé à 300 secondes. Le retour à Tuya a été
+vérifié après le redémarrage de secours, avec 90 secondes de stabilité,
+Wi-Fi associé et les quatre fichiers d'origine suivis restaurés ou inchangés.
+Un relevé ADB a échoué pendant la transition de retour ; il n'est pas compté
+comme une sonde API réussie. Le programme principal installé n'a pas été
+remplacé et les choix globaux restent `tuya` / `learning`.
+
+**Anomalie connue :** l'heure affichée passe d'une heure locale à une valeur
+décalée d'une heure dans la capture finale. La synchronisation initiale était
+déjà présente avant la première sonde API de diagnostic ; cela ne valide pas
+le maintien du fuseau pendant toute la session. L'interaction avec les clients
+API de diagnostic reste à examiner : la version inspectée d'`aioesphomeapi`
+répond automatiquement aux demandes d'heure avec son propre fuseau. Une
+sonde sans commande domotique n'est donc pas un observateur passif de l'heure.
+Ne pas considérer l'horloge comme validée
+pour des commandes programmées. Les pages Menu/Paramètres, leur persistance,
+l'OTA autonome et le démarrage permanent restent à valider.
+
+Les quatre expressions de texte conditionnelles construisent explicitement
+un `std::string` : sans cela, le C++ généré appelait `.c_str()` sur un
+`const char*`. Un test de génération C++ couvre cette régression ; les
+76 tests hors ligne passent. La compilation du binaire matériel a été faite
+dans HA, pas sur Mint. Les captures et configurations personnelles restent
+privées ; l'aperçu ci-dessus utilise des états fictifs et des polices de
+navigateur, et ne constitue pas une capture du panneau.
+
+Pour la préparer dans Builder, copier ce fichier sous un nouveau nom, choisir
+un `device_name` unique et adapter les substitutions d'entités, titres et
+couleurs `ui_*`. Réutiliser la clé privée existante uniquement pour une mise
+à jour du même panneau. Pour une autre installation, fournir ses propres
+secrets. Les coordonnées et les widgets restent intégralement éditables ;
+aucune police cloud, image externe ou information personnelle n'est requise.
+Compiler et télécharger dans HA, vérifier l'espace, puis effectuer un essai
+limité avant de changer le démarrage. Ne pas lancer une OTA pendant un essai
+automatisé. Le YAML personnel existant n'est pas remplacé automatiquement.
+
+Ressources : [LVGL](https://lvgl.io/) et
+[widgets LVGL d'ESPHome](https://esphome.io/components/lvgl/widgets/).
+
 ### Déplacer la configuration vers une autre installation
 
 1. Importer le YAML public ; les composants viennent de GitHub, sans chemin
@@ -128,10 +235,10 @@ PTR, SRV et TXT ont confirmé le nom `.local`, le port API, la MAC et l'annonce
 Noise. L'arrêt automatique a conservé Tuya, ADB et le programme en flash,
 sans redémarrage Linux. Aucun équipement de la maison n'a été commandé.
 
-L'ancienne entrée HA utilise encore la MAC fictive et une connexion sans clé :
-son appairage doit être migré séparément. Ne pas supprimer cette entrée avant
-de vérifier les liens d'entités et automatisations. Les avertissements de
-connexion des anciens clients ne constituent pas une validation de ce lien.
+Lors d'un nouvel essai limité en RAM, l'entrée HA a ensuite enregistré la
+nouvelle identité et la clé correspondant au YAML privé. Une connexion TCP
+depuis HA a été observée et l'entité de mise à jour est restée enregistrée.
+Cela ne valide pas les commandes domotiques ni les automatisations existantes.
 Le YAML peut désormais référencer les composants GitHub à un commit précis,
 sans dossier de composants local. Conserver une sauvegarde privée avant migration.
 
@@ -143,12 +250,76 @@ inchangé et l'arrêt limité a préservé Tuya. L'origine du second transfert
 reste à confirmer : ce test ne valide pas une séquence OTA complète isolée.
 Ne pas lancer Installer dans Builder pendant un essai OTA automatisé.
 
+Un nouvel essai limité à cinq minutes a ensuite validé un transfert OTA chiffré
+unique du même build vers une vraie copie RAM. Les relances de l'émetteur
+étaient désactivées : un appel d'envoi, une seule connexion entrante observée
+par échantillonnage TCP (port source concordant) et une seule mise à jour
+appliquée ont été relevés. Trois contrôles API chiffrés après transfert ont
+réussi ; HA s'est reconnecté. L'empreinte du programme flash est restée inchangée,
+Tuya est resté actif, Linux n'a pas redémarré et l'arrêt automatique a réussi.
+La trace réseau complète a été récupérée après le premier rapport, qui l'avait
+collectée trop tôt. Ce contrôle n'est pas une capture de tous les paquets et
+n'explique pas rétrospectivement le double transfert précédent. Il ne valide
+ni le bouton Installer de Builder, ni un changement de version, ni le démarrage
+permanent. La copie RAM a été supprimée après vérification ; les preuves sont
+conservées en privé.
+
+Le parcours **Installer → Sans fil** du Builder a ensuite été testé pendant
+une session RAM de 20 minutes. L'utilisateur a signalé « Installation réussie » ;
+les contrôles côté panneau ont confirmé une mise à jour appliquée, un seul pair
+TCP observé, 49 lectures API chiffrées réussies après transfert et l'arrêt
+automatique prévu. Le processus Tuya est resté actif et le programme flash
+inchangé. Le binaire reçu a été sauvegardé en privé avant suppression de la
+copie temporaire. Cela ne valide ni l'installation persistante ni l'affichage.
+
+### Affichage partagé : ne pas confondre OTA et interface LVGL
+
+Pendant cet essai, les deux programmes ouvraient `/dev/fb0` et
+`/dev/input/event1`. La capture réelle montrait l'horloge Tuya, pas une page
+ESPHome. L'accès au même framebuffer rend possibles des écritures concurrentes ;
+une API disponible ne prouve donc pas qu'ESPHome possède l'écran.
+
+Le diagnostic en lecture seule [tpp06_display_check.sh](../../tools/tpp06_display_check.sh)
+peut être exécuté avec `sh` sur le panneau via une console déjà authentifiée.
+Il lit `/proc` et la géométrie sysfs, sans ouvrir les périphériques, envoyer de
+signal, changer le réseau ni redémarrer. `CHECK_SHARED_FB0=yes` signale des
+descripteurs ouverts par les deux programmes ; `not_observed` n'est **pas** une
+preuve d'exclusivité. La sortie ne contient ni adresse réseau ni clé.
+
+Le firmware actuellement installé a été récupéré en lecture seule et vérifié
+par empreinte : il diffère de l'ancien dump. Dans ce firmware, `tal_disp_stop`
+ne fait qu'une vérification d'argument et un affichage de diagnostic ;
+`tuya_gui_hal_exit` appelle `ak_tde_exit`, sans constituer une pause graphique
+réversible validée. Une tâche `gui_watchdog` est également présente.
+Ne pas suspendre tout Tuya avec `SIGSTOP` pour contourner ce problème à distance.
+La libération à chaud de l'affichage sans perdre réseau et secours reste à valider ;
+aucune modification de l'application Tuya n'a été appliquée pour cet essai.
+
+L'analyse suivante montre que le watchdog graphique est alimenté par un timer
+LVGL de Tuya toutes les deux secondes. Il faut donc préserver sa boucle, pas
+simplement arrêter la tâche graphique. La bibliothèque est également liée
+avec `DT_SYMBOLIC` et utilise des appels locaux : remplacer une fonction
+exportée par un simple préchargement n'est pas une interception validée.
+Enfin, les deux programmes ouvrent le tactile ; masquer uniquement l'image
+ne garantit pas que Tuya cesse de traiter les appuis.
+
+La voie préparée reste donc le mode autonome : démarrer le réseau et le
+secours indépendamment, puis laisser ESPHome seul gérer écran et tactile.
+La sélection du profil actif et les refus d'un faux mode isolé sont corrigés
+et testés hors ligne, voir [préparation réseau](07-tuya-cutter.md#apprentissage-puis-wi-fi-autonome).
+Des essais séparés de démarrage à froid ont ensuite vérifié le réseau autonome,
+l'affichage LVGL et le retour au système d'origine dans les limites décrites
+dans le [bilan des essais](07-tuya-cutter.md#essai-autonome-prolongé-de-15-minutes).
+Ils ne valident pas une bascule à chaud, une panne réseau réelle ou une coupure
+électrique. Un accès de secours sur place reste nécessaire.
+
 `tpp06_mdns` publie en IPv4 les enregistrements natifs ESPHome (MAC réelle,
 version, service API et état de chiffrement) et le nom `device_name.local`.
 Choisir un `device_name` unique par panneau. L'adaptateur surveille les changements
 d'adresse et arrête ses annonces en cas de conflit de nom, sans couper l'accès IP.
 La validation YAML, la génération de code, l'analyse syntaxique ARMv5 et l'essai
-DNS-SD limité passent. L'appairage HA, l'adoption/installation dans Builder,
+DNS-SD limité passent. L'enregistrement de l'appairage HA et l'OTA depuis Builder
+en RAM ont été vérifiés ; l'adoption automatique,
 les changements DHCP, les conflits de nom et la stabilité prolongée restent
 à valider. Aucun démarrage permanent n'est validé par ces contrôles.
 
@@ -156,6 +327,28 @@ Lors de la migration, garder temporairement l'IP connue dans `device_address`.
 Ne passer à `${device_name}.local` qu'après résolution et découverte réussies
 depuis HA. Le changement de MAC peut créer une nouvelle identité dans HA :
 ne supprimer l'ancienne entrée qu'après vérification des liens et automatisations.
+
+### Migrer une ancienne MAC fictive dans Home Assistant
+
+Une réauthentification peut être refusée avec « appareil différent » même si
+la clé est correcte : l'ancienne entrée attend la MAC fictive, tandis que le
+nouveau programme annonce celle de `wlan0`. Ne pas rétablir une MAC commune
+pour contourner ce contrôle et ne pas supprimer l'ancienne entrée d'emblée.
+
+1. Vérifier que l'essai ESPHome est encore actif et que l'API répond. Après
+   l'arrêt automatique, le panneau peut rester joignable en ADB sans API ESPHome.
+2. Fermer le message puis ouvrir **Paramètres → Appareils et services → Ajouter
+   une intégration → ESPHome** (pas Device Builder).
+3. Saisir l'adresse du panneau, le port API `6053` et la valeur privée référencée
+   par `api.encryption.key`. Ne pas saisir le nom du secret ni générer une autre clé.
+4. Si HA propose une résolution du conflit de nom, choisir **Migrer**, pas
+   **Écraser**, pour conserver la configuration de l'entrée précédente.
+5. Vérifier la nouvelle identité, la connexion chiffrée et les associations
+   d'entités. La fermeture d'une fenêtre seule ne confirme pas l'appairage.
+
+Voir la [procédure officielle de migration ESPHome dans HA](https://www.home-assistant.io/integrations/esphome/#name-conflict-resolution).
+Cette procédure ne prolonge pas un essai temporaire et ne configure pas un
+démarrage permanent. Ne publier ni clé, ni capture contenant des secrets.
 
 ### Accès IP de secours et anciennes versions
 
@@ -189,7 +382,8 @@ l'échange initial et la réception de messages ESPHome pendant un essai borné.
 Un transfert OTA **chiffré** du binaire HA déjà validé a depuis réussi sur une
 vraie copie en RAM : remplacement, réexécution, retour API et arrêt automatique
 confirmés, sans modification du programme en flash ni reboot Linux. Le parcours
-complet via le bouton Installer de Builder reste à vérifier. Si les
+via le bouton Installer de Builder a également réussi en RAM, comme détaillé
+plus haut. Si les
 pilotes sont fournis par une source locale, conserver le dossier de composants
 avec le YAML lors d'une migration vers une autre installation.
 

@@ -10,6 +10,12 @@ FAIL_LIMIT=${TPP06_FAIL_LIMIT:-2}
 STOCK_READY_FILE=${TPP06_STOCK_READY_FILE:-}
 ESPHOME_HEALTH_PORT=${TPP06_ESPHOME_HEALTH_PORT:-6053}
 RESCUE_BINARY=${TPP06_RESCUE_BINARY:-/tuya/app/bin/tuya_factory}
+DHCP_SCRIPT=${TPP06_DHCP_SCRIPT:-/usr/share/udhcpc/default.script}
+SYS_ROOT=${TPP06_SYS_ROOT:-/sys}
+PROC_ROOT=${TPP06_PROC_ROOT:-/proc}
+FRAMEBUFFER_DEVICE=${TPP06_FRAMEBUFFER_DEVICE:-/dev/fb0}
+TOUCH_DEVICE=${TPP06_TOUCH_DEVICE:-/dev/input/event1}
+WATCHDOG_DEVICE=${TPP06_WATCHDOG_DEVICE:-/dev/watchdog}
 NETWORK_DIR=$BASE/network
 NETWORK_CONFIG=$NETWORK_DIR/wpa_supplicant.conf
 WPA_PID_FILE=$BASE/wpa_supplicant.pid
@@ -64,6 +70,11 @@ start_stock() {
     "$STOCK" start
 }
 
+stock_runtime_present() {
+    pidof voice_control_ak3760e >/dev/null 2>&1 ||
+        ps | grep '[t]uya_monitor.sh' >/dev/null 2>&1
+}
+
 wait_stock_ready() {
     elapsed=0
     while [ "$elapsed" -lt 45 ]; do
@@ -81,10 +92,55 @@ wait_stock_ready() {
 
 network_profile_valid() {
     [ -s "$NETWORK_CONFIG" ] && \
-        grep -q 'network[[:space:]]*={' "$NETWORK_CONFIG" && \
+        grep -q '^[[:space:]]*network[[:space:]]*=[[:space:]]*{' "$NETWORK_CONFIG" && \
         grep -q 'ssid[[:space:]]*=' "$NETWORK_CONFIG" && \
         { grep -q 'psk[[:space:]]*=' "$NETWORK_CONFIG" || \
           grep -q 'key_mgmt[[:space:]]*=[[:space:]]*NONE' "$NETWORK_CONFIG"; }
+}
+
+isolated_boot_prerequisites() {
+    # rc.local must have initialized hardware before calling S99tuya-app.
+    # Do not reload drivers, toggle GPIOs, or open/feed the watchdog here.
+    if [ ! -d "$SYS_ROOT/class/net/wlan0" ] || \
+       [ ! -c "$FRAMEBUFFER_DEVICE" ] || [ ! -c "$TOUCH_DEVICE" ] || \
+       [ ! -c "$WATCHDOG_DEVICE" ]; then
+        log "ERROR isolated boot hardware devices are not ready"
+        return 1
+    fi
+    if [ ! -x "$DHCP_SCRIPT" ]; then
+        log "ERROR DHCP event script is unavailable"
+        return 1
+    fi
+    for program in ifconfig wpa_supplicant wpa_cli udhcpc netstat; do
+        if ! command -v "$program" >/dev/null 2>&1; then
+            log "ERROR isolated boot requires $program"
+            return 1
+        fi
+    done
+    watchdog_owner=no
+    for watchdog_pid in $(pidof ak_watchdog 2>/dev/null); do
+        case "$watchdog_pid" in ''|*[!0-9]*) continue ;; esac
+        for descriptor in "$PROC_ROOT/$watchdog_pid"/fd/*; do
+            if [ "$(readlink "$descriptor" 2>/dev/null)" = "$WATCHDOG_DEVICE" ]; then
+                watchdog_owner=yes
+            fi
+        done
+    done
+    if [ "$watchdog_owner" != yes ]; then
+        log "ERROR stock hardware watchdog owner not observed"
+        return 1
+    fi
+    return 0
+}
+
+rescue_ports_listening() {
+    # Local listeners are necessary, not proof of remote authenticated access.
+    for rescue_port in 5555 8090; do
+        if ! netstat -lnt 2>/dev/null | grep -q ":$rescue_port "; then
+            log "ERROR local rescue listener missing port=$rescue_port"
+            return 1
+        fi
+    done
 }
 
 start_rescue_service() {
@@ -121,7 +177,21 @@ cleanup_independent_services() {
 }
 
 wlan_has_address() {
-    ifconfig wlan0 2>/dev/null | grep -Eq 'inet addr:|inet [0-9]'
+    # DHCP deconfig sets 0.0.0.0; do not mistake that for a usable lease.
+    ifconfig wlan0 2>/dev/null | awk '
+        { for (i=1; i<NF; i++) if ($i == "inet") {
+            address=$(i+1); sub(/^addr:/, "", address)
+            count=split(address, octets, "."); valid=(count == 4)
+            for (j=1; j<=count; j++)
+                if (octets[j] !~ /^[0-9]+$/ || octets[j] > 255) valid=0
+            if (valid && octets[1] > 0 && octets[1] < 224 && octets[1] != 127 &&
+                !(octets[1] == 169 && octets[2] == 254)) ready=1
+        } }
+        END { exit !ready }'
+}
+
+wifi_associated() {
+    wpa_cli -iwlan0 status 2>/dev/null | grep -q '^wpa_state=COMPLETED$'
 }
 
 start_independent_network() {
@@ -129,18 +199,25 @@ start_independent_network() {
         log "ERROR independent Wi-Fi profile is unavailable or incomplete"
         return 1
     fi
-    if wlan_has_address; then
-        log "independent Wi-Fi already has an address"
-        return 0
+    # A surviving stock address/daemon is not evidence of independent Wi-Fi.
+    # Never take ownership of it or terminate it to make this check pass.
+    if wlan_has_address || pidof wpa_supplicant >/dev/null 2>&1 || \
+       pidof udhcpc >/dev/null 2>&1; then
+        log "ERROR existing network state is not owned by this isolated session"
+        return 1
     fi
     if ! command -v wpa_supplicant >/dev/null 2>&1 || \
-       ! command -v udhcpc >/dev/null 2>&1; then
-        log "ERROR wpa_supplicant or udhcpc missing"
+       ! command -v udhcpc >/dev/null 2>&1 || \
+       ! command -v wpa_cli >/dev/null 2>&1 || [ ! -x "$DHCP_SCRIPT" ]; then
+        log "ERROR Wi-Fi tools or DHCP event script missing"
         return 1
     fi
 
     log "starting independent Wi-Fi (credentials remain masked)"
-    ifconfig wlan0 up
+    if ! ifconfig wlan0 up; then
+        log "ERROR cannot bring up wlan0"
+        return 1
+    fi
     if ! pidof wpa_supplicant >/dev/null 2>&1; then
         if ! wpa_supplicant -B -P"$WPA_PID_FILE" -Dnl80211 -iwlan0 \
             -c"$NETWORK_CONFIG" >>"$LOG_DIR/wifi.log" 2>&1; then
@@ -149,7 +226,7 @@ start_independent_network() {
         fi
     fi
     if ! pidof udhcpc >/dev/null 2>&1; then
-        if ! udhcpc -b -t 8 -p "$DHCP_PID_FILE" -i wlan0 \
+        if ! udhcpc -b -t 8 -p "$DHCP_PID_FILE" -i wlan0 -s "$DHCP_SCRIPT" \
             >>"$LOG_DIR/wifi.log" 2>&1; then
             cleanup_independent_services
             return 1
@@ -158,14 +235,14 @@ start_independent_network() {
 
     elapsed=0
     while [ "$elapsed" -lt 45 ]; do
-        if wlan_has_address; then
-            log "independent Wi-Fi ready after ${elapsed}s"
+        if wifi_associated && wlan_has_address; then
+            log "independent Wi-Fi associated with IPv4 after ${elapsed}s"
             return 0
         fi
         sleep 2
         elapsed=$((elapsed + 2))
     done
-    log "ERROR independent Wi-Fi did not obtain an address"
+    log "ERROR independent Wi-Fi association or IPv4 did not become ready"
     cleanup_independent_services
     return 1
 }
@@ -257,8 +334,21 @@ supervise() {
 
     network_mode=$(read_value "$BASE/network_mode" learning)
     if [ "$requested" = esphome ] && [ "$network_mode" = isolated ]; then
+        # Isolated mode is a cold-start policy, not a live GUI handover. Keeping
+        # Tuya/its monitor running would retain framebuffer and touch ownership.
+        if stock_runtime_present; then
+            log "ERROR isolated mode refused while stock UI or monitor is active"
+            increment_failure >/dev/null
+            fallback_stock isolated-stock-active
+            return
+        fi
+        if ! isolated_boot_prerequisites; then
+            increment_failure >/dev/null
+            fallback_stock isolated-prerequisites-failed
+            return
+        fi
         log "using independent Wi-Fi profile"
-        if ! start_rescue_service || ! start_independent_network; then
+        if ! start_rescue_service || ! start_independent_network || ! rescue_ports_listening; then
             increment_failure >/dev/null
             fallback_stock independent-network-failed
             return

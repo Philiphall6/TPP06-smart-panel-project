@@ -89,10 +89,29 @@ corruption du stockage ou de panne du noyau/matériel.
 
 ### Apprentissage puis Wi-Fi autonome
 
-L'installation recopie le profil Wi-Fi déjà utilisé depuis
-`/etc/wpa_supplicant.conf` vers
-`/data/tpp06-cutter/network/wpa_supplicant.conf`. Le fichier reste uniquement
-sur le panneau, en mode `0600` ; le Cutter n'affiche jamais le SSID ni la clé.
+L'installation lit les arguments du processus `wpa_supplicant` de `wlan0`
+pour sélectionner son vrai fichier `-c`, puis le copie vers
+`/data/tpp06-cutter/network/wpa_supplicant.conf`. Elle ne suppose plus que
+`/etc/wpa_supplicant.conf` est le profil actif : sur le panneau examiné, le
+processus utilisait un autre fichier dans les données Tuya. La sélection refuse
+un processus ambigu, une autre interface ou plusieurs blocs réseau. En cas
+d'échec, le mode réseau devient `unavailable`, sans copie d'un modèle arbitraire.
+La copie est vérifiée par empreinte avant remplacement et protégée en `0600`.
+Le contrôle utilise SHA-256 ou, à défaut, MD5 pour comparer les fichiers locaux
+car certains BusyBox du panneau n'ont pas `cmp` ; ce n'est pas une signature.
+Le Cutter n'affiche jamais le SSID, la clé ni l'empreinte du profil.
+
+Diagnostic seul, sans redémarrage ni modification :
+
+```bash
+python3 tools/tpp06_tuya_cutter.py 192.0.2.1 network-check
+```
+
+`SAVED_PROFILE=identical` confirme seulement que la copie correspond au fichier
+actif. `AUTONOMOUS_WIFI=not_verified` reste explicite : cela ne teste ni une
+réassociation Wi-Fi ni le lancement des pilotes sans Tuya. L'état `COMPLETED`
+de [wpa_supplicant STATUS](https://w1.fi/wpa_supplicant/devel/ctrl_iface_page.html)
+décrit la connexion courante, pas un futur démarrage autonome.
 
 Les deux politiques réseau sont distinctes, sans transition automatique :
 
@@ -104,6 +123,108 @@ Les deux politiques réseau sont distinctes, sans transition automatique :
 
 Un essai en apprentissage réussi ne valide pas le Wi-Fi autonome. Ne pas
 sélectionner le mode isolé à distance sans moyen de récupération sur place.
+
+Le superviseur corrigé refuse le mode isolé si l'application Tuya ou son
+moniteur est encore présent. Il refuse aussi de traiter une adresse existante
+ou des processus Wi-Fi/DHCP préexistants comme un réseau qu'il a lui-même
+démarré. Il ne tue pas ces processus pour contourner le refus. Ces protections
+sont testées hors ligne ; elles ne prouvent pas encore le démarrage matériel.
+
+Le 18 novembre 2026, la copie de secours a été préparée depuis le profil actif
+sur le panneau, après sauvegarde privée et vérification. Les paramètres réseau
+actifs, le programme flash et le superviseur installé n'ont pas changé ; les
+modes restent `tuya` et `learning`. Le nouveau superviseur n'a pas été déployé
+pendant cette préparation. Aucun redémarrage ni arrêt de Tuya n'a été envoyé.
+
+#### Prérequis du démarrage autonome
+
+Les scripts récupérés du firmware actuel montrent que `rc.local` charge les
+pilotes écran, tactile et Wi-Fi, relève `wlan0`, démarre ADB et lance
+`ak_watchdog` avant `S99tuya-app`. Le sélecteur doit conserver cet ordre : il
+ne recharge pas les modules, ne commute pas les GPIO et n'ouvre pas lui-même
+`/dev/watchdog`.
+
+Le superviseur préparé exige désormais :
+
+- l'interface `wlan0` et les périphériques écran, tactile et watchdog présents ;
+- un processus `ak_watchdog` ayant un descripteur ouvert sur le watchdog ;
+- les outils réseau et le script DHCP d'origine disponibles ;
+- une association `wpa_state=COMPLETED` **et** une IPv4 utilisable ;
+- les deux écouteurs locaux ADB `5555` et secours `8090` avant le lancement ESPHome.
+
+Le script DHCP est donné explicitement à `udhcpc`. L'échec de `ifconfig wlan0 up`
+interrompt la tentative. Une adresse `0.0.0.0`, de boucle locale ou link-local
+n'est pas acceptée comme bail prêt. Ces contrôles restent nécessaires mais non
+suffisants : un port en écoute ne prouve pas un accès distant authentifié, et
+un descripteur watchdog ouvert ne prouve pas son alimentation à long terme.
+
+À cette étape, les 69 tests hors ligne passaient. Sur le panneau, les contrôles matériels en
+lecture seule passent dans l'état Tuya actuel. Un essai séparé en RAM a vérifié
+uniquement le **refus** du mode isolé lorsque Tuya est actif : aucun moteur
+personnalisé lancé, processus réseau inchangés, programme flash, profil Wi-Fi
+et superviseur installé inchangés. Le programme sentinelle de cet essai n'était
+pas ESPHome. Ce test ne valide pas le démarrage autonome ni le retour après une
+panne réseau réelle. Un essai matériel de bascule exige encore une récupération
+sur place ; aucun redémarrage n'a été effectué pour ces contrôles.
+
+#### Essai autonome court du 18 novembre 2026
+
+Un essai distinct a ensuite démarré ESPHome après un redémarrage logiciel,
+sans lancer l'application graphique Tuya. Un lanceur temporaire a restauré
+le lanceur d'origine **avant** la tentative ; les choix globaux sont restés
+`tuya` et `learning`. Le binaire compilé dans Home Assistant a été copié dans
+un répertoire d'essai séparé, sans remplacer le programme installé.
+
+Le Wi-Fi autonome a établi l'association et obtenu une IPv4. ADB et le port
+`8090` sont restés accessibles pendant la session. Les 18 contrôles de l'API
+chiffrée ont réussi. Une capture du framebuffer montre l'interface LVGL,
+et non l'horloge Tuya ; ESPHome ouvrait l'écran et le tactile, sans processus
+graphique Tuya concurrent. Aucun toucher ni aucune action domotique n'a été
+envoyé pour ce contrôle distant.
+
+Le superviseur a arrêté ESPHome après 120 secondes et déclenché son retour
+à Tuya. Un minuteur indépendant a ensuite demandé un redémarrage, après
+210 secondes, via le lanceur d'origine déjà restauré. Une connexion ADB
+conservée côté client était devenue `offline` après ce redémarrage : sa
+déconnexion/reconnexion ciblée a rétabli l'accès, sans redémarrage supplémentaire.
+Une vérification finale distincte a confirmé 93 secondes de stabilité de Tuya,
+le Wi-Fi connecté et les sommes de contrôle d'origine restaurées ou inchangées.
+
+Il s'agit d'un **essai court**, pas d'une installation permanente ni d'une
+validation après coupure électrique. Il ne valide pas le secours en cas de
+blocage du noyau, la stabilité prolongée, les actions domotiques ou l'OTA en
+mode autonome. Les journaux, profils, clés et captures restent privés. Le
+minuteur d'essai n'est pas une garantie matérielle de récupération.
+
+#### Essai autonome prolongé de 15 minutes
+
+Le même binaire compilé dans Home Assistant a ensuite été testé pendant une
+session de 900 secondes, avec un retour par redémarrage indépendant prévu à
+990 secondes. Aucun transfert OTA ni aucune action domotique n'a été envoyé.
+Le lanceur d'origine était restauré avant de démarrer le superviseur d'essai.
+
+Les observations montrent un seul processus ESPHome sur le même démarrage,
+une mémoire résidente constante de **4 792 Kio**, et **51 contrôles chiffrés
+réussis**. Les captures du début et de la fin montrent la même interface LVGL.
+Cela ne constitue pas un nouveau test du tactile physique.
+
+Un relevé ADB a échoué pendant la session ; le suivant a retrouvé le même
+processus, sans redémarrage. Une tentative API supplémentaire a échoué au
+moment de l'arrêt : le relevé d'uptime et le journal du superviseur la situent
+à l'expiration programmée des 900 secondes. Ces incidents d'observation sont
+conservés dans le bilan, plutôt que présentés comme des contrôles tous réussis.
+
+Le retour à Tuya et le redémarrage de secours ont été observés, puis la
+stabilité de Tuya vérifiée pendant 90 secondes. Les sommes de contrôle des
+quatre fichiers d'origine suivis confirment leur restauration ou leur absence
+de modification. L'horloge
+système autonome est restée en 1970 dans ce premier binaire. Les essais v3/V4
+suivants ont ajouté la synchronisation depuis HA ; un décalage de fuseau a
+été observé dans V4, voir le [bilan de l'interface mobile](06-esphome-lvgl-natif.md#variante-mobile-inspirée-dios).
+Un contrôle complémentaire mDNS côté HA n'a pas été effectué, l'accès Docker
+de l'outil SSH étant protégé ; cette protection n'a pas été modifiée.
+L'endurance de longue durée, l'OTA autonome, les actions domotiques et les
+coupures électriques restent hors de cette validation.
 
 Si le profil est absent, si DHCP échoue ou si l'API ESPHome n'écoute pas, le
 mode isolé n'est pas validé et le moniteur Tuya original reprend la main. Le
@@ -194,8 +315,12 @@ python3 tools/tpp06_tuya_cutter.py 192.0.2.1 test esphome \
   --binary /chemin/esphome-lvgl-program
 ```
 
-Pendant un essai, le processus Tuya est suspendu avec `SIGSTOP`, pas tué. Le
-programme est copié sous `/tmp/tpp06-cutter`, donc disparaît au redémarrage.
+L'essai **ESPHome** conserve Tuya actif et possède un arrêt automatique : il
+ne valide pas la prise de contrôle exclusive de l'écran. Le chemin historique
+**openHASP** suspend encore Tuya avec `SIGSTOP` ; ce n'est pas une pause de la
+seule interface graphique et ce chemin n'est pas sûr pour un essai distant
+sans accès physique de secours. Ne pas l'utiliser comme solution d'affichage.
+Le programme est copié sous `/tmp/tpp06-cutter`, donc disparaît au redémarrage.
 Pour revenir immédiatement :
 
 ```bash

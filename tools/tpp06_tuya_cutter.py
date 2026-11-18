@@ -43,6 +43,7 @@ SUPPORTED_ENGINES = ("openhasp", "esphome")
 MODE_NAMES = ("tuya", *SUPPORTED_ENGINES)
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 MULTIBOOT_SCRIPT = PROJECT_ROOT / "device" / "tpp06-multiboot.sh"
+NETWORK_PROFILE_HELPER = PROJECT_ROOT / "device" / "tpp06-network-profile.sh"
 
 
 class CutterError(RuntimeError):
@@ -427,6 +428,39 @@ class TuyaCutter:
             ):
                 print(f"  {line}")
 
+    def network_check(self) -> None:
+        """Read-only comparison; never claims autonomous Wi-Fi is validated."""
+        helper = NETWORK_PROFILE_HELPER.read_text(encoding="utf-8")
+        command = helper + "\n" + (
+            "if profile=$(tpp06_active_wifi_profile); then\n"
+            "echo CHECK_ACTIVE_PROFILE=recognized\n"
+            f"if tpp06_profiles_equal \"$profile\" {REMOTE_BASE}/network/wpa_supplicant.conf; then\n"
+            "echo CHECK_SAVED_PROFILE=identical\n"
+            "else comparison=$?\n"
+            "if [ \"$comparison\" = 1 ]; then echo CHECK_SAVED_PROFILE=different_or_missing\n"
+            "else echo CHECK_SAVED_PROFILE=unavailable; fi; fi\n"
+            "else echo CHECK_ACTIVE_PROFILE=unknown\n"
+            "echo CHECK_SAVED_PROFILE=not_checked; fi\n"
+            "echo CHECK_AUTONOMOUS_WIFI=not_verified\n"
+        )
+        result = self.connected_session().run_root(command)
+        # Whitelist complete values; never print the shell echo, path or secrets.
+        expected = {
+            "ACTIVE_PROFILE": {"recognized", "unknown"},
+            "SAVED_PROFILE": {"identical", "different_or_missing", "not_checked", "unavailable"},
+            "AUTONOMOUS_WIFI": {"not_verified"},
+        }
+        found = {}
+        for line in result.stdout.splitlines():
+            match = re.fullmatch(r"CHECK_([A-Z_]+)=([a-z_]+)", line)
+            if match and match[1] in expected and match[2] in expected[match[1]]:
+                found[match[1]] = match[2]
+        if found.keys() != expected.keys():
+            raise CutterError("Diagnostic réseau incomplet ; aucune bascule autorisée.")
+        for key, value in found.items():
+            print(f"{key}={value}")
+        print("Aucun changement réseau. Un profil identique ne valide pas le Wi-Fi sans Tuya.")
+
     def reboot_check(self) -> None:
         """Read-only gate that must pass before a user-initiated reboot."""
         session = self.connected_session()
@@ -804,10 +838,12 @@ class TuyaCutter:
             "mv /data/etc/init.d/.S99tuya-app.staged /data/etc/init.d/S99tuya-app; "
             f"echo 0 > {REMOTE_BASE}/failure_count; "
             f"mkdir -p {REMOTE_BASE}/network; umask 077; "
-            "if grep -q 'network[[:space:]]*={' /etc/wpa_supplicant.conf 2>/dev/null && "
-            "grep -q 'ssid[[:space:]]*=' /etc/wpa_supplicant.conf 2>/dev/null; then "
-            f"cp /etc/wpa_supplicant.conf {REMOTE_BASE}/network/wpa_supplicant.conf; "
-            f"chmod 600 {REMOTE_BASE}/network/wpa_supplicant.conf; "
+            "if profile=$(tpp06_active_wifi_profile); then "
+            f"cp \"$profile\" {REMOTE_BASE}/network/wpa_supplicant.conf.staged; "
+            f"chmod 600 {REMOTE_BASE}/network/wpa_supplicant.conf.staged; "
+            f"tpp06_profiles_equal \"$profile\" {REMOTE_BASE}/network/wpa_supplicant.conf.staged; "
+            f"mv {REMOTE_BASE}/network/wpa_supplicant.conf.staged "
+            f"{REMOTE_BASE}/network/wpa_supplicant.conf; "
             f"echo learning > {REMOTE_BASE}/network_mode; "
             f"else echo unavailable > {REMOTE_BASE}/network_mode; fi; "
             f"rm -f {REMOTE_BASE}/boot_pending {REMOTE_BASE}/engine.pid "
@@ -815,7 +851,8 @@ class TuyaCutter:
             f"echo {next_mode} > {REMOTE_BASE}/mode.tmp; "
             f"mv {REMOTE_BASE}/mode.tmp {REMOTE_BASE}/mode; sync"
         )
-        session.run_root(command.replace("; ", ";\n"))
+        session.run_root(NETWORK_PROFILE_HELPER.read_text(encoding="utf-8") + "\n" +
+                         command.replace("; ", ";\n"))
         print(f"✓ {engine} installé ; prochain démarrage : {next_mode}.")
         print(f"✓ Sauvegarde de retour : {backup}")
         print("  Aucun redémarrage automatique n'a été envoyé.")
@@ -883,6 +920,7 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command")
 
     subparsers.add_parser("status", help="Détecter le panneau et afficher son état")
+    subparsers.add_parser("network-check", help="Comparer le profil Wi-Fi actif au secours, sans modification")
     subparsers.add_parser(
         "reboot-check", help="Vérifier sans écriture que le prochain démarrage est sûr"
     )
@@ -1011,6 +1049,8 @@ def main() -> int:
             cutter.status()
         elif args.command == "reboot-check":
             cutter.reboot_check()
+        elif args.command == "network-check":
+            cutter.network_check()
         elif args.command == "ota-space-check":
             cutter.ota_space_check(args.binary)
         elif args.command == "enable-adb":

@@ -1,0 +1,1348 @@
+# iOS-inspired, portable 320 x 480 native LVGL interface.
+substitutions:
+  device_name: "tpp06-lvgl"
+  # Use a unique device_name per panel. Keep a known IP during the first migration.
+  device_address: "${device_name}.local"
+  friendly_name: "TPP06 ESPHome LVGL"
+  cover_entity: "cover.tpp06_example_cover"
+  cave_light_entity: "light.tpp06_example_light_1"
+  bar_light_entity: "light.tpp06_example_light_2"
+  cover_page_title: "Volet"
+  light_1_page_title: "Lumiere 1"
+  light_2_page_title: "Lumiere 2"
+  cover_nav_label: "Volet"
+  light_1_nav_label: "Lum. 1"
+  light_2_nav_label: "Lum. 2"
+  network_interface: "wlan0"
+  framebuffer_device: "/dev/fb0"
+  touchscreen_device: "/dev/input/event1"
+  # Palette and titles are local, editable settings; no private installation data.
+  ui_background: "0x0B0C10"
+  ui_card: "0x1C1D24"
+  ui_accent: "0x0A84FF"
+  ui_text: "0xF5F5F7"
+  ui_muted: "0x989AA6"
+  api_encryption_key: !secret tpp06_api_encryption_key
+
+esphome:
+  name: "${device_name}"
+  friendly_name: "${friendly_name}"
+  includes:
+    - <stdio.h>
+  on_boot:
+    priority: -100
+    then:
+      - script.execute: tpp06_refresh_menu
+  project:
+    name: philiphall6.tpp06
+    version: "0.1.4"
+  build_flags:
+    - -static
+    # Keep debug/symbol tables out of the OTA payload on the small /data volume.
+    - -Wl,--strip-all
+    - -pthread
+    - -fno-threadsafe-statics
+    - -Wl,-u,pthread_mutex_lock
+    - -Wl,-u,pthread_mutex_init
+    - -Wl,-u,pthread_mutex_trylock
+    - -Wl,-u,pthread_mutex_unlock
+    - -Wl,-u,pthread_mutex_destroy
+    - -Wl,-u,pthread_self
+
+external_components:
+  - source:
+      type: git
+      url: https://github.com/Philiphall6/TPP06-smart-panel-project
+      ref: main
+      path: esphome-components
+    refresh: 5min
+    components:
+      - evdev
+      - fbdev
+      - host
+      - md5
+      - sha256
+      - tpp06_compat
+      - tpp06_mdns
+
+host:
+  use_address: "${device_address}"
+  network_interface: "${network_interface}"
+  # The compiler is selected automatically: native Zig on ARM64 Home
+  # Assistant hosts (Raspberry Pi), Bootlin GCC on x86-64 hosts.
+  cross_compile: {}
+
+tpp06_compat:
+
+# The native host component only constructs records. This adapter publishes
+# those records on Linux; it does not configure Wi-Fi or change DHCP.
+mdns:
+  disabled: false
+tpp06_mdns:
+  network_interface: "${network_interface}"
+
+logger:
+  level: INFO
+
+# Synchronize Linux time through the encrypted HA API, without Tuya/NTP.
+# Leave timezone unset so Home Assistant supplies the installation's timezone.
+# Before HA connects, the clock can still be invalid after a cold boot.
+time:
+  - platform: homeassistant
+    id: tpp06_ha_time
+    on_time_sync:
+      - if:
+          condition:
+            time.has_time:
+          then:
+            - logger.log:
+                level: INFO
+                format: "Home Assistant time synchronized"
+      - script.execute: tpp06_refresh_clock
+
+api:
+  reboot_timeout: 0s
+  encryption:
+    key: "${api_encryption_key}"
+  on_client_connected:
+    - lvgl.label.update:
+        id: ha_status_label
+        # Any API client (including Device Builder logs) can trigger this.
+        text: "API CONNECTEE"
+        text_color: 0x30D158
+  on_client_disconnected:
+    - if:
+        condition:
+          not:
+            api.connected:
+        then:
+          - lvgl.label.update:
+              id: ha_status_label
+              text: "API HORS LIGNE"
+              text_color: 0xFF9F0A
+
+# The first deployment is performed by TPP06 Cutter. Once this binary is
+# running, Device Builder can update it directly over the LAN.
+ota:
+  - platform: esphome
+    encryption:
+
+dashboard_import:
+  # "Take control" copies the complete LVGL configuration into Device Builder.
+  # The owner can then freely edit every page, widget and Home Assistant action.
+  package_import_url: github://Philiphall6/TPP06-smart-panel-project/esphome/tpp06-lvgl-mobile.yaml@main
+  import_full_config: true
+
+text_sensor:
+  # Linux driver link indication, NOT Internet connectivity or signal strength.
+  - platform: template
+    id: mobile_wifi_state
+    internal: true
+    update_interval: 15s
+    lambda: |-
+      FILE *file = fopen("/sys/class/net/${network_interface}/carrier", "r");
+      if (file == nullptr) return std::string("Wi-Fi : inconnu");
+      const int carrier = fgetc(file);
+      fclose(file);
+      if (carrier == '1') return std::string("Wi-Fi : liaison active");
+      if (carrier == '0') return std::string("Wi-Fi : sans liaison");
+      return std::string("Wi-Fi : inconnu");
+    on_value:
+      - lvgl.label.update:
+          id: mobile_home_wifi
+          text: !lambda return x;
+      - lvgl.label.update:
+          id: mobile_diag_wifi
+          text: !lambda return x;
+  - platform: version
+    id: mobile_version
+    name: "Version ESPHome"
+    entity_category: diagnostic
+
+  - platform: homeassistant
+    id: ha_cover_sdb_state
+    entity_id: "${cover_entity}"
+    internal: true
+    on_value:
+      - lvgl.label.update:
+          id: cover_state_label
+          text: !lambda |-
+            if (x == "open") return std::string("OUVERT");
+            if (x == "closed") return std::string("FERME");
+            if (x == "opening") return std::string("OUVERTURE...");
+            if (x == "closing") return std::string("FERMETURE...");
+            return std::string("ETAT INCONNU");
+
+  - platform: homeassistant
+    id: ha_cave_state
+    entity_id: "${cave_light_entity}"
+    internal: true
+    on_value:
+      - lvgl.label.update:
+          id: cave_state_label
+          text: !lambda |-
+            if (x == "on") return std::string("ALLUMEE");
+            if (x == "off") return std::string("ETEINTE");
+            return std::string("INDISPONIBLE");
+          text_color: !lambda |-
+            return x == "on" ? lv_color_hex(0x52D273) : lv_color_hex(0x9AA4B2);
+
+  - platform: homeassistant
+    id: ha_cave_bar_state
+    entity_id: "${bar_light_entity}"
+    internal: true
+    on_value:
+      - lvgl.label.update:
+          id: bar_state_label
+          text: !lambda |-
+            if (x == "on") return std::string("ALLUMEE");
+            if (x == "off") return std::string("ETEINTE");
+            return std::string("INDISPONIBLE");
+          text_color: !lambda |-
+            return x == "on" ? lv_color_hex(0x52D273) : lv_color_hex(0x9AA4B2);
+
+sensor:
+  - platform: uptime
+    id: mobile_uptime
+    name: "Duree de fonctionnement"
+    entity_category: diagnostic
+    update_interval: 30s
+
+  - platform: homeassistant
+    id: mobile_cave_brightness_from_ha
+    entity_id: "${cave_light_entity}"
+    attribute: brightness
+    internal: true
+    on_value:
+      - if:
+          condition:
+            lambda: return !std::isnan(x);
+          then:
+            - lvgl.slider.update:
+                id: cave_brightness
+                value: !lambda return static_cast<int>(std::max(1.0f, std::min(100.0f, x * 100.0f / 255.0f)));
+            - lvgl.label.update:
+                id: cave_brightness_value
+                text: !lambda return str_sprintf("%.0f %%", x * 100.0f / 255.0f);
+          else:
+            - lvgl.label.update:
+                id: cave_brightness_value
+                text: "-- %"
+
+  - platform: homeassistant
+    id: mobile_bar_brightness_from_ha
+    entity_id: "${bar_light_entity}"
+    attribute: brightness
+    internal: true
+    on_value:
+      - if:
+          condition:
+            lambda: return !std::isnan(x);
+          then:
+            - lvgl.slider.update:
+                id: bar_brightness
+                value: !lambda return static_cast<int>(std::max(1.0f, std::min(100.0f, x * 100.0f / 255.0f)));
+            - lvgl.label.update:
+                id: bar_brightness_value
+                text: !lambda return str_sprintf("%.0f %%", x * 100.0f / 255.0f);
+          else:
+            - lvgl.label.update:
+                id: bar_brightness_value
+                text: "-- %"
+
+display:
+  - platform: fbdev
+    id: tpp06_display
+    device: "${framebuffer_device}"
+    dimensions:
+      width: 320
+      height: 480
+    auto_clear_enabled: false
+    update_interval: never
+
+touchscreen:
+  - platform: evdev
+    id: tpp06_touch
+    display: tpp06_display
+    device: "${touchscreen_device}"
+    update_interval: 20ms
+    calibration:
+      x_min: 0
+      x_max: 320
+      y_min: 0
+      y_max: 480
+
+
+# Native LVGL only: no webview, bitmap wallpaper, cloud font or new driver.
+# This is a separate design candidate. Compile in HA and test before deployment.
+globals:
+  # Persistence needs writable ESPHOME_PREFDIR (or HOME) on the Linux host.
+  - id: mobile_clock_12h
+    type: bool
+    restore_value: true
+    initial_value: 'false'
+  - id: mobile_clock_visible
+    type: bool
+    restore_value: true
+    initial_value: 'true'
+  - id: mobile_purple_accent
+    type: bool
+    restore_value: true
+    initial_value: 'false'
+  - id: mobile_active_nav
+    type: int
+    restore_value: false
+    initial_value: '4'
+
+script:
+  - id: tpp06_refresh_clock
+    then:
+      - lvgl.label.update:
+          id: mobile_clock
+          text: !lambda |-
+            auto now = id(tpp06_ha_time).now();
+            if (!now.is_valid()) return std::string("--:--");
+            return now.strftime(id(mobile_clock_12h) ? "%I:%M %p" : "%H:%M");
+      - lvgl.label.update:
+          id: mobile_home_clock
+          text: !lambda |-
+            auto now = id(tpp06_ha_time).now();
+            if (!now.is_valid()) return std::string("--:--");
+            return now.strftime(id(mobile_clock_12h) ? "%I:%M %p" : "%H:%M");
+      - lvgl.label.update:
+          id: mobile_home_date
+          text: !lambda |-
+            auto now = id(tpp06_ha_time).now();
+            if (!now.is_valid()) return std::string("Date en attente de HA");
+            const char *days[] = {"", "Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"};
+            const char *months[] = {"", "janvier", "fevrier", "mars", "avril", "mai", "juin", "juillet", "aout", "septembre", "octobre", "novembre", "decembre"};
+            return str_sprintf("%s %d %s %d", days[now.day_of_week], now.day_of_month, months[now.month], now.year);
+      - lvgl.label.update:
+          id: mobile_home_greeting
+          text: !lambda |-
+            auto now = id(tpp06_ha_time).now();
+            if (!now.is_valid()) return std::string("Bienvenue");
+            return std::string(now.hour >= 18 || now.hour < 6 ? "Bonsoir" : "Bonjour");
+      - lvgl.widget.update:
+          id: mobile_clock
+          hidden: !lambda return !id(mobile_clock_visible);
+  - id: tpp06_refresh_menu
+    then:
+      - script.execute: tpp06_refresh_clock
+      - lvgl.label.update:
+          id: mobile_format_value
+          text: !lambda |-
+            return std::string(id(mobile_clock_12h) ? "12 h / AM-PM" : "24 heures");
+      - lvgl.label.update:
+          id: mobile_visibility_value
+          text: !lambda |-
+            return std::string(id(mobile_clock_visible) ? "Visible" : "Masquee");
+      - lvgl.label.update:
+          id: mobile_accent_value
+          text: !lambda |-
+            return std::string(id(mobile_purple_accent) ? "Violet" : "Couleur du YAML");
+      - lvgl.label.update:
+          id: mobile_diag_clock
+          text: !lambda |-
+            return std::string(id(tpp06_ha_time).now().is_valid() ? "Horloge : valide" : "Horloge : en attente");
+      - lvgl.label.update:
+          id: mobile_diag_uptime
+          text: !lambda |-
+            const float seconds = id(mobile_uptime).state;
+            if (std::isnan(seconds)) return std::string("Application : en attente");
+            return str_sprintf("Application : %.0f min", seconds / 60.0f);
+      - lvgl.label.update:
+          id: mobile_diag_version
+          text: !lambda return std::string("ESPHome ") + id(mobile_version).state;
+      - lvgl.widget.update:
+          id: mobile_nav_0
+          bg_color: !lambda |-
+            if (id(mobile_active_nav) != 0) return lv_color_hex(${ui_card});
+            return lv_color_hex(id(mobile_purple_accent) ? 0xBF5AF2 : ${ui_accent});
+      - lvgl.widget.update:
+          id: mobile_nav_1
+          bg_color: !lambda |-
+            if (id(mobile_active_nav) != 1) return lv_color_hex(${ui_card});
+            return lv_color_hex(id(mobile_purple_accent) ? 0xBF5AF2 : ${ui_accent});
+      - lvgl.widget.update:
+          id: mobile_nav_2
+          bg_color: !lambda |-
+            if (id(mobile_active_nav) != 2) return lv_color_hex(${ui_card});
+            return lv_color_hex(id(mobile_purple_accent) ? 0xBF5AF2 : ${ui_accent});
+      - lvgl.widget.update:
+          id: mobile_nav_3
+          bg_color: !lambda |-
+            if (id(mobile_active_nav) != 3) return lv_color_hex(${ui_card});
+            return lv_color_hex(id(mobile_purple_accent) ? 0xBF5AF2 : ${ui_accent});
+      - lvgl.widget.update:
+          id: mobile_nav_4
+          bg_color: !lambda |-
+            if (id(mobile_active_nav) != 4) return lv_color_hex(${ui_card});
+            return lv_color_hex(id(mobile_purple_accent) ? 0xBF5AF2 : ${ui_accent});
+
+interval:
+  - interval: 15s
+    then:
+      - script.execute: tpp06_refresh_menu
+
+lvgl:
+  displays: tpp06_display
+  touchscreens:
+    - touchscreen_id: tpp06_touch
+  buffer_size: 25%
+  bg_color: "${ui_background}"
+  default_font: montserrat_16
+  theme:
+    label:
+      text_color: "${ui_text}"
+    button:
+      radius: 24
+      border_width: 0
+      shadow_width: 0
+      pad_all: 0
+      text_color: "${ui_text}"
+      pressed:
+        bg_opa: 70%
+    obj:
+      pad_all: 0
+      border_width: 0
+      scrollable: false
+  style_definitions:
+    - id: mobile_card
+      bg_color: "${ui_card}"
+      radius: 24
+      border_width: 1
+      border_color: 0x2D2F38
+      pad_all: 0
+  top_layer:
+    widgets:
+      - label:
+          id: ha_status_label
+          x: 20
+          y: 22
+          width: 164
+          text_font: montserrat_12
+          text: "API HORS LIGNE"
+          text_color: 0xFF9F0A
+      - label:
+          id: mobile_clock
+          x: 188
+          y: 20
+          width: 112
+          text_align: RIGHT
+          text_font: montserrat_16
+          text: "--:--"
+      - obj:
+          styles: mobile_card
+          x: 12
+          y: 410
+          width: 296
+          height: 58
+          radius: 29
+          widgets:
+            - button:
+                id: mobile_nav_0
+                x: 62
+                y: 4
+                width: 54
+                height: 48
+                radius: 24
+                bg_color: "${ui_accent}"
+                widgets:
+                  - label:
+                      align: CENTER
+                      width: 50
+                      long_mode: DOT
+                      text_align: CENTER
+                      text_font: montserrat_12
+                      text: "${cover_nav_label}"
+                on_click:
+                  - lvgl.page.show: page_sdb
+            - button:
+                id: mobile_nav_1
+                x: 120
+                y: 4
+                width: 54
+                height: 48
+                radius: 24
+                bg_color: "${ui_card}"
+                widgets:
+                  - label:
+                      align: CENTER
+                      width: 50
+                      long_mode: DOT
+                      text_align: CENTER
+                      text_font: montserrat_12
+                      text: "${light_1_nav_label}"
+                on_click:
+                  - lvgl.page.show: page_cave
+            - button:
+                id: mobile_nav_2
+                x: 178
+                y: 4
+                width: 54
+                height: 48
+                radius: 24
+                bg_color: "${ui_card}"
+                widgets:
+                  - label:
+                      align: CENTER
+                      width: 50
+                      long_mode: DOT
+                      text_align: CENTER
+                      text_font: montserrat_12
+                      text: "${light_2_nav_label}"
+                on_click:
+                  - lvgl.page.show: page_bar
+            - button:
+                id: mobile_nav_3
+                x: 236
+                y: 4
+                width: 54
+                height: 48
+                radius: 24
+                bg_color: "${ui_card}"
+                widgets:
+                  - label:
+                      align: CENTER
+                      text_font: montserrat_12
+                      text: "Menu"
+                on_click:
+                  - lvgl.page.show: page_menu
+            - button:
+                id: mobile_nav_4
+                x: 4
+                y: 4
+                width: 54
+                height: 48
+                radius: 24
+                bg_color: "${ui_accent}"
+                widgets:
+                  - label:
+                      align: CENTER
+                      text_font: montserrat_12
+                      text: "Accueil"
+                on_click:
+                  - lvgl.page.show: page_home
+
+  pages:
+    - id: page_home
+      bg_color: "${ui_background}"
+      on_load:
+        - globals.set:
+            id: mobile_active_nav
+            value: '4'
+        - script.execute: tpp06_refresh_menu
+      widgets:
+        - label:
+            id: mobile_home_greeting
+            x: 20
+            y: 62
+            width: 280
+            height: 36
+            text_font: montserrat_28
+            text: "Bienvenue"
+        - label:
+            x: 20
+            y: 102
+            width: 280
+            text_font: montserrat_12
+            text_color: "${ui_muted}"
+            text: "La maison, au bout des doigts"
+        - obj:
+            styles: mobile_card
+            x: 16
+            y: 132
+            width: 288
+            height: 136
+            widgets:
+              - label:
+                  id: mobile_home_clock
+                  x: 20
+                  y: 14
+                  width: 248
+                  text_font: montserrat_28
+                  text: "--:--"
+              - label:
+                  id: mobile_home_date
+                  x: 20
+                  y: 56
+                  width: 248
+                  text_font: montserrat_16
+                  text: "Date en attente de HA"
+              - label:
+                  id: mobile_home_wifi
+                  x: 20
+                  y: 98
+                  width: 248
+                  text_font: montserrat_12
+                  text_color: "${ui_muted}"
+                  text: "Wi-Fi : en attente"
+        - button:
+            x: 16
+            y: 282
+            width: 138
+            height: 100
+            styles: mobile_card
+            widgets:
+              - label:
+                  x: 16
+                  y: 16
+                  text_font: montserrat_12
+                  text_color: "${ui_muted}"
+                  text: "CONFORT"
+              - label:
+                  x: 16
+                  y: 48
+                  width: 108
+                  long_mode: DOT
+                  text_font: montserrat_20
+                  text: "${cover_page_title}"
+            on_click:
+              - lvgl.page.show: page_sdb
+        - button:
+            x: 166
+            y: 282
+            width: 138
+            height: 100
+            styles: mobile_card
+            widgets:
+              - label:
+                  x: 16
+                  y: 16
+                  text_font: montserrat_12
+                  text_color: "${ui_muted}"
+                  text: "AMBIANCE"
+              - label:
+                  x: 16
+                  y: 48
+                  width: 108
+                  long_mode: DOT
+                  text_font: montserrat_20
+                  text: "Lumieres"
+            on_click:
+              - lvgl.page.show: page_cave
+
+    - id: page_sdb
+      bg_color: "${ui_background}"
+      on_load:
+        - globals.set:
+            id: mobile_active_nav
+            value: '0'
+        - script.execute: tpp06_refresh_menu
+
+      widgets:
+        - label:
+            x: 20
+            y: 60
+            width: 280
+            height: 36
+            long_mode: DOT
+            text_font: montserrat_28
+            text: "${cover_page_title}"
+        - label:
+            x: 20
+            y: 102
+            width: 280
+            text_font: montserrat_12
+            text_color: "${ui_muted}"
+            text: "Un geste pour ouvrir votre espace"
+
+        - obj:
+            styles: mobile_card
+            x: 16
+            y: 136
+            width: 288
+            height: 238
+            widgets:
+              - label:
+                  x: 20
+                  y: 20
+                  text_font: montserrat_12
+                  text_color: "${ui_muted}"
+                  text: "ETAT DU VOLET"
+              - label:
+                  id: cover_state_label
+                  x: 20
+                  y: 46
+                  width: 248
+                  height: 34
+                  long_mode: DOT
+                  text_font: montserrat_24
+                  text: "INCONNU"
+              - obj:
+                  x: 20
+                  y: 96
+                  width: 248
+                  height: 2
+                  bg_color: 0x343641
+              - button:
+                  x: 12
+                  y: 118
+                  width: 84
+                  height: 96
+                  radius: 22
+                  bg_color: "${ui_accent}"
+                  widgets:
+                    - label:
+                        align: CENTER
+                        text_font: montserrat_12
+                        text: "OUVRIR"
+                  on_click:
+                    - homeassistant.action:
+                        action: cover.open_cover
+                        data: {entity_id: "${cover_entity}"}
+              - button:
+                  x: 102
+                  y: 118
+                  width: 84
+                  height: 96
+                  radius: 22
+                  bg_color: "0x343641"
+                  widgets:
+                    - label:
+                        align: CENTER
+                        text_font: montserrat_12
+                        text: "STOP"
+                  on_click:
+                    - homeassistant.action:
+                        action: cover.stop_cover
+                        data: {entity_id: "${cover_entity}"}
+              - button:
+                  x: 192
+                  y: 118
+                  width: 84
+                  height: 96
+                  radius: 22
+                  bg_color: "${ui_accent}"
+                  widgets:
+                    - label:
+                        align: CENTER
+                        text_font: montserrat_12
+                        text: "FERMER"
+                  on_click:
+                    - homeassistant.action:
+                        action: cover.close_cover
+                        data: {entity_id: "${cover_entity}"}
+
+        - label:
+            x: 20
+            y: 387
+            width: 280
+            text_align: CENTER
+            text_font: montserrat_12
+            text_color: "${ui_muted}"
+            text: "Commandes via Home Assistant"
+    - id: page_cave
+      bg_color: "${ui_background}"
+      on_load:
+        - globals.set:
+            id: mobile_active_nav
+            value: '1'
+        - script.execute: tpp06_refresh_menu
+
+      widgets:
+        - label:
+            x: 20
+            y: 60
+            width: 280
+            height: 36
+            long_mode: DOT
+            text_font: montserrat_28
+            text: "${light_1_page_title}"
+        - label:
+            x: 20
+            y: 102
+            width: 280
+            text_font: montserrat_12
+            text_color: "${ui_muted}"
+            text: "Votre eclairage, a portee de main"
+
+        - button:
+            x: 16
+            y: 136
+            width: 288
+            height: 76
+            bg_color: "${ui_card}"
+            on_click:
+              - homeassistant.action:
+                  action: light.toggle
+                  data: {entity_id: "${cave_light_entity}"}
+            widgets:
+              - label:
+                  id: cave_state_label
+                  x: 20
+                  y: 12
+                  width: 248
+                  long_mode: DOT
+                  text_font: montserrat_24
+                  text: "INCONNU"
+                  text_color: "${ui_muted}"
+              - label:
+                  x: 20
+                  y: 46
+                  text_font: montserrat_12
+                  text: "TOUCHER POUR BASCULER"
+                  text_color: "${ui_muted}"
+        - obj:
+            styles: mobile_card
+            x: 16
+            y: 224
+            width: 288
+            height: 98
+            widgets:
+              - label:
+                  x: 20
+                  y: 14
+                  text_font: montserrat_12
+                  text: "LUMINOSITE"
+                  text_color: "${ui_muted}"
+              - label:
+                  id: cave_brightness_value
+                  x: 210
+                  y: 12
+                  width: 58
+                  text_align: RIGHT
+                  text: "-- %"
+              - slider:
+                  id: cave_brightness
+                  x: 20
+                  y: 44
+                  width: 248
+                  height: 32
+                  radius: 20
+                  bg_color: 0x343641
+                  min_value: 1
+                  max_value: 100
+                  value: 1
+                  indicator:
+                    bg_color: "${ui_accent}"
+                    radius: 20
+                  knob:
+                    bg_color: "${ui_text}"
+                    radius: 20
+                    pad_all: 6
+                  on_release:
+                    - homeassistant.action:
+                        action: light.turn_on
+                        data: {entity_id: "${cave_light_entity}"}
+                        data_template: {brightness_pct: "{{ brightness }}"}
+                        variables:
+                          brightness: !lambda return static_cast<int>(x);
+        - label:
+            x: 20
+            y: 332
+            text_font: montserrat_12
+            text_color: "${ui_muted}"
+            text: "AMBIANCE"
+        - button:
+            x: 16
+            y: 354
+            width: 48
+            height: 44
+            radius: 22
+            bg_color: 0xD93D45
+            text_color: 0xFFFFFF
+            widgets:
+              - label:
+                  align: CENTER
+                  text_font: montserrat_12
+                  text: "R"
+            on_click:
+              - homeassistant.action:
+                  action: light.turn_on
+                  data:
+                    entity_id: "${cave_light_entity}"
+                    color_name: red
+        - button:
+            x: 76
+            y: 354
+            width: 48
+            height: 44
+            radius: 22
+            bg_color: 0x30D158
+            text_color: 0x111218
+            widgets:
+              - label:
+                  align: CENTER
+                  text_font: montserrat_12
+                  text: "V"
+                  text_color: 0x111218
+            on_click:
+              - homeassistant.action:
+                  action: light.turn_on
+                  data:
+                    entity_id: "${cave_light_entity}"
+                    color_name: green
+        - button:
+            x: 136
+            y: 354
+            width: 48
+            height: 44
+            radius: 22
+            bg_color: 0x0A84FF
+            text_color: 0xFFFFFF
+            widgets:
+              - label:
+                  align: CENTER
+                  text_font: montserrat_12
+                  text: "B"
+            on_click:
+              - homeassistant.action:
+                  action: light.turn_on
+                  data:
+                    entity_id: "${cave_light_entity}"
+                    color_name: blue
+        - button:
+            x: 196
+            y: 354
+            width: 48
+            height: 44
+            radius: 22
+            bg_color: 0xBF5AF2
+            text_color: 0xFFFFFF
+            widgets:
+              - label:
+                  align: CENTER
+                  text_font: montserrat_12
+                  text: "P"
+            on_click:
+              - homeassistant.action:
+                  action: light.turn_on
+                  data:
+                    entity_id: "${cave_light_entity}"
+                    color_name: purple
+        - button:
+            x: 256
+            y: 354
+            width: 48
+            height: 44
+            radius: 22
+            bg_color: 0xFFE4AE
+            text_color: 0x111218
+            widgets:
+              - label:
+                  align: CENTER
+                  text_font: montserrat_12
+                  text: "2700K"
+                  text_color: 0x111218
+            on_click:
+              - homeassistant.action:
+                  action: light.turn_on
+                  data:
+                    entity_id: "${cave_light_entity}"
+                    color_temp_kelvin: "2700"
+
+    - id: page_bar
+      bg_color: "${ui_background}"
+      on_load:
+        - globals.set:
+            id: mobile_active_nav
+            value: '2'
+        - script.execute: tpp06_refresh_menu
+
+      widgets:
+        - label:
+            x: 20
+            y: 60
+            width: 280
+            height: 36
+            long_mode: DOT
+            text_font: montserrat_28
+            text: "${light_2_page_title}"
+        - label:
+            x: 20
+            y: 102
+            width: 280
+            text_font: montserrat_12
+            text_color: "${ui_muted}"
+            text: "Votre eclairage, a portee de main"
+
+        - button:
+            x: 16
+            y: 136
+            width: 288
+            height: 76
+            bg_color: "${ui_card}"
+            on_click:
+              - homeassistant.action:
+                  action: light.toggle
+                  data: {entity_id: "${bar_light_entity}"}
+            widgets:
+              - label:
+                  id: bar_state_label
+                  x: 20
+                  y: 12
+                  width: 248
+                  long_mode: DOT
+                  text_font: montserrat_24
+                  text: "INCONNU"
+                  text_color: "${ui_muted}"
+              - label:
+                  x: 20
+                  y: 46
+                  text_font: montserrat_12
+                  text: "TOUCHER POUR BASCULER"
+                  text_color: "${ui_muted}"
+        - obj:
+            styles: mobile_card
+            x: 16
+            y: 224
+            width: 288
+            height: 98
+            widgets:
+              - label:
+                  x: 20
+                  y: 14
+                  text_font: montserrat_12
+                  text: "LUMINOSITE"
+                  text_color: "${ui_muted}"
+              - label:
+                  id: bar_brightness_value
+                  x: 210
+                  y: 12
+                  width: 58
+                  text_align: RIGHT
+                  text: "-- %"
+              - slider:
+                  id: bar_brightness
+                  x: 20
+                  y: 44
+                  width: 248
+                  height: 32
+                  radius: 20
+                  bg_color: 0x343641
+                  min_value: 1
+                  max_value: 100
+                  value: 1
+                  indicator:
+                    bg_color: "${ui_accent}"
+                    radius: 20
+                  knob:
+                    bg_color: "${ui_text}"
+                    radius: 20
+                    pad_all: 6
+                  on_release:
+                    - homeassistant.action:
+                        action: light.turn_on
+                        data: {entity_id: "${bar_light_entity}"}
+                        data_template: {brightness_pct: "{{ brightness }}"}
+                        variables:
+                          brightness: !lambda return static_cast<int>(x);
+        - label:
+            x: 20
+            y: 332
+            text_font: montserrat_12
+            text_color: "${ui_muted}"
+            text: "AMBIANCE"
+        - button:
+            x: 16
+            y: 354
+            width: 48
+            height: 44
+            radius: 22
+            bg_color: 0xD93D45
+            text_color: 0xFFFFFF
+            widgets:
+              - label:
+                  align: CENTER
+                  text_font: montserrat_12
+                  text: "R"
+            on_click:
+              - homeassistant.action:
+                  action: light.turn_on
+                  data:
+                    entity_id: "${bar_light_entity}"
+                    color_name: red
+        - button:
+            x: 76
+            y: 354
+            width: 48
+            height: 44
+            radius: 22
+            bg_color: 0x30D158
+            text_color: 0x111218
+            widgets:
+              - label:
+                  align: CENTER
+                  text_font: montserrat_12
+                  text: "V"
+                  text_color: 0x111218
+            on_click:
+              - homeassistant.action:
+                  action: light.turn_on
+                  data:
+                    entity_id: "${bar_light_entity}"
+                    color_name: green
+        - button:
+            x: 136
+            y: 354
+            width: 48
+            height: 44
+            radius: 22
+            bg_color: 0x0A84FF
+            text_color: 0xFFFFFF
+            widgets:
+              - label:
+                  align: CENTER
+                  text_font: montserrat_12
+                  text: "B"
+            on_click:
+              - homeassistant.action:
+                  action: light.turn_on
+                  data:
+                    entity_id: "${bar_light_entity}"
+                    color_name: blue
+        - button:
+            x: 196
+            y: 354
+            width: 48
+            height: 44
+            radius: 22
+            bg_color: 0xBF5AF2
+            text_color: 0xFFFFFF
+            widgets:
+              - label:
+                  align: CENTER
+                  text_font: montserrat_12
+                  text: "P"
+            on_click:
+              - homeassistant.action:
+                  action: light.turn_on
+                  data:
+                    entity_id: "${bar_light_entity}"
+                    color_name: purple
+        - button:
+            x: 256
+            y: 354
+            width: 48
+            height: 44
+            radius: 22
+            bg_color: 0xFFE4AE
+            text_color: 0x111218
+            widgets:
+              - label:
+                  align: CENTER
+                  text_font: montserrat_12
+                  text: "2700K"
+                  text_color: 0x111218
+            on_click:
+              - homeassistant.action:
+                  action: light.turn_on
+                  data:
+                    entity_id: "${bar_light_entity}"
+                    color_temp_kelvin: "2700"
+
+    - id: page_menu
+      bg_color: "${ui_background}"
+      on_load:
+        - globals.set:
+            id: mobile_active_nav
+            value: '3'
+        - script.execute: tpp06_refresh_menu
+      widgets:
+        - label:
+            x: 20
+            y: 60
+            width: 280
+            height: 36
+            text_font: montserrat_28
+            text: "Parametres"
+        - label:
+            x: 20
+            y: 102
+            width: 280
+            text_font: montserrat_12
+            text_color: "${ui_muted}"
+            text: "Votre panneau, a votre facon"
+        - button:
+            id: mobile_setting_0
+            x: 16
+            y: 126
+            width: 288
+            height: 58
+            styles: mobile_card
+            widgets:
+              - label:
+                  x: 16
+                  y: 8
+                  text_font: montserrat_12
+                  text_color: "${ui_muted}"
+                  text: "ACCENT NAVIGATION"
+              - label:
+                  id: mobile_accent_value
+                  x: 16
+                  y: 27
+                  width: 232
+                  text_font: montserrat_16
+                  text: "Couleur du YAML"
+              - label:
+                  x: 260
+                  y: 20
+                  text: ">"
+            on_click:
+              - lambda: id(mobile_purple_accent) = !id(mobile_purple_accent);
+              - script.execute: tpp06_refresh_menu
+        - button:
+            id: mobile_setting_1
+            x: 16
+            y: 194
+            width: 288
+            height: 58
+            styles: mobile_card
+            widgets:
+              - label:
+                  x: 16
+                  y: 8
+                  text_font: montserrat_12
+                  text_color: "${ui_muted}"
+                  text: "FORMAT DE L'HEURE"
+              - label:
+                  id: mobile_format_value
+                  x: 16
+                  y: 27
+                  width: 232
+                  text_font: montserrat_16
+                  text: "24 heures"
+              - label:
+                  x: 260
+                  y: 20
+                  text: ">"
+            on_click:
+              - lambda: id(mobile_clock_12h) = !id(mobile_clock_12h);
+              - script.execute: tpp06_refresh_menu
+        - button:
+            id: mobile_setting_2
+            x: 16
+            y: 262
+            width: 288
+            height: 58
+            styles: mobile_card
+            widgets:
+              - label:
+                  x: 16
+                  y: 8
+                  text_font: montserrat_12
+                  text_color: "${ui_muted}"
+                  text: "HORLOGE EN HAUT"
+              - label:
+                  id: mobile_visibility_value
+                  x: 16
+                  y: 27
+                  width: 232
+                  text_font: montserrat_16
+                  text: "Visible"
+              - label:
+                  x: 260
+                  y: 20
+                  text: ">"
+            on_click:
+              - lambda: id(mobile_clock_visible) = !id(mobile_clock_visible);
+              - script.execute: tpp06_refresh_menu
+        - button:
+            id: mobile_setting_3
+            x: 16
+            y: 330
+            width: 288
+            height: 58
+            styles: mobile_card
+            widgets:
+              - label:
+                  x: 16
+                  y: 8
+                  text_font: montserrat_12
+                  text_color: "${ui_muted}"
+                  text: "SYSTEME"
+              - label:
+                  id: mobile_diagnostics_link
+                  x: 16
+                  y: 27
+                  width: 232
+                  text_font: montserrat_16
+                  text: "Diagnostics"
+              - label:
+                  x: 260
+                  y: 20
+                  text: ">"
+            on_click:
+              - lvgl.page.show: page_diagnostics
+
+    - id: page_diagnostics
+      bg_color: "${ui_background}"
+      on_load:
+        - globals.set:
+            id: mobile_active_nav
+            value: '3'
+        - script.execute: tpp06_refresh_menu
+      widgets:
+        - label:
+            x: 20
+            y: 60
+            width: 280
+            height: 36
+            text_font: montserrat_28
+            text: "Diagnostics"
+        - label:
+            x: 20
+            y: 102
+            width: 280
+            text_font: montserrat_12
+            text_color: "${ui_muted}"
+            text: "Lecture seule / aucun redemarrage"
+        - obj:
+            styles: mobile_card
+            x: 16
+            y: 136
+            width: 288
+            height: 190
+            widgets:
+              - label:
+                  id: mobile_diag_version
+                  x: 16
+                  y: 18
+                  width: 256
+                  long_mode: DOT
+                  text_font: montserrat_16
+                  text: "ESPHome : en attente"
+              - label:
+                  id: mobile_diag_uptime
+                  x: 16
+                  y: 52
+                  width: 256
+                  long_mode: DOT
+                  text_font: montserrat_16
+                  text: "Application : en attente"
+              - label:
+                  id: mobile_diag_clock
+                  x: 16
+                  y: 86
+                  width: 256
+                  long_mode: DOT
+                  text_font: montserrat_16
+                  text: "Horloge : en attente"
+              - label:
+                  id: mobile_diag_wifi
+                  x: 16
+                  y: 120
+                  width: 256
+                  text_font: montserrat_12
+                  text: "Wi-Fi : en attente"
+              - label:
+                  x: 16
+                  y: 148
+                  width: 256
+                  text_font: montserrat_12
+                  text_color: "${ui_muted}"
+                  text: "API connectee ne signifie pas\nforcement HA connecte."
+        - button:
+            x: 16
+            y: 334
+            width: 288
+            height: 54
+            bg_color: "${ui_card}"
+            widgets:
+              - label:
+                  align: CENTER
+                  text: "Retour aux parametres"
+            on_click:
+              - lvgl.page.show: page_menu
