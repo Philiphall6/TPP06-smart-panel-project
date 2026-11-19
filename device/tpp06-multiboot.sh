@@ -24,6 +24,11 @@ DHCP_PID_FILE=$BASE/udhcpc.pid
 LOG_DIR=$BASE/diagnostics
 LOG_FILE=$LOG_DIR/multiboot.log
 
+# Optional Wi-Fi editor: firmware OTA alone cannot change the boot/network policy.
+wifi_edit_in_progress() { return 1; }
+wifi_edit_recover() { return 0; }
+wifi_edit_tick() { return 0; }
+
 mkdir -p "$BASE" "$LOG_DIR"
 
 log() {
@@ -295,6 +300,7 @@ fallback_stock() {
     if ! write_state mode tuya; then
         log "ERROR cannot persist stock fallback selection"
     fi
+    wifi_edit_recover || log "ERROR Wi-Fi trial recovery failed; retaining journal"
     cleanup_independent_services
     rm -f "$BASE/boot_pending" "$BASE/engine.pid"
     # A failed custom session is never retried automatically on the following
@@ -306,7 +312,7 @@ fallback_stock() {
 
 persistent_health_ready() {
     kill -0 "$engine_pid" 2>/dev/null || return 1
-    if ! local_offline_policy; then
+    if ! local_offline_policy && ! wifi_edit_in_progress; then
         wifi_associated && wlan_has_address || return 1
     fi
     # Still check local processes/listeners; no ping, Internet or HA login.
@@ -328,6 +334,11 @@ monitor_persistent() {
     unhealthy=0
     armed=no
     while kill -0 "$engine_pid" 2>/dev/null; do
+        if ! wifi_edit_tick && [ -f "$NETWORK_DIR/wifi-trial/pending" ]; then
+            stop_owned_engine
+            fallback_stock wifi-editor-failed
+            return
+        fi
         if persistent_health_ready; then
             unhealthy=0
             if [ "$armed" = no ] &&
@@ -360,6 +371,13 @@ monitor_persistent() {
 }
 
 supervise() {
+    if [ -f "$BASE/tpp06-wifi-edit.sh" ]; then
+        . "$BASE/tpp06-wifi-edit.sh"
+        if ! wifi_edit_init; then
+            fallback_stock wifi-editor-recovery-failed
+            return
+        fi
+    fi
     requested=$(read_value "$BASE/mode" tuya)
     write_state requested_mode "$requested"
 

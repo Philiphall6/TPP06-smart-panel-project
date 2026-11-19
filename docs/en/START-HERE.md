@@ -86,7 +86,13 @@ credentials. An identical saved Wi-Fi profile does not establish standalone
 network recovery. Stop on missing, ambiguous or unknown state; do not invent
 ESP32 Wi-Fi configuration for this Linux panel.
 
-## 4. Prepare V5 in Device Builder
+## 4. Prepare the published version in Device Builder
+
+Open the [latest release](https://github.com/Philiphall6/TPP06-smart-panel-project/releases/latest),
+read its limitations and download its sources. With a Git clone, select its
+tag using `git switch --detach RELEASE_TAG` (replace the placeholder with the
+listed tag). An old ADB release is not an interface release. Keep the template
+and drivers from the same version together.
 
 An [experimental assisted procedure](13-assisted-setup.md) generates private
 configuration and coordinates the transition after compilation. It has only
@@ -95,7 +101,7 @@ first commissioning on a panel already using ESPHome.
 
 1. Back up existing HA/Builder configurations.
 2. Copy the complete
-   [`esphome/tpp06-lvgl-mobile.yaml`](../../esphome/tpp06-lvgl-mobile.yaml)
+   [`esphome/tpp06-lvgl-modern.yaml`](../../esphome/tpp06-lvgl-modern.yaml)
    into `/config/esphome`, for example `my-panel.yaml`, using HA’s file editor.
    It then appears in Builder. Do not use the wizard to create an ESP32.
 3. Click **Edit** and change the substitutions at the top:
@@ -107,6 +113,7 @@ first commissioning on a panel already using ESPHome.
    | `device_address` | Current panel IP initially; `.local` name after verifying mDNS |
    | `cover_entity` | Your cover entity, or leave the fictional example for display-only testing |
    | `cave_light_entity`, `bar_light_entity` | Your two light entities; historical variable names, not required room names |
+   | `weather_entity`, `weather_location` | HA `weather.…` entity and weather card title |
    | Titles and `ui_*` colours | Your labels and palette |
 
    Find entity IDs in **HA → Developer tools → States**. A visible light name
@@ -155,11 +162,11 @@ Success on another panel does not validate yours.
 
 1. Privately back up the YAML, `secrets.yaml`, previous working executable and
    Cutter archive. Do not change the device name or key during the UI update.
-2. For V4 → V5, compare your YAML with the full mobile V5 model. Keep your
+2. Compare your YAML with the chosen release’s complete template. Keep your
    substitutions, keys and addresses; include new `tpp06_backlight`, scripts,
    globals and automations, not only `lvgl:`. Do not remove older local
    component directories without comparing them with the published drivers.
-3. Check project version **`0.1.5`**, then **Validate**. Leave sleep on
+3. Check the **project version listed in the release notes**, then **Validate**. Leave sleep on
    **Never**. Do not create a second device for this update.
 4. Build/download the candidate in HA. With the downloaded program, check
    space from the administration computer:

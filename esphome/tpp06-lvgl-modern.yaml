@@ -1,6 +1,8 @@
-# V6 design candidate: 320 x 480, weather from HA, no boot changes.
-# Validate/compile in HA before OTA. Hardware deployment is NOT yet validated.
-# V5 remains available separately. Sound is explicitly locked pending a driver.
+# Current interface: weather, touch sound, storage, restart buttons and Wi-Fi page.
+# Linux Wi-Fi bridge commissioned at idle; real network migration still untested.
+# Requires the optional Linux supervisor helper in addition to a firmware OTA.
+# Compile in HA; no automatic reboot, Wi-Fi switch or boot-policy activation.
+# Earlier templates remain available separately. Sound defaults ON; user OFF is saved.
 substitutions:
   device_name: "tpp06-lvgl"
   # Use a unique device_name per panel. Keep a known IP during the first migration.
@@ -24,11 +26,12 @@ substitutions:
   touchscreen_device: "/dev/input/event1"
   backlight_device: "backlight"
   # Palette and titles are local, editable settings; no private installation data.
-  ui_background: "0x0B1220"
-  ui_card: "0x172338"
-  ui_accent: "0x369CF4"
-  ui_text: "0xF3F7FD"
-  ui_muted: "0xA2B3CC"
+  ui_background: "0x10131B"
+  ui_card: "0x252C3A"
+  ui_card_bottom: "0x191E29"
+  ui_accent: "0x438DD1"
+  ui_text: "0xF5F6FA"
+  ui_muted: "0x9DA5B4"
   api_encryption_key: !secret tpp06_api_encryption_key
 
 esphome:
@@ -39,11 +42,54 @@ esphome:
   on_boot:
     priority: -100
     then:
+      - lambda: |-
+          // Small code-native Home Assistant house/tree mark; no image download.
+          lv_obj_add_event_cb(id(mobile_ha_logo), [](lv_event_t *e) {
+            auto *obj = lv_event_get_target_obj(e);
+            auto *ctx = lv_event_get_layer(e);
+            lv_area_t area;
+            lv_obj_get_coords(obj, &area);
+            const lv_coord_t x = area.x1, y = area.y1;
+            lv_draw_triangle_dsc_t roof;
+            lv_draw_triangle_dsc_init(&roof);
+            roof.p[0].x = x+2; roof.p[0].y = y+12;
+            roof.p[1].x = x+14; roof.p[1].y = y+1;
+            roof.p[2].x = x+26; roof.p[2].y = y+12;
+            roof.color = lv_obj_get_style_text_color(obj, LV_PART_MAIN);
+            lv_draw_triangle(ctx, &roof);
+            lv_draw_rect_dsc_t fill;
+            lv_draw_rect_dsc_init(&fill);
+            fill.bg_color = lv_obj_get_style_text_color(obj, LV_PART_MAIN);
+            const lv_area_t house = {lv_coord_t(x+2), lv_coord_t(y+12),
+                                     lv_coord_t(x+26), lv_coord_t(y+26)};
+            lv_draw_rect(ctx, &fill, &house);
+            lv_draw_line_dsc_t line;
+            lv_draw_line_dsc_init(&line);
+            line.color = lv_color_hex(0x1B2330);
+            line.width = 2;
+            const lv_point_t stems[] = {{lv_coord_t(x+14), lv_coord_t(y+26)},
+                {lv_coord_t(x+14), lv_coord_t(y+10)}, {lv_coord_t(x+14), lv_coord_t(y+22)},
+                {lv_coord_t(x+8), lv_coord_t(y+17)}, {lv_coord_t(x+14), lv_coord_t(y+19)},
+                {lv_coord_t(x+20), lv_coord_t(y+14)}};
+            for (int i = 0; i < 6; i += 2) {
+              line.p1.x = stems[i].x; line.p1.y = stems[i].y;
+              line.p2.x = stems[i+1].x; line.p2.y = stems[i+1].y;
+              lv_draw_line(ctx, &line);
+            }
+            fill.bg_color = line.color;
+            fill.radius = LV_RADIUS_CIRCLE;
+            for (int i : {1, 3, 5}) {
+              const lv_area_t dot = {lv_coord_t(stems[i].x-2), lv_coord_t(stems[i].y-2),
+                                    lv_coord_t(stems[i].x+2), lv_coord_t(stems[i].y+2)};
+              lv_draw_rect(ctx, &fill, &dot);
+            }
+          }, LV_EVENT_DRAW_MAIN, nullptr);
+      - script.execute: tpp06_refresh_connection
       - script.execute: tpp06_refresh_menu
       - lambda: id(panel_backlight).set_percent(id(mobile_brightness));
   project:
     name: philiphall6.tpp06
-    version: "0.1.6"
+    version: "0.1.6-glass.2-dev"
   build_flags:
     - -static
     # Keep debug/symbol tables out of the OTA payload on the small /data volume.
@@ -61,7 +107,7 @@ external_components:
   - source:
       type: git
       url: https://github.com/Philiphall6/TPP06-smart-panel-project
-      ref: main
+      ref: v0.1.6
       path: esphome-components
     refresh: 5min
     components:
@@ -74,8 +120,47 @@ external_components:
       - tpp06_mdns
       - tpp06_backlight
       - tpp06_ui
+      - tpp06_buzzer
+      - tpp06_system
+      - tpp06_wifi
 
 tpp06_ui:
+
+# Optional local editor. Requires the separately commissioned Linux helper;
+# without it the page stays read-only and no connection is changed.
+tpp06_wifi:
+  id: panel_wifi_editor
+
+tpp06_buzzer:
+  id: panel_buzzer
+
+# Same ESPHome device as the local relay entities; no extra HA integration.
+# Two explicit actions. Device reboot interrupts the network; relay states
+# across a full Linux boot are not guaranteed. Neither button runs at startup.
+button:
+  - platform: tpp06_system
+    id: panel_restart
+    name: "Redemarrer ESPHome"
+    mode: application
+  - platform: tpp06_system
+    id: panel_device_restart
+    name: "Redemarrer le panneau"
+    mode: device
+    icon: mdi:power-cycle
+
+switch:
+  - platform: template
+    id: touch_beep
+    name: "Bip au toucher"
+    entity_category: config
+    restore_mode: RESTORE_DEFAULT_ON
+    lambda: return id(panel_buzzer).enabled();
+    turn_on_action:
+      - lambda: id(panel_buzzer).set_enabled(true);
+      - script.execute: tpp06_refresh_menu
+    turn_off_action:
+      - lambda: id(panel_buzzer).set_enabled(false);
+      - script.execute: tpp06_refresh_menu
 
 tpp06_backlight:
   id: panel_backlight
@@ -121,21 +206,9 @@ api:
   encryption:
     key: "${api_encryption_key}"
   on_client_connected:
-    - lvgl.label.update:
-        id: ha_status_label
-        # Any API client (including Device Builder logs) can trigger this.
-        text: "API CONNECTEE"
-        text_color: 0x30D158
+    - script.execute: tpp06_refresh_connection
   on_client_disconnected:
-    - if:
-        condition:
-          not:
-            api.connected:
-        then:
-          - lvgl.label.update:
-              id: ha_status_label
-              text: "API HORS LIGNE"
-              text_color: 0xFF9F0A
+    - script.execute: tpp06_refresh_connection
 
 # The first deployment is performed by TPP06 Cutter. Once this binary is
 # running, Device Builder can update it directly over the LAN.
@@ -146,10 +219,14 @@ ota:
 dashboard_import:
   # "Take control" copies the complete LVGL configuration into Device Builder.
   # The owner can then freely edit every page, widget and Home Assistant action.
-  package_import_url: github://Philiphall6/TPP06-smart-panel-project/esphome/tpp06-lvgl-modern.yaml@main
+  package_import_url: github://Philiphall6/TPP06-smart-panel-project/esphome/tpp06-lvgl-modern.yaml@v0.1.6
   import_full_config: true
 
 text_sensor:
+  - platform: tpp06_system
+    id: panel_storage
+    name: "Stockage disponible et total"
+    update_interval: 60s
   - platform: homeassistant
     id: mobile_weather_state
     entity_id: "${weather_entity}"
@@ -187,14 +264,16 @@ text_sensor:
       if (carrier == '0') return std::string("Wi-Fi : sans liaison");
       return std::string("Wi-Fi : inconnu");
     on_value:
-      - lvgl.label.update:
-          id: mobile_home_wifi
-          text: !lambda return x;
+      - lambda: |-
+          lv_obj_set_style_text_color(id(mobile_home_wifi),
+              lv_color_hex(x == "Wi-Fi : liaison active" ? 0x75B7FA : ${ui_muted}), 0);
       - lvgl.label.update:
           id: mobile_diag_wifi
           text: !lambda return x;
   - platform: version
     id: mobile_version
+    hide_timestamp: true
+    hide_hash: true
     name: "Version ESPHome"
     entity_category: diagnostic
 
@@ -330,6 +409,8 @@ touchscreen:
     display: tpp06_display
     device: "${touchscreen_device}"
     update_interval: 20ms
+    on_touch:
+      - lambda: id(panel_buzzer).click();
     calibration:
       x_min: 0
       x_max: 320
@@ -389,6 +470,67 @@ globals:
     initial_value: '4'
 
 script:
+  - id: tpp06_refresh_connection
+    then:
+      - lambda: |-
+          // UI indication only, not authentication. A Builder log connection
+          // must not turn the HA logo blue. Inspect the live API clients.
+          bool connected = false;
+          for (const auto &client : esphome::api::global_api_server->active_clients()) {
+            const char *name = client->get_name();
+            if (name != nullptr && std::string(name).find("Home Assistant ") == 0)
+              connected = true;
+          }
+          // One gentle blue pulse, started only on connection transitions.
+          // Never fade to invisible; grey and stationary while disconnected.
+          static bool was_connected = false;
+          static const lv_anim_exec_xcb_t pulse = [](void *target, int32_t value) {
+            lv_obj_set_style_text_color(static_cast<lv_obj_t *>(target),
+                lv_color_mix(lv_color_hex(0x18BCF2), lv_color_hex(0x176C97), value), 0);
+          };
+          if (connected && !was_connected) {
+            lv_anim_t animation;
+            lv_anim_init(&animation);
+            lv_anim_set_var(&animation, id(mobile_ha_logo));
+            lv_anim_set_exec_cb(&animation, pulse);
+            lv_anim_set_values(&animation, 100, 255);
+            lv_anim_set_duration(&animation, 1400);
+            lv_anim_set_reverse_duration(&animation, 1400);
+            lv_anim_set_repeat_count(&animation, LV_ANIM_REPEAT_INFINITE);
+            lv_anim_set_path_cb(&animation, lv_anim_path_ease_in_out);
+            lv_anim_start(&animation);
+          } else if (!connected) {
+            if (was_connected) lv_anim_delete(id(mobile_ha_logo), pulse);
+            lv_obj_set_style_text_color(id(mobile_ha_logo), lv_color_hex(${ui_muted}), 0);
+          }
+          was_connected = connected;
+  - id: tpp06_refresh_wifi_scan
+    then:
+      - lambda: |-
+          id(panel_wifi_editor).refresh_scan();
+          lv_label_set_text(id(mobile_wifi_scan_status), id(panel_wifi_editor).scan_status_text().c_str());
+          lv_label_set_text(id(mobile_wifi_scan_0), id(panel_wifi_editor).scan_row_text(0).c_str());
+          lv_label_set_text(id(mobile_wifi_scan_1), id(panel_wifi_editor).scan_row_text(1).c_str());
+          lv_label_set_text(id(mobile_wifi_scan_2), id(panel_wifi_editor).scan_row_text(2).c_str());
+          lv_label_set_text(id(mobile_wifi_scan_3), id(panel_wifi_editor).scan_row_text(3).c_str());
+  - id: tpp06_select_wifi
+    parameters:
+      row: int
+    then:
+      - if:
+          condition:
+            lambda: return !id(panel_wifi_editor).scan_row_ssid(row).empty();
+          then:
+            - lvgl.textarea.update:
+                id: mobile_wifi_ssid
+                text: !lambda return id(panel_wifi_editor).scan_row_ssid(row);
+            - lvgl.textarea.update:
+                id: mobile_wifi_password
+                text: ""
+            - lvgl.keyboard.update:
+                id: mobile_wifi_keyboard
+                textarea: mobile_wifi_password
+            - lvgl.page.show: page_wifi_settings
   - id: tpp06_refresh_weather
     then:
       - lambda: |-
@@ -455,6 +597,25 @@ script:
       - script.execute: tpp06_refresh_clock
       - script.execute: tpp06_refresh_weather
       - lvgl.label.update:
+          id: mobile_beep_summary
+          text: !lambda |-
+            if (!id(panel_buzzer).available()) return std::string("Pilote indisponible / voir les options");
+            return std::string(id(panel_buzzer).enabled() ? "Active / voir les options" : "Desactive / voir les options");
+      - lvgl.label.update:
+          id: mobile_beep_mode
+          text: !lambda |-
+            if (!id(panel_buzzer).available()) return std::string("Pilote indisponible");
+            return std::string(id(panel_buzzer).enabled() ? "Bip active" : "Silencieux");
+      - lvgl.label.update:
+          id: mobile_beep_value
+          text: !lambda |-
+            if (!id(panel_buzzer).available()) return std::string("Activation impossible : consulter les logs");
+            return std::string(id(panel_buzzer).enabled() ? "Actif / toucher pour desactiver" : "Inactif / toucher pour activer");
+      - lvgl.widget.update:
+          id: mobile_beep_enable
+          state:
+            disabled: !lambda return !id(panel_buzzer).available();
+      - lvgl.label.update:
           id: mobile_sleep_value
           text: !lambda |-
             const char *choices[] = {"Jamais", "30 secondes", "1 minute", "2 minutes", "5 minutes"};
@@ -493,34 +654,36 @@ script:
             return str_sprintf("Application : %.0f min", seconds / 60.0f);
       - lvgl.label.update:
           id: mobile_diag_version
-          text: !lambda return std::string("Interface V6 / ESPHome ") + id(mobile_version).state;
-      - lvgl.widget.update:
-          id: mobile_nav_0
-          bg_color: !lambda |-
-            if (id(mobile_active_nav) != 0) return lv_color_hex(${ui_card});
-            return lv_color_hex(id(mobile_purple_accent) ? 0xBF5AF2 : ${ui_accent});
-      - lvgl.widget.update:
-          id: mobile_nav_1
-          bg_color: !lambda |-
-            if (id(mobile_active_nav) != 1) return lv_color_hex(${ui_card});
-            return lv_color_hex(id(mobile_purple_accent) ? 0xBF5AF2 : ${ui_accent});
-      - lvgl.widget.update:
-          id: mobile_nav_2
-          bg_color: !lambda |-
-            if (id(mobile_active_nav) != 2) return lv_color_hex(${ui_card});
-            return lv_color_hex(id(mobile_purple_accent) ? 0xBF5AF2 : ${ui_accent});
-      - lvgl.widget.update:
-          id: mobile_nav_3
-          bg_color: !lambda |-
-            if (id(mobile_active_nav) != 3) return lv_color_hex(${ui_card});
-            return lv_color_hex(id(mobile_purple_accent) ? 0xBF5AF2 : ${ui_accent});
-      - lvgl.widget.update:
-          id: mobile_nav_4
-          bg_color: !lambda |-
-            if (id(mobile_active_nav) != 4) return lv_color_hex(${ui_card});
-            return lv_color_hex(id(mobile_purple_accent) ? 0xBF5AF2 : ${ui_accent});
+          text: !lambda return std::string("V6 / ESPHome ") + id(mobile_version).state;
+      - lambda: |-
+          // Small native gradients: no blur surfaces, bitmaps or animation loop.
+          lv_obj_t *tabs[] = {id(mobile_nav_0), id(mobile_nav_1), id(mobile_nav_2),
+                              id(mobile_nav_3), id(mobile_nav_4)};
+          const auto accent = lv_color_hex(id(mobile_purple_accent) ? 0xBF5AF2 : ${ui_accent});
+          for (int i = 0; i < 5; ++i) {
+            const bool selected = id(mobile_active_nav) == i;
+            lv_obj_set_style_bg_opa(tabs[i], selected ? LV_OPA_COVER : LV_OPA_TRANSP, 0);
+            lv_obj_set_style_bg_color(tabs[i], accent, 0);
+            lv_obj_set_style_bg_grad_color(tabs[i], lv_color_hex(0x25374E), 0);
+            lv_obj_set_style_bg_grad_dir(tabs[i], LV_GRAD_DIR_VER, 0);
+            lv_obj_set_style_border_width(tabs[i], selected ? 1 : 0, 0);
+            lv_obj_set_style_border_color(tabs[i], accent, 0);
+            lv_obj_set_style_shadow_width(tabs[i], selected ? 8 : 0, 0);
+            lv_obj_set_style_shadow_color(tabs[i], accent, 0);
+            lv_obj_set_style_shadow_opa(tabs[i], LV_OPA_20, 0);
+            const auto ink = lv_color_hex(selected ? ${ui_text} : ${ui_muted});
+            for (uint32_t child = 0; child < lv_obj_get_child_cnt(tabs[i]); ++child)
+              lv_obj_set_style_text_color(lv_obj_get_child(tabs[i], child), ink, 0);
+          }
 
 interval:
+  - interval: 2s
+    then:
+      - script.execute: tpp06_refresh_connection
+      - script.execute: tpp06_refresh_wifi_scan
+      - lvgl.label.update:
+          id: mobile_wifi_editor_status
+          text: !lambda return id(panel_wifi_editor).status_text();
   - interval: 15s
     then:
       - script.execute: tpp06_refresh_menu
@@ -550,6 +713,8 @@ lvgl:
     - lambda: id(panel_backlight).wake();
     - script.execute: tpp06_refresh_clock
   bg_color: "${ui_background}"
+  bg_grad_color: 0x1C2331
+  bg_grad_dir: VER
   default_font: montserrat_16
   theme:
     label:
@@ -569,28 +734,54 @@ lvgl:
   style_definitions:
     - id: mobile_card
       bg_color: "${ui_card}"
+      bg_grad_color: "${ui_card_bottom}"
+      bg_grad_dir: VER
       radius: 24
       border_width: 1
-      border_color: 0x293D59
+      border_color: 0x424B5E
+      shadow_width: 8
+      shadow_opa: 20%
+      shadow_color: 0x07101E
+      shadow_offset_y: 2
       pad_all: 0
   top_layer:
     widgets:
-      - label:
-          id: ha_status_label
-          x: 20
-          y: 22
-          width: 164
-          text_font: montserrat_12
-          text: "API HORS LIGNE"
-          text_color: 0xFF9F0A
+      - obj:
+          x: 18
+          y: 8
+          width: 28
+          height: 29
+          radius: 8
+          bg_color: 0x2C3445
+          bg_grad_color: 0x1B202C
+          bg_grad_dir: VER
+          border_width: 1
+          border_color: 0x424B5E
+          widgets:
+            - obj:
+                id: mobile_ha_logo
+                x: 0
+                y: 0
+                width: 28
+                height: 28
+                bg_opa: TRANSP
+                text_color: "${ui_muted}"
       - label:
           id: mobile_clock
-          x: 188
-          y: 20
-          width: 112
+          x: 182
+          y: 14
+          width: 88
           text_align: RIGHT
-          text_font: montserrat_16
+          text_font: montserrat_14
           text: "--:--"
+      - label:
+          id: mobile_home_wifi
+          x: 282
+          y: 13
+          width: 20
+          text_font: montserrat_16
+          text_color: "${ui_muted}"
+          text: "\uF1EB"
       - obj:
           styles: mobile_card
           x: 12
@@ -598,6 +789,9 @@ lvgl:
           width: 296
           height: 58
           radius: 29
+          bg_color: 0x2B3141
+          bg_grad_color: 0x1C202B
+          border_color: 0x4A5263
           widgets:
             - button:
                 id: mobile_nav_0
@@ -731,6 +925,8 @@ lvgl:
   pages:
     - id: page_home
       bg_color: "${ui_background}"
+      bg_grad_color: 0x1C2331
+      bg_grad_dir: VER
       on_load:
         - globals.set:
             id: mobile_active_nav
@@ -740,37 +936,41 @@ lvgl:
         - label:
             id: mobile_home_greeting
             x: 20
-            y: 52
+            y: 60
             width: 280
             height: 24
-            text_font: montserrat_16
-            text_color: "${ui_muted}"
+            text_font: montserrat_18
+            text_color: "${ui_text}"
             text: "Bienvenue"
         - label:
             id: mobile_home_clock
             x: 20
-            y: 74
+            y: 83
             width: 280
             height: 52
-            text_font: montserrat_40
+            text_font: montserrat_44
             text: "--:--"
         - label:
             id: mobile_home_date
             x: 20
-            y: 126
+            y: 136
             width: 280
             long_mode: DOT
             text_font: montserrat_14
             text_color: "${ui_muted}"
             text: "Date en attente de HA"
         - button:
+            id: mobile_weather_card
             styles: mobile_card
             x: 16
-            y: 158
+            y: 164
             width: 288
             height: 132
-            bg_color: 0x183A60
-            border_color: 0x2A557E
+            bg_color: 0x293E60
+            bg_grad_color: 0x22283F
+            border_color: 0x526B96
+            shadow_color: 0x33598A
+            shadow_width: 10
             on_click:
               - lvgl.page.show: page_weather
             widgets:
@@ -780,12 +980,12 @@ lvgl:
                   width: 172
                   long_mode: DOT
                   text_font: montserrat_12
-                  text_color: 0xB3D7F9
+                  text_color: 0xB6C2D8
                   text: "${weather_location}"
               - label:
                   id: mobile_weather_temp
                   x: 18
-                  y: 34
+                  y: 32
                   width: 176
                   long_mode: DOT
                   text_font: montserrat_36
@@ -793,25 +993,11 @@ lvgl:
               - label:
                   id: mobile_weather_condition
                   x: 18
-                  y: 82
+                  y: 96
                   width: 238
                   long_mode: DOT
                   text_font: montserrat_16
                   text: "Meteo a configurer"
-              - label:
-                  id: mobile_home_wifi
-                  x: 18
-                  y: 108
-                  width: 236
-                  text_font: montserrat_12
-                  text_color: 0xB3D7F9
-                  text: "Wi-Fi : en attente"
-              - label:
-                  x: 258
-                  y: 108
-                  text_font: montserrat_12
-                  text_color: 0xB3D7F9
-                  text: "\uF1EB"
               # Code-native weather illustration: no bitmap/font download.
               - obj:
                   id: mobile_weather_art
@@ -830,6 +1016,11 @@ lvgl:
                         height: 36
                         radius: 18
                         bg_color: 0xFFD27D
+                        bg_grad_color: 0x56667F
+                        bg_grad_dir: VER
+                        shadow_width: 8
+                        shadow_color: 0xADC1E2
+                        shadow_opa: 20%
                     - obj:
                         x: 2
                         y: 31
@@ -837,6 +1028,8 @@ lvgl:
                         height: 24
                         radius: 12
                         bg_color: 0xDDEEFF
+                        bg_grad_color: 0x7E92AE
+                        bg_grad_dir: VER
                     - obj:
                         x: 13
                         y: 18
@@ -844,6 +1037,8 @@ lvgl:
                         height: 33
                         radius: 17
                         bg_color: 0xDDEEFF
+                        bg_grad_color: 0xB6C8DE
+                        bg_grad_dir: VER
                     - obj:
                         x: 38
                         y: 27
@@ -851,12 +1046,18 @@ lvgl:
                         height: 28
                         radius: 14
                         bg_color: 0xDDEEFF
+                        bg_grad_color: 0x9EB2CB
+                        bg_grad_dir: VER
         - button:
+            id: mobile_home_cover_card
             x: 16
-            y: 304
+            y: 310
             width: 138
             height: 88
             styles: mobile_card
+            bg_color: 0x293A53
+            bg_grad_color: 0x222B3C
+            border_color: 0x455B76
             widgets:
               - obj:
                   x: 14
@@ -864,7 +1065,14 @@ lvgl:
                   width: 30
                   height: 30
                   radius: 15
-                  bg_color: 0x28496A
+                  bg_color: 0x4779AB
+                  bg_grad_color: 0x23384D
+                  bg_grad_dir: VER
+                  border_width: 1
+                  border_color: 0x527EAD
+                  shadow_width: 8
+                  shadow_color: 0x428CD0
+                  shadow_opa: 20%
               - label:
                   x: 22
                   y: 16
@@ -881,11 +1089,15 @@ lvgl:
             on_click:
               - lvgl.page.show: page_sdb
         - button:
+            id: mobile_home_lights_card
             x: 166
-            y: 304
+            y: 310
             width: 138
             height: 88
             styles: mobile_card
+            bg_color: 0x39362F
+            bg_grad_color: 0x292725
+            border_color: 0x5B554D
             widgets:
               - obj:
                   x: 14
@@ -893,7 +1105,14 @@ lvgl:
                   width: 30
                   height: 30
                   radius: 15
-                  bg_color: 0x564331
+                  bg_color: 0x9D7743
+                  bg_grad_color: 0x453A2B
+                  bg_grad_dir: VER
+                  border_width: 1
+                  border_color: 0xAA824A
+                  shadow_width: 8
+                  shadow_color: 0xC99241
+                  shadow_opa: 20%
               - label:
                   x: 22
                   y: 16
@@ -1447,7 +1666,7 @@ lvgl:
             x: 16
             y: 126
             width: 288
-            height: 58
+            height: 48
             styles: mobile_card
             widgets:
               - label:
@@ -1473,9 +1692,9 @@ lvgl:
         - button:
             id: mobile_setting_1
             x: 16
-            y: 194
+            y: 180
             width: 288
-            height: 58
+            height: 48
             styles: mobile_card
             widgets:
               - label:
@@ -1501,9 +1720,9 @@ lvgl:
         - button:
             id: mobile_setting_2
             x: 16
-            y: 262
+            y: 234
             width: 288
-            height: 58
+            height: 48
             styles: mobile_card
             widgets:
               - label:
@@ -1528,9 +1747,9 @@ lvgl:
         - button:
             id: mobile_setting_3
             x: 16
-            y: 330
+            y: 288
             width: 288
-            height: 58
+            height: 48
             styles: mobile_card
             widgets:
               - label:
@@ -1552,6 +1771,276 @@ lvgl:
                   text: ">"
             on_click:
               - lvgl.page.show: page_diagnostics
+
+        - button:
+            x: 16
+            y: 342
+            width: 288
+            height: 48
+            styles: mobile_card
+            widgets:
+              - label:
+                  align: CENTER
+                  text: "\uF1EB  Wi-Fi  >"
+            on_click:
+              - lvgl.page.show: page_wifi_discovery
+
+    - id: page_wifi_discovery
+      bg_color: "${ui_background}"
+      on_load:
+        - globals.set:
+            id: mobile_active_nav
+            value: '3'
+        - script.execute: tpp06_refresh_menu
+      widgets:
+        - label:
+            x: 20
+            y: 58
+            text_font: montserrat_24
+            text: "Reseaux Wi-Fi"
+        - label:
+            id: mobile_wifi_scan_status
+            x: 16
+            y: 90
+            width: 288
+            height: 28
+            text_font: montserrat_12
+            text_color: "${ui_muted}"
+            text: "Rechercher puis toucher votre reseau"
+        - button:
+            x: 16
+            y: 122
+            width: 288
+            height: 44
+            widgets:
+              - label:
+                  align: CENTER
+                  text: "\uF1EB  Rechercher les reseaux"
+            on_click:
+              - lambda: id(panel_wifi_editor).request_scan();
+              - script.execute: tpp06_refresh_wifi_scan
+        - button:
+            x: 16
+            y: 174
+            width: 288
+            height: 44
+            styles: mobile_card
+            widgets:
+              - label:
+                  id: mobile_wifi_scan_0
+                  align: CENTER
+                  width: 264
+                  height: 30
+                  long_mode: DOT
+                  text_font: montserrat_12
+                  text: "-"
+            on_click:
+              - script.execute:
+                  id: tpp06_select_wifi
+                  row: 0
+        - button:
+            x: 16
+            y: 220
+            width: 288
+            height: 44
+            styles: mobile_card
+            widgets:
+              - label:
+                  id: mobile_wifi_scan_1
+                  align: CENTER
+                  width: 264
+                  height: 30
+                  long_mode: DOT
+                  text_font: montserrat_12
+                  text: "-"
+            on_click:
+              - script.execute:
+                  id: tpp06_select_wifi
+                  row: 1
+        - button:
+            x: 16
+            y: 266
+            width: 288
+            height: 44
+            styles: mobile_card
+            widgets:
+              - label:
+                  id: mobile_wifi_scan_2
+                  align: CENTER
+                  width: 264
+                  height: 30
+                  long_mode: DOT
+                  text_font: montserrat_12
+                  text: "-"
+            on_click:
+              - script.execute:
+                  id: tpp06_select_wifi
+                  row: 2
+        - button:
+            x: 16
+            y: 312
+            width: 288
+            height: 44
+            styles: mobile_card
+            widgets:
+              - label:
+                  id: mobile_wifi_scan_3
+                  align: CENTER
+                  width: 264
+                  height: 30
+                  long_mode: DOT
+                  text_font: montserrat_12
+                  text: "-"
+            on_click:
+              - script.execute:
+                  id: tpp06_select_wifi
+                  row: 3
+        - button:
+            x: 16
+            y: 362
+            width: 152
+            height: 44
+            widgets:
+              - label:
+                  align: CENTER
+                  text_font: montserrat_12
+                  text: "Saisie manuelle"
+            on_click:
+              - lvgl.textarea.update:
+                  id: mobile_wifi_ssid
+                  text: ""
+              - lvgl.textarea.update:
+                  id: mobile_wifi_password
+                  text: ""
+              - lvgl.keyboard.update:
+                  id: mobile_wifi_keyboard
+                  textarea: mobile_wifi_ssid
+              - lvgl.page.show: page_wifi_settings
+        - button:
+            x: 176
+            y: 362
+            width: 128
+            height: 44
+            widgets:
+              - label:
+                  align: CENTER
+                  text_font: montserrat_12
+                  text: "Suite >"
+            on_click:
+              - lambda: id(panel_wifi_editor).next_scan_page();
+              - script.execute: tpp06_refresh_wifi_scan
+
+    - id: page_wifi_settings
+      bg_color: "${ui_background}"
+      on_load:
+        - globals.set:
+            id: mobile_active_nav
+            value: '3'
+        - script.execute: tpp06_refresh_menu
+        - lambda: lv_textarea_set_password_show_time(id(mobile_wifi_password), 0);
+      on_unload:
+        - lvgl.textarea.update:
+            id: mobile_wifi_password
+            text: ""
+      widgets:
+        - label:
+            x: 20
+            y: 58
+            text_font: montserrat_24
+            text: "Reseau Wi-Fi"
+        - label:
+            id: mobile_wifi_editor_status
+            x: 16
+            y: 90
+            width: 288
+            height: 42
+            text_font: montserrat_12
+            text_color: "${ui_muted}"
+            text: "Verification du superviseur..."
+        - textarea:
+            id: mobile_wifi_ssid
+            x: 16
+            y: 136
+            width: 288
+            height: 42
+            one_line: true
+            max_length: 32
+            placeholder_text: "Nom du reseau (SSID)"
+            on_focus:
+              - lvgl.keyboard.update:
+                  id: mobile_wifi_keyboard
+                  textarea: mobile_wifi_ssid
+            on_click:
+              - lvgl.keyboard.update:
+                  id: mobile_wifi_keyboard
+                  textarea: mobile_wifi_ssid
+        - textarea:
+            id: mobile_wifi_password
+            x: 16
+            y: 184
+            width: 288
+            height: 42
+            one_line: true
+            password_mode: true
+            max_length: 64
+            placeholder_text: "Mot de passe"
+            on_focus:
+              - lvgl.keyboard.update:
+                  id: mobile_wifi_keyboard
+                  textarea: mobile_wifi_password
+            on_click:
+              - lvgl.keyboard.update:
+                  id: mobile_wifi_keyboard
+                  textarea: mobile_wifi_password
+        - button:
+            x: 16
+            y: 232
+            width: 88
+            height: 44
+            widgets:
+              - label:
+                  align: CENTER
+                  text_font: montserrat_12
+                  text: "Essayer"
+            on_click:
+              - lambda: |-
+                  id(panel_wifi_editor).start(lv_textarea_get_text(id(mobile_wifi_ssid)),
+                                             lv_textarea_get_text(id(mobile_wifi_password)));
+                  lv_textarea_set_text(id(mobile_wifi_password), "");
+                  lv_label_set_text(id(mobile_wifi_editor_status), id(panel_wifi_editor).status_text().c_str());
+        - button:
+            x: 112
+            y: 232
+            width: 96
+            height: 44
+            widgets:
+              - label:
+                  align: CENTER
+                  text_font: montserrat_12
+                  text: "Confirmer"
+            on_click:
+              - lambda: id(panel_wifi_editor).confirm();
+        - button:
+            x: 216
+            y: 232
+            width: 88
+            height: 44
+            widgets:
+              - label:
+                  align: CENTER
+                  text_font: montserrat_12
+                  text: "Annuler"
+            on_click:
+              - lambda: id(panel_wifi_editor).cancel();
+        - keyboard:
+            id: mobile_wifi_keyboard
+            x: 0
+            y: 280
+            width: 320
+            height: 124
+            text_font: montserrat_12
+            mode: TEXT_LOWER
+            textarea: mobile_wifi_ssid
 
     - id: page_display_settings
       bg_color: "${ui_background}"
@@ -1653,7 +2142,7 @@ lvgl:
             on_click:
               - lambda: id(mobile_clock_visible) = !id(mobile_clock_visible);
               - script.execute: tpp06_refresh_menu
-        # Sound settings are explicit, but cannot enable unverified hardware.
+        # No boot tone. Preference defaults ON and is retained when changed.
         - button:
             x: 16
             y: 344
@@ -1668,6 +2157,7 @@ lvgl:
                   text_color: "${ui_muted}"
                   text: "\uF026  BIP AU TOUCHER"
               - label:
+                  id: mobile_beep_summary
                   x: 16
                   y: 24
                   width: 256
@@ -1706,6 +2196,7 @@ lvgl:
             bg_color: 0x183A60
             widgets:
               - label:
+                  id: mobile_beep_mode
                   x: 18
                   y: 14
                   text_font: montserrat_20
@@ -1715,7 +2206,7 @@ lvgl:
                   y: 46
                   text_font: montserrat_12
                   text_color: 0xB3D7F9
-                  text: "Mode actuel : aucun bip emis"
+                  text: "Retour sonore local / sans HA"
         - button:
             id: mobile_beep_enable
             x: 16
@@ -1723,8 +2214,14 @@ lvgl:
             width: 288
             height: 62
             styles: mobile_card
-            state:
-              disabled: true
+            on_click:
+              - if:
+                  condition:
+                    lambda: return id(panel_buzzer).enabled();
+                  then:
+                    - switch.turn_off: touch_beep
+                  else:
+                    - switch.turn_on: touch_beep
             widgets:
               - label:
                   x: 18
@@ -1732,11 +2229,12 @@ lvgl:
                   text_color: "${ui_muted}"
                   text: "Bip au toucher"
               - label:
+                  id: mobile_beep_value
                   x: 18
                   y: 35
                   text_font: montserrat_12
                   text_color: "${ui_muted}"
-                  text: "Activation verrouillee"
+                  text: "Inactif / toucher pour activer"
         - label:
             x: 22
             y: 306
@@ -1744,7 +2242,7 @@ lvgl:
             long_mode: WRAP
             text_font: montserrat_14
             text_color: "${ui_muted}"
-            text: "Le pilote sonore de ce panneau reste a valider. Aucun GPIO n'est modifie."
+            text: "Actif par defaut. Votre choix est memorise. Pilote experimental : essai sur place requis."
         - button:
             x: 16
             y: 356
@@ -1896,6 +2394,7 @@ lvgl:
                   x: 16
                   y: 18
                   width: 256
+                  height: 24
                   long_mode: DOT
                   text_font: montserrat_16
                   text: "ESPHome : en attente"

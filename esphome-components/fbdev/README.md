@@ -57,8 +57,9 @@ changer les couleurs du thème pour compenser cette erreur. Cela ne modifie ni
 le logo stocké en NAND ni les relais. La correction nécessite une compilation
 puis une installation OTA ; la mire seule ne corrige pas le programme installé.
 
-La version `0.1.5-colors.1` a été installée par OTA et ses couleurs confirmées
-par le propriétaire. Le logo de démarrage a une correction séparée : voir le
+Le correctif a été installé par OTA et ses couleurs confirmées par le propriétaire.
+Consulter la [dernière release](https://github.com/Philiphall6/TPP06-smart-panel-project/releases/latest)
+pour la version publiée. Le logo de démarrage a une correction séparée : voir le
 [suivi NAND](../../docs/fr/12-logo-demarrage.md), dont le contrôle visuel reste à faire.
 
 On the tested TPP06, raw little-endian RGB565 red/green/blue bars display in
@@ -68,7 +69,9 @@ or may select `BGR565`. Both single-pixel and LVGL bulk writes use this setting.
 This changes neither the NAND boot logo nor relay control. Compile and install
 the updated application via OTA, then visually verify its colours.
 
-`0.1.5-colors.1` was installed by OTA and its UI colours confirmed by the owner.
+The fix was installed by OTA and its UI colours confirmed by the owner.
+See the [latest release](https://github.com/Philiphall6/TPP06-smart-panel-project/releases/latest)
+for the published version.
 The separate [NAND logo correction](../../docs/en/12-boot-logo.md) still awaits
 visual confirmation at boot.
 

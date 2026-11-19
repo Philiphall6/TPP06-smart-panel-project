@@ -4,6 +4,9 @@ Une interface tactile personnalisable pour le panneau **MOES / Tuya TPP06**,
 reliée à Home Assistant. ESPHome fonctionne sur le **Linux Anyka d’origine** :
 ce n’est pas un ESP32 et il ne faut pas lui envoyer un firmware ESP32.
 
+**[Dernière release : version, nouveautés et limites](https://github.com/Philiphall6/TPP06-smart-panel-project/releases/latest)** ·
+[Historique des releases](https://github.com/Philiphall6/TPP06-smart-panel-project/releases)
+
 **[Commencer ici — guide débutant français](docs/fr/DEMARRER-ICI.md)** ·
 **[Start here — English beginner guide](docs/en/START-HERE.md)**
 
@@ -13,80 +16,80 @@ ce n’est pas un ESP32 et il ne faut pas lui envoyer un firmware ESP32.
 ## Le boîtier TPP06
 
 <p align="center">
-  <img src="media/visuels-produit/01-panneau-blanc.png" alt="TPP06 avec commandes blanches" width="300">
+  <img src="media/visuels-produit/01-panneau-blanc.png" alt="TPP06 blanc / white" width="300">
   &nbsp;&nbsp;
-  <img src="media/visuels-produit/02-panneau-noir.png" alt="TPP06 avec commandes noires" width="300">
+  <img src="media/visuels-produit/02-panneau-noir.png" alt="TPP06 noir / black" width="300">
 </p>
 
-*Visuels de référence des deux variantes du boîtier. L’apparence seule ne garantit pas la compatibilité du firmware.*
+*L’apparence seule ne garantit pas la compatibilité du firmware.*
 
-## État actuel — 18 novembre 2026
+## Interface et fonctions
 
-- **Correctifs V5 `0.1.5-colors.1` installés** : couleurs RGB565 confirmées
-  visuellement et présentation de l'image corrigée. [Détails affichage](esphome-components/fbdev/README.md).
-- **Trois relais locaux** : touches haut/milieu/bas confirmées sur les canaux
-  1/2/3, voyants synchronisés, switches exposés par l'API. Le package public
-  reste en observation par défaut ; [essais hors réseau encore à faire](docs/fr/14-relais-locaux.md).
-- [Logo de démarrage](docs/fr/12-logo-demarrage.md) réencodé en RGB565 et
-  relu après écriture ; sa couleur au prochain démarrage reste à confirmer.
-- [Interface météo V6](esphome/tpp06-lvgl-modern.yaml) publiée comme **candidate** :
-  pas encore compilée ni installée sur le panneau. Bip toujours indisponible.
-- **V5 / projet `0.1.5` installée sur le panneau de référence** après une
-  installation sans fil annoncée réussie par son propriétaire. Vérifications
-  directes : binaire conforme, API chiffrée accessible, Wi-Fi associé,
-  superviseur sain et politique de démarrage persistante conservée.
-- Capture réelle de l’accueil vérifiée : navigation avec icônes, heure, date,
-  liaison Wi-Fi et menu. L’aperçu ci-dessous utilise des données fictives.
-- Compilation dans **ESPHome Device Builder sur Home Assistant** ; aucun
-  ordinateur Mint ni serveur de compilation externe obligatoire.
-- YAML entièrement éditable : pages, titres, couleurs, entités de votre maison.
-  Les pilotes viennent de GitHub ; les secrets restent chez vous.
-- Veille **désactivée par défaut**. Réveil tactile, secours pendant la veille,
-  bip, coupures électriques et endurance longue durée restent à valider.
+- Accueil sombre à cartes arrondies, heure, date et météo Home Assistant.
+- Logo Home Assistant bleu animé lorsqu’un client HA est connecté, gris sinon ;
+  petite horloge et Wi-Fi uniquement dans la barre supérieure de l’accueil.
+- Pages volet et lumières, paramètres, luminosité, veille et diagnostics.
+- Bip tactile local, actif par défaut et désactivable avec choix mémorisé.
+- Trois relais locaux avec boutons physiques et voyants, exposés dans HA.
+  Le modèle public reste en **observation par défaut** avant validation du matériel.
+- Stockage disponible/total et deux commandes distinctes : relancer ESPHome
+  ou redémarrer Linux, avec contrôles préalables.
+- Paramètres Wi-Fi : recherche, sélection et mot de passe. Cette fonction
+  nécessite aussi le service Linux optionnel ; **le changement réel de réseau
+  et son retour arrière restent à valider sur matériel**.
 
-> [!WARNING]
-> Projet expérimental, vérifié sur un matériel précis, pas un installateur
-> universel. La première préparation réseau écrit un overlay et peut rendre
-> une variante incompatible inutilisable. Sauvegardes et récupération locale
-> sont nécessaires. **Sans démontage ne signifie pas sans risque.**
-> Ne pas ouvrir un panneau sous tension et ne jamais exposer ses ports sur Internet.
+![Aperçu illustratif avec données fictives, pas une capture personnelle](docs/images/tpp06-interface-preview.svg)
 
-![Aperçu illustratif de la V5, pas une capture personnelle](docs/images/tpp06-mobile-preview.svg)
+Les [notes de la dernière release](https://github.com/Philiphall6/TPP06-smart-panel-project/releases/latest)
+font foi pour la version, les essais réalisés et les limites. La branche `main`
+peut contenir des travaux plus récents. Consulter les [détails de l’interface](docs/fr/interface.md).
 
-## Choisir le bon parcours
+## Installation et mises à jour
+
+Compilation dans **ESPHome Device Builder sur Home Assistant**, sans poste Mint
+ni serveur de compilation externe obligatoire. Le [YAML complet](esphome/tpp06-lvgl-modern.yaml)
+reste éditable : pages, titres, couleurs et entités. Pour une installation
+reproductible, prendre les sources du tag indiqué dans la dernière release,
+pas une copie arbitraire de `main`.
 
 | Votre situation | Prochaine étape |
 | --- | --- |
-| ESPHome fonctionne déjà sur votre panneau | [Mise à jour OTA, sans réinstaller le démarrage](docs/fr/DEMARRER-ICI.md#5-mettre-à-jour-un-panneau-déjà-sous-esphome) |
-| Le panneau est encore d’origine | [Compatibilité, accès réseau, sauvegarde et préparation](docs/fr/DEMARRER-ICI.md) |
-| Le panneau ne démarre plus ou n’a plus de réseau | [Récupération avancée / archives matérielles](docs/archive/README.md) |
+| ESPHome fonctionne déjà | [Mise à jour OTA](docs/fr/DEMARRER-ICI.md#5-mettre-à-jour-un-panneau-déjà-sous-esphome), sans réinstaller le démarrage |
+| Panneau encore d’origine | [Compatibilité, accès réseau, sauvegarde et préparation](docs/fr/DEMARRER-ICI.md) |
+| Plus de démarrage ou de réseau | [Récupération avancée](docs/archive/README.md) |
 
-Le parcours courant est **réseau → accès ADB → sauvegarde → compilation dans
-HA → essai encadré → mise à jour OTA**. Le démontage, l’UART et le dessoudage
-NAND ne sont plus des étapes normales du tutoriel.
+Le parcours courant est **réseau → ADB → sauvegarde → compilation HA → essai
+encadré → OTA**. Le démontage et l’UART restent dans les archives de récupération.
+L’[assistant de première mise en service](docs/fr/13-installation-assistee.md)
+est testé hors ligne ; son parcours complet n’est pas validé pour un novice seul.
 
-La première activation autonome permanente reste une intervention avancée :
-le Cutter standard conserve une sélection ponctuelle et ne confirme pas
-automatiquement le mode persistant. Son secours revient à **Tuya d’origine**,
-pas automatiquement à la précédente version ESPHome. Voir le guide avant
-de sélectionner un démarrage ou de redémarrer.
+> [!WARNING]
+> Projet expérimental, spécifique au matériel testé, pas un installateur universel.
+> La première préparation écrit un overlay. Sauvegardes et récupération locale
+> sont nécessaires. Le secours revient à **Tuya d’origine**, pas automatiquement
+> au précédent programme ESPHome ; il ne protège pas d’une panne NAND ou du noyau.
+> Veille/réveil, coupure électrique, perte réseau et endurance restent à tester
+> selon votre installation. Ne pas ouvrir un panneau sous tension ni exposer ses ports sur Internet.
 
-## Documentation et fichiers
+Une OTA d’interface ne remplace ni le superviseur Linux ni le logo de démarrage.
+Le [logo Home Assistant au démarrage](docs/fr/12-logo-demarrage.md) est une
+opération NAND distincte, facultative et avancée.
 
-- [Assistant de première mise en service — tests hors ligne uniquement](docs/fr/13-installation-assistee.md)
-- [Interface V5 : fonctions, validation et limites](docs/fr/11-interface-v5.md)
-- [Configuration complète V5 à personnaliser](esphome/tpp06-lvgl-mobile.yaml)
-- [Accès réseau sans démontage](docs/fr/00-acces-reseau-authkey.md)
-- [Préparation ADB par Wi-Fi — avancée](docs/fr/04-adb-wifi-sans-uart.md)
-- [Tuya Cutter : sauvegarde, contrôles, restauration](docs/fr/07-tuya-cutter.md)
-- [Détails du portage ESPHome et historique des essais](docs/fr/06-esphome-lvgl-natif.md)
-- [Portage openHASP — autre voie expérimentale](docs/fr/05-openhasp-local.md)
-- [Logo de démarrage — opération distincte, facultative et avancée](docs/fr/12-logo-demarrage.md)
+## Documentation et confidentialité
 
-Les anciennes releases ADB ne sont **pas** des firmwares V5. Compiler son
-propre programme : il contient les clés et paramètres de son installation.
-Ne pas publier de binaire personnel, capture privée, dump, sauvegarde,
-`secrets.yaml`, adresse réelle ou identifiant de maison.
+- [Interface, fonctions et limites](docs/fr/interface.md)
+- [Relais locaux](docs/fr/14-relais-locaux.md) · [Bip tactile](docs/fr/15-bip-tactile.md)
+- [Wi-Fi depuis les paramètres](docs/fr/17-wifi-depuis-ecran.md)
+- [Fonctions Tuya restantes](docs/fr/16-ecarts-tuya.md)
+- [Accès réseau](docs/fr/00-acces-reseau-authkey.md) · [Tuya Cutter](docs/fr/07-tuya-cutter.md)
+- [Portage ESPHome et historique](docs/fr/06-esphome-lvgl-natif.md)
+- [openHASP — autre voie expérimentale](docs/fr/05-openhasp-local.md)
+
+La release de l’interface distribue les **sources**, pas un programme personnel
+prêt à flasher. Les anciennes releases ADB ne sont pas des firmwares ESPHome.
+Compiler chez soi : les clés et paramètres privés restent dans votre installation.
+Ne publier ni `secrets.yaml`, YAML personnel, programme compilé personnel,
+capture privée, dump ou sauvegarde. Les exemples publics sont fictifs.
 
 ## Remerciements
 

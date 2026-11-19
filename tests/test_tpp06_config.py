@@ -205,10 +205,11 @@ class MobileConfigTests(PortableConfigTests):
         visit(ui["top_layer"]["widgets"])
         for page in ui["pages"]:
             visit(page["widgets"])
-            self.assertEqual(len(page["on_load"]), 2)
+            self.assertEqual(len(page["on_load"]), 3 if page["id"] == "page_wifi_settings" else 2)
         ids = [value["id"] for _, value in widgets if "id" in value]
         self.assertEqual(len(ids), len(set(ids)))
-        for required in ("ha_status_label", "mobile_clock", "cover_state_label",
+        self.assertIn("mobile_ha_logo" if self.CONFIG_FILE == "tpp06-lvgl-modern.yaml" else "ha_status_label", ids)
+        for required in ("mobile_clock", "cover_state_label",
                          "cave_brightness_value", "bar_brightness_value",
                          "mobile_home_clock", "mobile_home_date", "mobile_home_wifi",
                          "mobile_nav_4", "mobile_format_value", "mobile_visibility_value",
@@ -287,9 +288,124 @@ class MobileConfigTests(PortableConfigTests):
 
 class ModernConfigTests(MobileConfigTests):
     CONFIG_FILE = "tpp06-lvgl-modern.yaml"
-    PAGE_COUNT = 9
-    UI_VERSION = "0.1.6"
+    PAGE_COUNT = 11
+    UI_VERSION = "0.1.6-glass.2-dev"
     IMPORT_MARKER = "modern"
+
+    def test_release_sources_are_pinned_together(self):
+        self.test_local_configuration_and_diagnostics()
+        config = yaml_util.load_yaml(CORE.config_path)
+        self.assertEqual(config["external_components"][0]["source"]["ref"], "v0.1.6")
+        self.assertTrue(config["dashboard_import"]["package_import_url"].endswith("@v0.1.6"))
+
+    def test_glass_status_and_weather_layout(self):
+        self.test_local_configuration_and_diagnostics()
+        config = yaml_util.load_yaml(CORE.config_path)
+        ui = config['lvgl']
+        home = next(p for p in ui['pages'] if p['id'] == 'page_home')
+        top = ui['top_layer']['widgets']
+        wifi = next(w['label'] for w in top if w.get('label', {}).get('id') == 'mobile_home_wifi')
+        self.assertEqual(wifi['text'], '\uf1eb')
+        self.assertLess(wifi['y'], 20)
+        self.assertNotIn('mobile_home_wifi', str(home))
+        self.assertNotIn('Wi-Fi', str(home))
+        script = next(s for s in config['script'] if s['id'] == 'tpp06_refresh_connection')
+        self.assertIn('active_clients()', str(script))
+        self.assertIn('Home Assistant ', str(script))
+        self.assertIn('0x18BCF2', str(script))
+        self.assertIn('${ui_muted}', str(script))
+        self.assertNotIn('ha_status_label', str(config))
+        self.assertIn('connected && !was_connected', str(script))
+        self.assertIn('lv_anim_start', str(script))
+        self.assertIn('lv_anim_delete', str(script))
+        clock = next(w['label'] for w in top if w.get('label', {}).get('id') == 'mobile_clock')
+        self.assertEqual(clock['text_align'], 'RIGHT')
+        self.assertGreater(clock['x'], 160)
+        self.assertLess(clock['x'] + clock['width'], wifi['x'])
+        logo = str(config['esphome']['on_boot']['then'][0])
+        self.assertIn('lv_event_get_target_obj', logo)
+        self.assertIn('lv_event_get_layer', logo)
+        self.assertIn('lv_draw_triangle_dsc_init', logo)
+        self.assertNotIn('lv_event_get_draw_ctx', logo)  # Removed in LVGL 9.
+        for name in ('mobile_home_cover_card', 'mobile_home_lights_card', 'mobile_weather_card'):
+            card = next(w['button'] for w in home['widgets'] if w.get('button', {}).get('id') == name)
+            self.assertLessEqual(card['y'] + card['height'], 400)
+            self.assertIn('lvgl.page.show', str(card['on_click']))
+
+    def test_wifi_editor_is_local_masked_and_not_automatic(self):
+        self.test_local_configuration_and_diagnostics()
+        config = yaml_util.load_yaml(CORE.config_path)
+        page = next(p for p in config["lvgl"]["pages"] if p["id"] == "page_wifi_settings")
+        password = next(w["textarea"] for w in page["widgets"] if
+                        w.get("textarea", {}).get("id") == "mobile_wifi_password")
+        self.assertTrue(password["password_mode"])
+        self.assertNotIn("text", password)
+        self.assertIn("mobile_wifi_password", str(page["on_unload"]))
+        self.assertNotIn("homeassistant.action", str(page))
+        self.assertNotIn("panel_wifi_editor", str(config["esphome"]["on_boot"]))
+        self.assertNotIn("wifi", config)
+        self.assertNotIn("text", config)  # No HA credential entities.
+
+    def test_wifi_discovery_requires_tap_and_keeps_manual_entry(self):
+        self.test_local_configuration_and_diagnostics()
+        config = yaml_util.load_yaml(CORE.config_path)
+        page = next(p for p in config["lvgl"]["pages"] if p["id"] == "page_wifi_discovery")
+        self.assertNotIn("request_scan", str(page["on_load"]))
+        self.assertNotIn("request_scan", str(config["interval"]))
+        buttons = [w["button"] for w in page["widgets"] if "button" in w]
+        selections = [b for b in buttons if "tpp06_select_wifi" in str(b)]
+        self.assertEqual(len(selections), 4)
+        self.assertTrue(any("request_scan" in str(b) for b in buttons))
+        self.assertTrue(any("Saisie manuelle" in str(b) for b in buttons))
+        select = next(s for s in config["script"] if s["id"] == "tpp06_select_wifi")
+        self.assertIn("mobile_wifi_password", str(select))
+        self.assertNotIn(".start(", str(select))  # Selecting does not switch Wi-Fi.
+        for button in buttons:
+            self.assertLessEqual(button["y"] + button["height"], 406)
+        menu = next(p for p in config["lvgl"]["pages"] if p["id"] == "page_menu")
+        rows = sorted((w["button"] for w in menu["widgets"] if "button" in w), key=lambda b: b["y"])
+        self.assertEqual(len(rows), 5)
+        for row in rows:
+            self.assertGreaterEqual(row["height"], 44)
+            self.assertLessEqual(row["y"] + row["height"], 406)
+        for previous, following in zip(rows, rows[1:]):
+            self.assertLess(previous["y"] + previous["height"], following["y"])
+
+    def test_storage_and_restart_are_native_same_device_entities(self):
+        self.test_local_configuration_and_diagnostics()
+        config = yaml_util.load_yaml(CORE.config_path)
+        storage = next(s for s in config["text_sensor"] if s.get("id") == "panel_storage")
+        restart = next(b for b in config["button"] if b.get("id") == "panel_restart")
+        device = next(b for b in config["button"] if b.get("id") == "panel_device_restart")
+        self.assertEqual(restart["mode"], "application")
+        self.assertEqual(device["mode"], "device")
+        self.assertEqual(storage["platform"], "tpp06_system")
+        self.assertEqual(storage["update_interval"], "60s")
+        self.assertNotIn("internal", storage)
+        self.assertNotIn("entity_category", storage)
+        self.assertEqual(restart["platform"], "tpp06_system")
+        self.assertNotIn("internal", restart)
+        self.assertNotIn("entity_category", restart)
+        self.assertNotIn("button.press", str(config["esphome"]["on_boot"]))
+
+    def test_diagnostics_version_is_short_and_height_bounded(self):
+        self.test_local_configuration_and_diagnostics()
+        config = yaml_util.load_yaml(CORE.config_path)
+        version = next(x for x in config["text_sensor"] if x.get("id") == "mobile_version")
+        self.assertTrue(version["hide_hash"])
+        self.assertTrue(version["hide_timestamp"])
+        def labels(node):
+            if isinstance(node, dict):
+                if node.get("id") == "mobile_diag_version" and "height" in node:
+                    yield node
+                for value in node.values():
+                    yield from labels(value)
+            elif isinstance(node, list):
+                for value in node:
+                    yield from labels(value)
+        label, = list(labels(config["lvgl"]))
+        self.assertEqual(label["long_mode"], "DOT")
+        self.assertLessEqual(label["y"] + label["height"], 52)
 
     def test_weather_is_private_optional_read_only_and_unit_aware(self):
         self.test_local_configuration_and_diagnostics()
@@ -310,14 +426,22 @@ class ModernConfigTests(MobileConfigTests):
         self.assertNotIn("http_request", config)
         self.assertNotIn("api_key", config["substitutions"])
 
-    def test_sound_never_enables_unverified_hardware(self):
+    def test_sound_setting_controls_real_driver_and_preserves_user_choice(self):
         self.test_local_configuration_and_diagnostics()
         config = yaml_util.load_yaml(CORE.config_path)
         sound = next(p for p in config["lvgl"]["pages"] if p["id"] == "page_sound")
         button = next(x["button"] for x in sound["widgets"] if "button" in x
                       and x["button"].get("id") == "mobile_beep_enable")
-        self.assertTrue(button["state"]["disabled"])
-        self.assertNotIn("on_click", button)
+        self.assertIn("on_click", button)
+        self.assertIn("touch_beep", str(button["on_click"]))
+        setting = next(s for s in config["switch"] if s["id"] == "touch_beep")
+        self.assertEqual(setting["restore_mode"], "RESTORE_DEFAULT_ON")
+        self.assertIn("set_enabled(true)", str(setting["turn_on_action"]))
+        self.assertIn("set_enabled(false)", str(setting["turn_off_action"]))
+        self.assertIn("enabled()", str(setting["lambda"]))
+        self.assertIn("panel_buzzer).click()", str(config["touchscreen"][0]["on_touch"]))
+        self.assertNotIn("on_update", config["touchscreen"][0])
+        self.assertNotIn("click()", str(config["esphome"]["on_boot"]))
         self.assertNotIn("/sys/class/pwm", str(config))
         self.assertNotIn("/sys/class/gpio", str(config))
         self.assertNotIn("homeassistant.action", str(sound))

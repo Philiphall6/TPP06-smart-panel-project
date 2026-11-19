@@ -6,6 +6,21 @@ from tools.render_mobile_preview import render
 
 
 class MobilePreviewTests(unittest.TestCase):
+    def test_modern_preview_has_gradients_and_wifi_only_in_status_bar(self):
+        source = Path(__file__).resolve().parents[1] / "esphome/tpp06-lvgl-modern.yaml"
+        svg = render(source, ['page_home'])
+        document = ET.fromstring(svg)
+        self.assertEqual(document.attrib['width'], '368')
+        self.assertIn('linearGradient', svg)
+        self.assertIn('Interface — LVGL native', svg)
+        self.assertNotIn('Wi-Fi : liaison active', svg)
+        self.assertIn('fill="#18BCF2"', svg)
+        disconnected = render(source, ['page_home'], ha_connected=False)
+        self.assertNotIn('CONNECTE', disconnected)
+        self.assertNotIn('HOME ASSISTANT', svg)
+        self.assertNotIn('fill="#18BCF2"', disconnected)
+        self.assertIn('stroke="#75B7FA"', disconnected)  # Wi-Fi is independent.
+
     def test_preview_is_valid_and_explicitly_not_a_capture(self):
         source = Path(__file__).resolve().parents[1] / "esphome/tpp06-lvgl-mobile.yaml"
         svg = render(source)

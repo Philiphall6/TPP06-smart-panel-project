@@ -34,7 +34,10 @@ class DocumentationTests(unittest.TestCase):
             text = (ROOT / name).read_text()
             self.assertIn(guide, text)
             self.assertIn('docs/archive/README.md', text)
-            self.assertIn('0.1.5', text)
+            self.assertIn('/releases/latest', text)
+            self.assertNotRegex(text, r'\b[Vv][456]\b')
+            self.assertNotRegex(text, r'\b0\.1\.[456]\b')
+            self.assertIn('esphome/tpp06-lvgl-modern.yaml', text)
         for lang, guide in [('fr', 'DEMARRER-ICI.md'), ('en', 'START-HERE.md')]:
             text = (ROOT / 'docs' / lang / guide).read_text()
             for term in ('ota-space-check', 'secrets.yaml', 'persistent_confirmed', '192.0.2.1'):

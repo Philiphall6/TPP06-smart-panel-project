@@ -99,7 +99,13 @@ copie identique ne prouve pas que le réseau redémarrera sans Tuya. Un profil
 absent, ambigu ou un état inconnu est un motif d’arrêt, pas une invitation à
 inventer des paramètres Wi-Fi dans le YAML.
 
-## 4. Préparer la V5 dans Device Builder
+## 4. Préparer la version publiée dans Device Builder
+
+Ouvrir la [dernière release](https://github.com/Philiphall6/TPP06-smart-panel-project/releases/latest),
+lire ses limites et télécharger ses sources. Avec un clone Git, sélectionner
+son tag via `git switch --detach TAG_DE_LA_RELEASE` (remplacer le texte par le
+tag affiché). Ne pas confondre une ancienne release ADB avec la release de
+l’interface. Garder ensemble le modèle et les pilotes de cette version.
 
 Une [procédure assistée expérimentale](13-installation-assistee.md) peut générer
 la configuration privée et orchestrer la transition après compilation. Elle
@@ -108,7 +114,7 @@ Ce n'est pas une nouvelle étape à exécuter sur un panneau déjà sous ESPHome
 
 1. Sauvegarder les configurations existantes de HA/Builder.
 2. Copier le contenu complet de
-   [`esphome/tpp06-lvgl-mobile.yaml`](../../esphome/tpp06-lvgl-mobile.yaml)
+   [`esphome/tpp06-lvgl-modern.yaml`](../../esphome/tpp06-lvgl-modern.yaml)
    dans un fichier local du dossier `/config/esphome`, par exemple
    `mon-panneau.yaml`, avec l’éditeur de fichiers de HA. Le fichier apparaît
    ensuite dans Builder. Ne pas utiliser l’assistant pour créer un ESP32.
@@ -121,6 +127,7 @@ Ce n'est pas une nouvelle étape à exécuter sur un panneau déjà sous ESPHome
    | `device_address` | IP actuelle pour la première connexion ; puis nom `.local` une fois mDNS vérifié |
    | `cover_entity` | Identifiant réel de votre volet, ou conserver l’exemple sans commander |
    | `cave_light_entity`, `bar_light_entity` | Identifiants réels de vos deux lumières ; noms historiques des variables, pas des pièces imposées |
+   | `weather_entity`, `weather_location` | Entité `weather.…` de HA et titre de la carte météo |
    | Titres et couleurs `ui_*` | Vos libellés et votre palette |
 
    Trouver les identifiants dans **HA → Outils de développement → États**.
@@ -176,12 +183,12 @@ Une sélection réussie sur un autre panneau ne valide pas le vôtre.
 1. Sauvegarder le YAML actuel, `secrets.yaml`, le dernier programme fonctionnel
    et la sauvegarde Cutter, hors GitHub. Ne pas renommer le panneau ou changer
    sa clé en même temps que l’interface.
-2. Pour passer de V4 à V5, comparer votre YAML avec le modèle mobile V5 :
+2. Comparer votre YAML avec le modèle complet de la release choisie :
    conserver vos substitutions, clés et adresses ; reprendre aussi les nouveaux
-   blocs V5 (`tpp06_backlight`, scripts, globales et automatismes), pas seulement
+   blocs de composants, scripts, globales et automatismes, pas seulement
    `lvgl:`. Si un dossier local de composants issu des essais est encore
    référencé, ne pas le supprimer sans comparer avec les pilotes publiés.
-3. Vérifier **version de projet `0.1.5`**, puis **Valider**. Laisser la veille
+3. Vérifier la **version de projet indiquée dans les notes de release**, puis **Valider**. Laisser la veille
    sur **Jamais**. Ne pas installer un second appareil pour cette mise à jour.
 4. Compiler/télécharger le candidat dans HA. Avec le programme téléchargé,
    vérifier l’espace disponible depuis l’ordinateur d’administration :

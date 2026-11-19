@@ -1,5 +1,10 @@
 # Interface V5 — installée sur le panneau de référence
 
+> Document historique. Pour la version actuelle, consulter le
+> [guide de l’interface](interface.md) et la
+> [dernière release](https://github.com/Philiphall6/TPP06-smart-panel-project/releases/latest).
+> Les mentions « en préparation » ci-dessous décrivent des étapes passées.
+
 Le 18 novembre 2026, le propriétaire a confirmé l’installation sans fil de la
 V5, version de projet **0.1.5**, compilée dans Home Assistant. Les contrôles
 directs après installation ont confirmé le binaire attendu, la version `0.1.5`
@@ -11,6 +16,26 @@ Le programme est un exécutable statique ARMv5TE / ARM926EJ-S, ABI soft-float.
 Ce contrôle après installation n’est pas une mesure complète du transfert OTA
 ni un essai prolongé de toutes les pages. Veille/réveil et bip restent à valider.
 Pour commencer : [guide débutant](DEMARRER-ICI.md).
+
+Évolution distincte en préparation : [Paramètres → Wi-Fi](17-wifi-depuis-ecran.md).
+Cette fonction nécessite une mise en service du superviseur, pas seulement une OTA.
+
+### Nouveau visuel V6 en préparation
+
+Le modèle `esphome/tpp06-lvgl-modern.yaml`, version `0.1.6-glass.2-dev`,
+reprend un style sombre à cartes dégradées : météo bleu ardoise, raccourcis
+bleu et doré, navigation arrondie. Il conserve les commandes et paramètres.
+Le pictogramme maison/arbre Home Assistant, en haut à gauche sans texte,
+est dessiné par LVGL : pulsation bleue douce quand un client API se présentant
+comme Home Assistant est connecté, gris et immobile sinon. La petite horloge
+est à droite, près du Wi-Fi.
+Un lecteur de journaux seul ne suffit pas. C'est une indication visuelle,
+pas un contrôle d'authentification supplémentaire.
+Le Wi-Fi figure uniquement dans la barre supérieure de l'accueil ; son état
+de liaison détaillé reste consultable dans Diagnostics. Aucune batterie fictive.
+Cette mise à jour d'interface ne réécrit ni le logo NAND ni le superviseur.
+Les aperçus SVG sont des illustrations à données fictives, pas des captures
+du panneau. La validation visuelle sur matériel reste nécessaire après OTA.
 
 ## Disponibilité dans le Builder
 
@@ -56,6 +81,10 @@ Leur présence ne suffit pas à valider une séquence de commande sûre. La lign
 du menu indique explicitement « Indisponible : pilote a valider » ; ce n'est
 pas un interrupteur factice. Aucun GPIO de buzzer n'a été modifié.
 
+La [chaîne du clic Tuya a désormais été identifiée](15-bip-tactile.md) :
+PWM à 4 750 Hz pendant 4 ms, sélection par les GPIO 8 et 18. Cela reste une
+analyse en lecture seule, pas un essai sonore ni une activation dans ESPHome.
+
 ## Vrai logo de démarrage
 
 La demande concerne le remplacement du **logo MOES initial**, pas un second
@@ -65,8 +94,9 @@ Sur le matériel de référence, la partition nommée `logo` fait 512 Kio, avec
 des blocs d'effacement de 128 Kio. Une sauvegarde privée a été vérifiée par
 une seconde lecture ; le contenu de l'image est exactement le PNG MOES du
 dump converti en pixels 16 bits, 320 × 480 (307 200 octets), suivi de `0xff`.
-Le logo monochrome ne permet pas de distinguer RGB565 de BGR565. Le format
-LCD du DT vivant et le pilote vidéo ont servi à retenir BGR565.
+Le logo monochrome ne permet pas de distinguer RGB565 de BGR565. Le premier
+choix BGR565 fondé sur les métadonnées était incorrect : une mire physique a
+confirmé RGB565 et le logo a été corrigé dans ce format.
 
 Le logo Home Assistant seul a été programmé sur le panneau de référence et
 la relecture complète est identique au fichier préparé. Le contrôle visuel
