@@ -33,6 +33,8 @@ pour conserver ensemble les versions des pilotes et de l’interface.
 
 ## Installation et récupération
 
+[SSH Dropbear et changement du mot de passe root](docs/fr/19-ssh-dropbear.md) : guide manuel, sans activation automatique au démarrage.
+
 1. [Identifier son cas et préparer HA](docs/fr/DEMARRER-ICI.md).
 2. [Accès réseau](docs/fr/00-acces-reseau-authkey.md), puis
    [ADB si nécessaire](docs/fr/04-adb-wifi-sans-uart.md) et

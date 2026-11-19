@@ -77,6 +77,7 @@ opération NAND distincte, facultative et avancée.
 
 ## Documentation et confidentialité
 
+- [Installer SSH Dropbear et changer le mot de passe root](docs/fr/19-ssh-dropbear.md)
 - [Interface, fonctions et limites](docs/fr/interface.md)
 - [Relais locaux](docs/fr/14-relais-locaux.md) · [Bip tactile](docs/fr/15-bip-tactile.md)
 - [Wi-Fi depuis les paramètres](docs/fr/17-wifi-depuis-ecran.md)

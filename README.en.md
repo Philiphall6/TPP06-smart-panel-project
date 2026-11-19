@@ -64,6 +64,7 @@ not an end-to-end hardware validation for unassisted beginners.
 
 ## Documentation and privacy
 
+- [Dropbear SSH installation and root password changes (French guide)](docs/fr/19-ssh-dropbear.md)
 - [Interface and limitations](docs/en/interface.md)
 - [Local relays](docs/en/14-local-relays.md) · [Touch beep](docs/en/15-touch-beep.md)
 - [On-screen Wi-Fi settings](docs/en/17-screen-wifi.md)
