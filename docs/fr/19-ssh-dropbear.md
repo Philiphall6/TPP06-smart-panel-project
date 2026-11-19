@@ -98,7 +98,11 @@ gpg --homedir "$TPP06_WORK/gpg-check" --verify \
 ```
 
 Exiger une signature valide. La clé publiée par le projet lors de cet essai a
-pour empreinte `F734 7EF2 EEEE 07A2 6762 8CA9 4593 1494 F29C 6783`.
+pour empreinte `F734 7EF2 EE2E 07A2 6762 8CA9 4493 1494 F29C 6773`.
+Il s'agit de la clé **publique** de signature du projet Dropbear, pas d'une clé
+du panneau ni d'un secret personnel : ne pas modifier cette empreinte pour
+l'anonymiser. La contrôler sur le fichier officiel `dropbear-key-2015.asc` avec
+`gpg --show-keys --with-colons dropbear-key-2015.asc` (ligne `fpr`).
 Une clé téléchargée depuis le même site n'apporte pas une validation indépendante
 de son propriétaire ; un avertissement de confiance GPG est distinct d'une
 signature incorrecte. Vérifier la provenance sur le [site officiel Dropbear](https://matt.ucc.asn.au/dropbear/dropbear.html).
