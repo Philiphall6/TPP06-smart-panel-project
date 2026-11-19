@@ -1,0 +1,264 @@
+# Optional modern UI plus local-relays-experimental.yaml.
+# Use all external components from the same release (v0.1.7 or newer).
+# Does not enable relay control or the Linux offline policy.
+# [TPP06] 01 — PERSONNALISATION : noms, entités HA, matériel et couleurs
+substitutions:
+  local_relay_1_label: "Relais 1"
+  local_relay_2_label: "Relais 2"
+  local_relay_3_label: "Relais 3"
+
+# [TPP06] RÉGLAGES HA : interrupteurs et préférences
+switch:
+  - platform: template
+    id: quiet_schedule
+    name: "Silence programme"
+    entity_category: config
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_OFF
+
+# [TPP06] RÉGLAGES HA : valeurs numériques
+number:
+  - platform: template
+    id: quiet_start_hour
+    name: "Debut du silence (heure)"
+    entity_category: config
+    min_value: 0
+    max_value: 23
+    step: 1
+    initial_value: 22
+    optimistic: true
+    restore_value: true
+  - platform: template
+    id: quiet_end_hour
+    name: "Fin du silence (heure)"
+    entity_category: config
+    min_value: 0
+    max_value: 23
+    step: 1
+    initial_value: 7
+    optimistic: true
+    restore_value: true
+
+# [TPP06] ACTUALISATION : tâches périodiques
+interval:
+  - interval: 1s
+    then:
+      - script.execute: local_controls_refresh
+
+# [TPP06] LOGIQUE : actualisation des vues et actions locales
+script:
+  - id: local_controls_refresh
+    then:
+      - lambda: |-
+          auto now = id(tpp06_ha_time).now();
+          const bool hours_valid = !std::isnan(id(quiet_start_hour).state) && !std::isnan(id(quiet_end_hour).state);
+          id(panel_buzzer).set_quiet(esphome::tpp06_buzzer::quiet_hours(
+            id(quiet_schedule).state, now.is_valid() && hours_valid,
+            now.hour * 60 + now.minute,
+            hours_valid ? (int) id(quiet_start_hour).state : 0,
+            hours_valid ? (int) id(quiet_end_hour).state : 0));
+      - lvgl.widget.update:
+          id: [local_control_1, local_control_2, local_control_3]
+          state:
+            disabled: !lambda return !id(panel_relays).control_available();
+      - lvgl.label.update:
+          id: local_state_1
+          text: !lambda |-
+            return std::string(!id(panel_relays).control_available() ? "Indisponible" : (id(local_relay_1).state ? "Allume" : "Eteint"));
+      - lvgl.label.update:
+          id: local_state_2
+          text: !lambda |-
+            return std::string(!id(panel_relays).control_available() ? "Indisponible" : (id(local_relay_2).state ? "Allume" : "Eteint"));
+      - lvgl.label.update:
+          id: local_state_3
+          text: !lambda |-
+            return std::string(!id(panel_relays).control_available() ? "Indisponible" : (id(local_relay_3).state ? "Allume" : "Eteint"));
+      - lvgl.label.update:
+          id: local_quiet_state
+          text: !lambda |-
+            if (!id(quiet_schedule).state) return std::string("Silence programme : desactive");
+            return std::string(id(panel_buzzer).quiet() ? "Silence programme : silencieux" : "Silence programme : hors plage");
+      - lvgl.label.update:
+          id: local_quiet_start
+          text: !lambda |-
+            if (std::isnan(id(quiet_start_hour).state)) return std::string("Debut : --");
+            return std::string("Debut : ") + std::to_string((int) id(quiet_start_hour).state) + " h +";
+      - lvgl.label.update:
+          id: local_quiet_end
+          text: !lambda |-
+            if (std::isnan(id(quiet_end_hour).state)) return std::string("Fin : --");
+            return std::string("Fin : ") + std::to_string((int) id(quiet_end_hour).state) + " h +";
+
+# [TPP06] INTERFACE : styles, navigation et pages tactiles
+lvgl:
+  top_layer:
+    widgets:
+      - button:
+          x: 62
+          y: 8
+          width: 86
+          height: 30
+          radius: 15
+          bg_color: 0x24344D
+          widgets:
+            - label: {align: CENTER, text_font: montserrat_12, text: "Local"}
+          on_click:
+            - lvgl.page.show: page_local_controls
+  pages:
+    # [TPP06] VUE RELAIS : commandes locales indépendantes de HA
+    - id: page_local_controls
+      bg_color: "${ui_background}"
+      on_load:
+        - globals.set: {id: mobile_active_nav, value: '3'}
+        - script.execute: tpp06_refresh_menu
+        - script.execute: local_controls_refresh
+      widgets:
+        - label: {x: 20, y: 62, text_font: montserrat_28, text: "Relais locaux"}
+        - label:
+            x: 20
+            y: 102
+            text_font: montserrat_12
+            text_color: "${ui_muted}"
+            text: "Commandes directes, sans Home Assistant"
+        - button:
+            id: local_control_1
+            x: 16
+            y: 130
+            width: 288
+            height: 62
+            styles: mobile_card
+            state: {disabled: true}
+            widgets:
+              - label: {x: 16, y: 10, text: "${local_relay_1_label}"}
+              - label:
+                  id: local_state_1
+                  x: 16
+                  y: 36
+                  text_font: montserrat_12
+                  text: "Indisponible"
+            on_click:
+              - switch.toggle: local_relay_1
+              - script.execute: local_controls_refresh
+        - button:
+            id: local_control_2
+            x: 16
+            y: 202
+            width: 288
+            height: 62
+            styles: mobile_card
+            state: {disabled: true}
+            widgets:
+              - label: {x: 16, y: 10, text: "${local_relay_2_label}"}
+              - label:
+                  id: local_state_2
+                  x: 16
+                  y: 36
+                  text_font: montserrat_12
+                  text: "Indisponible"
+            on_click:
+              - switch.toggle: local_relay_2
+              - script.execute: local_controls_refresh
+        - button:
+            id: local_control_3
+            x: 16
+            y: 274
+            width: 288
+            height: 62
+            styles: mobile_card
+            state: {disabled: true}
+            widgets:
+              - label: {x: 16, y: 10, text: "${local_relay_3_label}"}
+              - label:
+                  id: local_state_3
+                  x: 16
+                  y: 36
+                  text_font: montserrat_12
+                  text: "Indisponible"
+            on_click:
+              - switch.toggle: local_relay_3
+              - script.execute: local_controls_refresh
+        - button:
+            x: 16
+            y: 352
+            width: 288
+            height: 44
+            styles: mobile_card
+            widgets:
+              - label: {align: CENTER, text: "Plages de silence"}
+            on_click:
+              - lvgl.page.show: page_local_quiet
+    # [TPP06] VUE : page_local_quiet
+    - id: page_local_quiet
+      bg_color: "${ui_background}"
+      on_load:
+        - globals.set: {id: mobile_active_nav, value: '3'}
+        - script.execute: tpp06_refresh_menu
+        - script.execute: local_controls_refresh
+      widgets:
+        - label: {x: 20, y: 62, text_font: montserrat_24, text: "Silence programme"}
+        - label:
+            x: 20
+            y: 106
+            width: 280
+            text_font: montserrat_12
+            text: "Ne change ni les relais ni le choix Bip."
+        - button:
+            x: 16
+            y: 144
+            width: 288
+            height: 52
+            styles: mobile_card
+            widgets:
+              - label:
+                  id: local_quiet_state
+                  align: CENTER
+                  text_font: montserrat_12
+                  text: "Silence programme : desactive"
+            on_click:
+              - switch.toggle: quiet_schedule
+              - script.execute: local_controls_refresh
+        - button:
+            x: 16
+            y: 212
+            width: 138
+            height: 60
+            styles: mobile_card
+            widgets:
+              - label: {id: local_quiet_start, align: CENTER, text: "Debut : --"}
+            on_click:
+              - number.set:
+                  id: quiet_start_hour
+                  value: !lambda |-
+                    return std::isnan(id(quiet_start_hour).state) ? 22 : ((int) id(quiet_start_hour).state + 1) % 24;
+              - script.execute: local_controls_refresh
+        - button:
+            x: 166
+            y: 212
+            width: 138
+            height: 60
+            styles: mobile_card
+            widgets:
+              - label: {id: local_quiet_end, align: CENTER, text: "Fin : --"}
+            on_click:
+              - number.set:
+                  id: quiet_end_hour
+                  value: !lambda |-
+                    return std::isnan(id(quiet_end_hour).state) ? 7 : ((int) id(quiet_end_hour).state + 1) % 24;
+              - script.execute: local_controls_refresh
+        - label:
+            x: 20
+            y: 288
+            width: 280
+            text_font: montserrat_12
+            text_color: "${ui_muted}"
+            text: "Heures identiques : silence permanent.\nHeure inconnue : silence si active."
+        - button:
+            x: 16
+            y: 352
+            width: 288
+            height: 44
+            styles: mobile_card
+            widgets:
+              - label: {align: CENTER, text: "Retour aux relais"}
+            on_click:
+              - lvgl.page.show: page_local_controls

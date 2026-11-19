@@ -9,9 +9,11 @@ tpp06_local_relays:
   key_map: [1, 2, 3]  # F1/F2/F3 = top/middle/bottom on reference hardware; verify yours.
   indicator_mode: follow_relay  # Or off; LEDs do not control the relay outputs.
 
+# [TPP06] CONNEXION HA : API chiffrée et événements de connexion
 api:
   reboot_timeout: 0s
 
+# [TPP06] RÉGLAGES HA : interrupteurs et préférences
 switch:
   - platform: tpp06_local_relays
     relays_id: panel_relays

@@ -12,6 +12,9 @@
 #include <unistd.h>
 #include "esphome/core/hal.h"
 #include "esphome/core/log.h"
+#ifdef USE_TPP06_MUTE_INPUT
+#include "esphome/components/text_sensor/text_sensor.h"
+#endif
 
 namespace esphome::tpp06_local_relays {
 static const char *const TAG = "tpp06_local_relays";
@@ -95,7 +98,29 @@ bool LocalRelays::resync_keys_() {
   unsigned char keys[(KEY_MAX + 8) / 8]{};
   if (ioctl(input_fd_, EVIOCGKEY(sizeof(keys)), keys) < 0) return false;
   for (uint8_t i = 0; i < 3; ++i) down_[i] = bit_set(keys, KEY_F1 + i);
+  resync_mute_();
   return true;  // Held keys never generate a synthetic press.
+}
+
+void LocalRelays::publish_mute_(const char *state) {
+#ifdef USE_TPP06_MUTE_INPUT
+  if (mute_sensor_ != nullptr && mute_sensor_->state != state) mute_sensor_->publish_state(state);
+#else
+  (void) state;
+#endif
+}
+
+void LocalRelays::resync_mute_() {
+#ifdef USE_TPP06_MUTE_INPUT
+  if (mute_sensor_ == nullptr) return;
+  unsigned char bits[(SW_MAX + 8) / 8]{};
+  if (ioctl(input_fd_, EVIOCGBIT(EV_SW, sizeof(bits)), bits) < 0 || !bit_set(bits, SW_MUTE_DEVICE) ||
+      ioctl(input_fd_, EVIOCGSW(sizeof(bits)), bits) < 0) {
+    publish_mute_("Indisponible");
+    return;  // An optional input failure must never disable the three relays.
+  }
+  publish_mute_(bit_set(bits, SW_MUTE_DEVICE) ? "Actif" : "Inactif");
+#endif
 }
 
 void LocalRelays::setup_indicators_() {
@@ -144,6 +169,7 @@ void LocalRelays::fault_(const char *message) {
   if (!faulted_) ESP_LOGE(TAG, "%s; relay commands locked until restart", message);
   faulted_ = true;
   ready_ = false;
+  publish_mute_("Indisponible");
   status_set_warning(message);
   // Never force outputs OFF on a fault: loads must not be switched implicitly.
 }
@@ -220,7 +246,9 @@ bool LocalRelays::command(uint8_t channel, bool value) {
 }
 
 void LocalRelays::event_(uint16_t type, uint16_t code, int32_t value) {
-  if (type == EV_SYN && code == SYN_DROPPED) { dropped_ = true; return; }
+  if (type == EV_SYN && code == SYN_DROPPED) {
+    dropped_ = true; publish_mute_("Indisponible"); return;
+  }
   if (dropped_) {
     if (type == EV_SYN && code == SYN_REPORT) {
       if (!resync_keys_()) fault_("Cannot resynchronize keys");
@@ -232,6 +260,7 @@ void LocalRelays::event_(uint16_t type, uint16_t code, int32_t value) {
     // Identify the fourth input on site; never interpret it as KEY_POWER or
     // assign a shutdown/general relay action from an unverified label.
     ESP_LOGI(TAG, "SW_MUTE_DEVICE=%d (observation only, no action)", value);
+    publish_mute_(value ? "Actif" : "Inactif");
     return;
   }
   if (type != EV_KEY || code < KEY_F1 || code > KEY_F3 || (value != 0 && value != 1)) return;

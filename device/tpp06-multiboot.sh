@@ -1,5 +1,6 @@
 #!/bin/sh
 # TPP06_MULTIBOOT_V1
+# TPP06_RUNTIME_HEALTH_V1 -- optional, observe unless separately commissioned.
 # BusyBox/ash supervisor.  The stock SquashFS application is never modified.
 
 BASE=${TPP06_BASE:-/data/tpp06-cutter}
@@ -23,6 +24,7 @@ WPA_PID_FILE=$BASE/wpa_supplicant.pid
 DHCP_PID_FILE=$BASE/udhcpc.pid
 LOG_DIR=$BASE/diagnostics
 LOG_FILE=$LOG_DIR/multiboot.log
+HEARTBEAT_FILE=${TPP06_HEARTBEAT_FILE:-/tmp/tpp06-health/heartbeat}
 
 # Optional Wi-Fi editor: firmware OTA alone cannot change the boot/network policy.
 wifi_edit_in_progress() { return 1; }
@@ -59,6 +61,39 @@ write_state() {
     echo "$2" >"$BASE/$1.tmp" || return 1
     mv "$BASE/$1.tmp" "$BASE/$1" || return 1
     sync
+}
+
+trim_runtime_log() {
+    trim_path=$1
+    trim_limit=$2
+    [ -f "$trim_path" ] && [ ! -L "$trim_path" ] || return 0
+    # Every producer opens with >> / O_APPEND. Copy/truncate keeps its live
+    # descriptor attached; rename alone would leave it growing the old inode.
+    # Diagnostic lines written during the snapshot may be lost deliberately.
+    trim_size=$(wc -c < "$trim_path") || return 1
+    case "$trim_size" in ''|*[!0-9]*) return 1 ;; esac
+    [ "$trim_size" -gt "$trim_limit" ] || return 0
+    [ ! -L "$trim_path.previous" ] || return 1
+    if [ -e "$trim_path.previous" ] && [ ! -f "$trim_path.previous" ]; then return 1; fi
+    trim_tmp=$(mktemp "$LOG_DIR/.log-tail.XXXXXX") || return 1
+    if tail -c 65536 "$trim_path" > "$trim_tmp" &&
+       mv "$trim_tmp" "$trim_path.previous"; then
+        : > "$trim_path"
+        trim_result=$?
+        chmod 600 "$trim_path" "$trim_path.previous"
+        return "$trim_result"
+    fi
+    rm -f "$trim_tmp"
+    return 1
+}
+
+maintain_runtime_logs() {
+    # Retention limits checked each supervisor tick, not a hard byte quota.
+    # No configuration, executable, firmware dump or unknown log is deleted.
+    trim_runtime_log "$LOG_DIR/esphome.log" 1048576
+    trim_runtime_log "$LOG_DIR/openhasp.log" 1048576
+    trim_runtime_log "$LOG_DIR/wifi.log" 262144
+    trim_runtime_log "$LOG_DIR/tuya-factory.log" 262144
 }
 
 start_stock() {
@@ -310,8 +345,30 @@ fallback_stock() {
     start_stock
 }
 
+heartbeat_ready() {
+    # Backward-compatible observation by default. Requiring a heartbeat is a
+    # separate commissioning step after firmware AND helper validation.
+    case "$(read_value "$BASE/heartbeat_policy" observe)" in
+        observe) return 0 ;;
+        required-v1) ;;
+        *) return 1 ;;
+    esac
+    [ -f "$HEARTBEAT_FILE" ] && [ ! -L "$HEARTBEAT_FILE" ] || return 1
+    [ "$(wc -c < "$HEARTBEAT_FILE")" -le 96 ] || return 1
+    IFS=' ' read -r hb_version hb_pid hb_time hb_extra < "$HEARTBEAT_FILE" || return 1
+    [ "$hb_version" = 1 ] && [ "$hb_pid" = "$engine_pid" ] && [ -z "$hb_extra" ] || return 1
+    case "$hb_time" in ''|*[!0-9]*|0[0-9]*) return 1 ;; esac
+    [ "${#hb_time}" -le 9 ] || return 1
+    hb_now=$(cut -d. -f1 < "$PROC_ROOT/uptime") || return 1
+    case "$hb_now" in ''|*[!0-9]*) return 1 ;; esac
+    [ "${#hb_now}" -le 9 ] || return 1
+    # Monotonic boot time: changing the wall clock via HA cannot trigger this.
+    [ "$hb_time" -le "$hb_now" ] && [ "$((hb_now - hb_time))" -le 25 ]
+}
+
 persistent_health_ready() {
     kill -0 "$engine_pid" 2>/dev/null || return 1
+    heartbeat_ready || return 1
     if ! local_offline_policy && ! wifi_edit_in_progress; then
         wifi_associated && wlan_has_address || return 1
     fi
@@ -334,6 +391,7 @@ monitor_persistent() {
     unhealthy=0
     armed=no
     while kill -0 "$engine_pid" 2>/dev/null; do
+        maintain_runtime_logs
         if ! wifi_edit_tick && [ -f "$NETWORK_DIR/wifi-trial/pending" ]; then
             stop_owned_engine
             fallback_stock wifi-editor-failed
@@ -483,11 +541,7 @@ supervise() {
     write_state boot_pending "$(date +%s 2>/dev/null || echo pending):$requested"
     write_state active_mode "$requested-starting"
     engine_log=$LOG_DIR/$requested.log
-    if [ -f "$engine_log" ]; then
-        engine_log_size=$(wc -c <"$engine_log" 2>/dev/null || echo 0)
-        [ "$engine_log_size" -gt 1048576 ] && \
-            mv "$engine_log" "$engine_log.previous"
-    fi
+    maintain_runtime_logs
     log "starting custom engine=$requested grace=${GRACE_SECONDS}s"
 
     if [ "$requested" = esphome ]; then
@@ -502,6 +556,7 @@ supervise() {
 
     elapsed=0
     while [ "$elapsed" -lt "$GRACE_SECONDS" ]; do
+        maintain_runtime_logs
         if ! kill -0 "$engine_pid" 2>/dev/null; then
             increment_failure >/dev/null
             fallback_stock early-exit
@@ -517,6 +572,13 @@ supervise() {
         kill "$engine_pid" 2>/dev/null
         increment_failure >/dev/null
         fallback_stock api-not-listening
+        return
+    fi
+
+    if [ "$requested" = esphome ] && ! heartbeat_ready; then
+        stop_owned_engine
+        increment_failure >/dev/null
+        fallback_stock heartbeat-not-ready
         return
     fi
 
@@ -536,6 +598,7 @@ supervise() {
     if [ "$SESSION_SECONDS" -gt 0 ]; then
         while kill -0 "$engine_pid" 2>/dev/null && \
               [ "$elapsed" -lt "$SESSION_SECONDS" ]; do
+            maintain_runtime_logs
             sleep 2
             elapsed=$((elapsed + 2))
         done

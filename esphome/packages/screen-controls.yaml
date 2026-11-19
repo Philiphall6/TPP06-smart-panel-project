@@ -1,0 +1,91 @@
+# Optional companion to tpp06-lvgl-modern.yaml.
+# The panel's existing restored globals are the only preference store: changes
+# from HA and from Settings > Display converge without two competing restores.
+# This package neither pauses the screen nor changes brightness on startup.
+# [TPP06] RÉGLAGES HA : valeurs numériques
+number:
+  - platform: template
+    id: screen_brightness_control
+    name: "Luminosite ecran"
+    entity_category: config
+    icon: mdi:brightness-6
+    unit_of_measurement: "%"
+    min_value: 10
+    max_value: 100
+    step: 1
+    update_interval: 1s
+    lambda: |-
+      if (!id(panel_backlight).available()) return NAN;
+      return static_cast<float>(id(mobile_brightness));
+    set_action:
+      - lambda: |-
+          if (!std::isfinite(x) || x < 10 || x > 100 ||
+              !id(panel_backlight).available()) return;
+          const int percent = static_cast<int>(x);
+          // While sleeping this changes the next wake brightness, not sleep.
+          if (id(panel_backlight).set_percent(percent)) {
+            id(mobile_brightness) = percent;
+            id(screen_brightness_control).publish_state(percent);
+          } else {
+            // Restore the driver's next-wake target after a failed write.
+            id(panel_backlight).set_percent(id(mobile_brightness));
+          }
+      - script.execute: tpp06_refresh_menu
+
+# [TPP06] RÉGLAGES HA : listes de choix
+select:
+  - platform: template
+    id: screen_sleep_control
+    name: "Veille automatique ecran"
+    entity_category: config
+    icon: mdi:sleep
+    update_interval: 1s
+    options:
+      - Jamais
+      - 30 secondes
+      - 1 minute
+      - 2 minutes
+      - 5 minutes
+    lambda: |-
+      const char *const options[] = {"Jamais", "30 secondes", "1 minute", "2 minutes", "5 minutes"};
+      const int choice = id(mobile_sleep_choice);
+      if (choice < 0 || choice > 4) return {};
+      return std::string(options[choice]);
+    set_action:
+      - lambda: |-
+          const char *const options[] = {"Jamais", "30 secondes", "1 minute", "2 minutes", "5 minutes"};
+          for (int choice = 0; choice < 5; ++choice) {
+            if (x == options[choice]) {
+              // Disabling idle sleep remains possible if the driver failed.
+              if (choice != 0 && !id(panel_backlight).available()) return;
+              id(mobile_sleep_choice) = choice;
+              id(screen_sleep_control).publish_state(x);
+              return;
+            }
+          }
+      - script.execute: tpp06_refresh_menu
+
+# [TPP06] COMMANDES HA : boutons, redémarrage logiciel et panneau
+button:
+  - platform: template
+    id: screen_wake_control
+    name: "Reveiller ecran"
+    entity_category: config
+    icon: mdi:monitor
+    on_press:
+      - if:
+          condition:
+            lambda: return id(panel_backlight).available();
+          then:
+            - lvgl.resume:
+
+# [TPP06] ÉTATS : indicateurs binaires
+binary_sensor:
+  - platform: template
+    id: screen_sleep_state
+    name: "Ecran en veille"
+    entity_category: diagnostic
+    icon: mdi:monitor-off
+    lambda: |-
+      if (!id(panel_backlight).available()) return {};
+      return id(mobile_ui).is_paused();

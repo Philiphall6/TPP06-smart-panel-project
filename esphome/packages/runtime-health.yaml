@@ -1,0 +1,18 @@
+# Requires tpp06_health from the same release (v0.1.7 or newer).
+# Observe heartbeat first; this package does NOT arm the Linux watchdog policy.
+tpp06_health:
+  id: panel_health
+  heartbeat: true
+  wifi_signal_via_wpa: true
+  network_interface: ${network_interface}
+  update_interval: 5s
+  memory:
+    name: "Memoire disponible et totale"
+  wifi_signal:
+    name: "Signal Wi-Fi Linux"
+  link:
+    name: "Liaison reseau Linux"
+  supervisor:
+    name: "Superviseur Linux"
+  ota_capacity:
+    name: "Marge stockage OTA"

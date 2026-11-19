@@ -1,5 +1,7 @@
 # TPP06 · ESPHome + LVGL, en local
 
+[![Téléchargements des assets de la dernière release](https://img.shields.io/github/downloads/Philiphall6/TPP06-smart-panel-project/latest/total?label=assets%20t%C3%A9l%C3%A9charg%C3%A9s)](https://github.com/Philiphall6/TPP06-smart-panel-project/releases/latest)
+
 Une interface tactile personnalisable pour le panneau **MOES / Tuya TPP06**,
 reliée à Home Assistant. ESPHome fonctionne sur le **Linux Anyka d’origine** :
 ce n’est pas un ESP32 et il ne faut pas lui envoyer un firmware ESP32.
@@ -29,6 +31,9 @@ ce n’est pas un ESP32 et il ne faut pas lui envoyer un firmware ESP32.
 - Logo Home Assistant bleu animé lorsqu’un client HA est connecté, gris sinon ;
   petite horloge et Wi-Fi uniquement dans la barre supérieure de l’accueil.
 - Pages volet et lumières, paramètres, luminosité, veille et diagnostics.
+- Détection des annonces BLE vers HA, activable dans HA et les paramètres
+  (expérimental, sans GATT ni audio), et commandes HA du rétroéclairage.
+- Page des trois relais locaux, plages de silence et diagnostics RAM/réseau/OTA.
 - Bip tactile local, actif par défaut et désactivable avec choix mémorisé.
 - Trois relais locaux avec boutons physiques et voyants, exposés dans HA.
   Le modèle public reste en **observation par défaut** avant validation du matériel.
@@ -51,6 +56,14 @@ ni serveur de compilation externe obligatoire. Le [YAML complet](esphome/tpp06-l
 reste éditable : pages, titres, couleurs et entités. Pour une installation
 reproductible, prendre les sources du tag indiqué dans la dernière release,
 pas une copie arbitraire de `main`.
+
+Télécharger **`TPP06-HA-Panel-v<version>-sources.zip`** et son fichier SHA256
+depuis la dernière release. Le compteur indique les téléchargements des assets,
+pas le nombre d'installations ; sa mise à jour peut être différée.
+Le [modèle complet avec les nouveaux modules](esphome/tpp06-lvgl-complete.yaml)
+et le [guide BLE, écran et sections YAML](docs/fr/20-ble-ecran-yaml.md)
+expliquent quoi personnaliser. Les relais restent en observation dans le modèle
+public : conserver son réglage existant sur un panneau déjà validé.
 
 | Votre situation | Prochaine étape |
 | --- | --- |
@@ -82,6 +95,7 @@ opération NAND distincte, facultative et avancée.
 - [Relais locaux](docs/fr/14-relais-locaux.md) · [Bip tactile](docs/fr/15-bip-tactile.md)
 - [Wi-Fi depuis les paramètres](docs/fr/17-wifi-depuis-ecran.md)
 - [Fonctions Tuya restantes](docs/fr/16-ecarts-tuya.md)
+- [Consolidation Linux : candidat et suivi des 22 domaines](docs/fr/18-consolidation-linux.md)
 - [Accès réseau](docs/fr/00-acces-reseau-authkey.md) · [Tuya Cutter](docs/fr/07-tuya-cutter.md)
 - [Portage ESPHome et historique](docs/fr/06-esphome-lvgl-natif.md)
 - [openHASP — autre voie expérimentale](docs/fr/05-openhasp-local.md)

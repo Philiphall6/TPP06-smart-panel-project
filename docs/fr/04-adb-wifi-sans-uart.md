@@ -26,9 +26,9 @@ mise à jour Tuya peut cependant supprimer ou remplacer l'overlay.
 
 ### Capture de la console validée
 
-![Connexion ADB Wi-Fi au TPP06, shell root et noyau Tuya](../../media/adb-wifi/console-adb-wifi.png)
-
-Le mot de passe est volontairement masqué et l'`AUTHKEY` n'est jamais affiché.
+Les anciennes captures de console ne sont plus distribuées pour préserver
+les adresses d'installation. Utiliser l'adresse de son panneau ; ne publier
+ni mot de passe, ni `AUTHKEY`, ni capture brute de sa session.
 
 ## Prérequis
 

@@ -7,7 +7,8 @@
 
 ## Références
 
-- ![Carte avec NAND](../../../media/carte-et-remontage/01-carte-avec-nand.jpg)
+- La vue d'ensemble portant une étiquette d'identification du panneau n'est
+  pas distribuée ; les détails de la NAND ci-dessous restent disponibles.
 - Référence recto : photographie historique non distribuée dans le dépôt.
 - ![NAND et SoC](../../../media/carte-et-remontage/07-reference-nand-soc.jpg)
 

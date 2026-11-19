@@ -7,9 +7,9 @@ kernel `4.4.192V2.4` dated 13 December 2024.
 
 ## Verified console capture
 
-![TPP06 ADB over Wi-Fi, root shell, and Tuya kernel](../../media/adb-wifi/console-adb-wifi.png)
-
-The password is deliberately masked and the `AUTHKEY` is never displayed.
+Old console screenshots are no longer distributed to protect installation
+addresses. Use your own panel address; never publish a password, `AUTHKEY`
+or raw screenshot of your session.
 
 > **Warning.** The `bootpicture` update handler deletes and replaces
 > `/data/app` and `/data/customize`. A different hardware or firmware revision

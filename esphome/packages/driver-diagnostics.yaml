@@ -1,0 +1,32 @@
+# Optional: modern UI plus the commissioned local-relay hub.
+# Read-only availability, not proof that a physical output operated correctly.
+# [TPP06] IMPORTS ET DIAGNOSTICS : textes, météo, lumières et volet HA
+text_sensor:
+  - platform: template
+    id: local_relay_driver_health
+    name: "Pilote relais locaux"
+    entity_category: diagnostic
+    update_interval: 10s
+    lambda: |-
+      return std::string(id(panel_relays).control_available() ? "Pilotage local disponible" : "Desactive ou indisponible");
+  - platform: template
+    id: local_buzzer_driver_health
+    name: "Pilote retour sonore"
+    entity_category: diagnostic
+    update_interval: 10s
+    lambda: |-
+      return std::string(id(panel_buzzer).available() ? "Pilote disponible" : "Pilote indisponible");
+  - platform: template
+    id: local_backlight_driver_health
+    name: "Pilote retroeclairage"
+    entity_category: diagnostic
+    update_interval: 10s
+    lambda: |-
+      return std::string(id(panel_backlight).available() ? "Pilote initialise" : "Pilote indisponible");
+  - platform: template
+    id: local_wifi_editor_health
+    name: "Service configuration Wi-Fi"
+    entity_category: diagnostic
+    update_interval: 10s
+    lambda: |-
+      return std::string(id(panel_wifi_editor).available() ? "Pret pour une demande" : "Indisponible ou occupe");

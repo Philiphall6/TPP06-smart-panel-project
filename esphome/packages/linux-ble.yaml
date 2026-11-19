@@ -1,0 +1,139 @@
+# Requires the external, host-only bluetooth_proxy from this checkout.
+# Advertisement detection only: no GATT, pairing or audio.
+# Start disabled; the one persisted switch is shared by HA and the screen.
+# [TPP06] BLUETOOTH : annonces BLE vers Home Assistant
+bluetooth_proxy:
+  id: panel_ble_proxy
+  controller: 0
+
+# [TPP06] RÉGLAGES HA : interrupteurs et préférences
+switch:
+  - platform: template
+    id: ble_detection
+    name: "Detection Bluetooth BLE"
+    icon: mdi:bluetooth
+    entity_category: config
+    restore_mode: RESTORE_DEFAULT_OFF
+    lambda: return id(panel_ble_proxy).enabled();
+    turn_on_action:
+      - lambda: id(panel_ble_proxy).set_enabled(true);
+    turn_off_action:
+      - lambda: id(panel_ble_proxy).set_enabled(false);
+
+# [TPP06] IMPORTS ET DIAGNOSTICS : textes, météo, lumières et volet HA
+text_sensor:
+  - platform: template
+    id: ble_detection_status
+    name: "Etat detection BLE"
+    entity_category: diagnostic
+    update_interval: 2s
+    lambda: return std::string(id(panel_ble_proxy).status());
+
+# [TPP06] IMPORTS ET MESURES : température, humidité, position et luminosité
+sensor:
+  - platform: template
+    id: ble_advertisements_received
+    name: "Annonces BLE recues"
+    accuracy_decimals: 0
+    state_class: total_increasing
+    entity_category: diagnostic
+    update_interval: 10s
+    lambda: return id(panel_ble_proxy).received();
+  - platform: template
+    id: ble_advertisements_forwarded
+    name: "Annonces BLE transmises"
+    accuracy_decimals: 0
+    state_class: total_increasing
+    entity_category: diagnostic
+    update_interval: 10s
+    lambda: return id(panel_ble_proxy).forwarded();
+
+# [TPP06] ACTUALISATION : tâches périodiques
+interval:
+  - interval: 2s
+    then:
+      - lvgl.label.update:
+          id: ble_status_label
+          text: !lambda return std::string(id(panel_ble_proxy).status());
+      - lvgl.label.update:
+          id: ble_switch_label
+          text: !lambda |-
+            return std::string(id(panel_ble_proxy).enabled() ? "Desactiver la detection" : "Activer la detection");
+      - lvgl.label.update:
+          id: ble_counts_label
+          text: !lambda |-
+            return str_sprintf("Recues : %u\nTransmises : %u", id(panel_ble_proxy).received(), id(panel_ble_proxy).forwarded());
+
+# [TPP06] INTERFACE : styles, navigation et pages tactiles
+lvgl:
+  pages:
+    - id: !extend page_menu
+      widgets:
+        - button:
+            x: 232
+            y: 60
+            width: 72
+            height: 36
+            styles: mobile_card
+            widgets:
+              - label: {align: CENTER, text: "BLE", text_font: montserrat_14}
+            on_click:
+              - lvgl.page.show: page_ble_settings
+    # [TPP06] VUE BLUETOOTH : détection et compteurs BLE
+    - id: page_ble_settings
+      bg_color: "${ui_background}"
+      on_load:
+        - globals.set: {id: mobile_active_nav, value: '4'}
+        - script.execute: tpp06_refresh_menu
+      widgets:
+        - label: {x: 20, y: 60, text: "Bluetooth BLE", text_font: montserrat_28}
+        - label:
+            x: 20
+            y: 104
+            width: 280
+            text_font: montserrat_12
+            text_color: "${ui_muted}"
+            text: "Detection pour Home Assistant"
+        - obj:
+            x: 16
+            y: 132
+            width: 288
+            height: 100
+            styles: mobile_card
+            widgets:
+              - label:
+                  id: ble_status_label
+                  x: 16
+                  y: 14
+                  width: 256
+                  height: 64
+                  long_mode: WRAP
+                  text: "Initialisation"
+        - button:
+            x: 16
+            y: 242
+            width: 288
+            height: 48
+            styles: mobile_card
+            widgets:
+              - label: {id: ble_switch_label, align: CENTER, text: "Activer la detection", text_font: montserrat_14}
+            on_click:
+              - switch.toggle: ble_detection
+        - label:
+            id: ble_counts_label
+            x: 24
+            y: 302
+            width: 272
+            height: 44
+            text_font: montserrat_14
+            text: "Recues : 0\nTransmises : 0"
+        - button:
+            x: 16
+            y: 354
+            width: 288
+            height: 44
+            styles: mobile_card
+            widgets:
+              - label: {align: CENTER, text: "Retour aux parametres", text_font: montserrat_14}
+            on_click:
+              - lvgl.page.show: page_menu

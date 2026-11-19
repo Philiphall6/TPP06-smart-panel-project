@@ -1,0 +1,9 @@
+# Requires local-relays-experimental.yaml (or an equivalent commissioned hub).
+# This is EV_SW/SW_MUTE_DEVICE, NOT a verified Power button or microphone mute.
+# No relay, beep, reboot or audio command is attached to this diagnostic.
+# [TPP06] IMPORTS ET DIAGNOSTICS : textes, météo, lumières et volet HA
+text_sensor:
+  - platform: tpp06_local_relays
+    relays_id: panel_relays
+    id: panel_mute_input
+    name: "Entree mute Linux (observation)"

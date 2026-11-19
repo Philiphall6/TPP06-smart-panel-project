@@ -38,7 +38,8 @@ def render(source: Path, page_ids=None, ha_connected=True) -> str:
     config = yaml.load(source.read_text(), Loader=PublicLoader)
     substitutions = config["substitutions"]
     ui = config["lvgl"]
-    modern = config["esphome"]["project"]["version"].startswith("0.1.6")
+    # Detect the layout, not a release number that changes at publication.
+    modern = any(page["id"] == "page_weather" for page in ui["pages"])
     version = "" if modern else "V5 "
     pages = [p for p in ui["pages"] if page_ids is None or p["id"] in page_ids]
     styles = {s["id"]: s for s in ui["style_definitions"]}

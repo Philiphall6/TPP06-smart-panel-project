@@ -190,7 +190,7 @@ void Buzzer::loop() {
 }
 void Buzzer::click() {
   const uint32_t now = millis();
-  if (!enabled() || joinable_ || (seen_click_ && uint32_t(now - last_click_) < 200)) return;
+  if (!enabled() || quiet_.load() || joinable_ || (seen_click_ && uint32_t(now - last_click_) < 200)) return;
   seen_click_ = true; last_click_ = now;
   finished_.store(false);
   int rc = pthread_create(&worker_id_, nullptr, worker_, this);

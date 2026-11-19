@@ -1,5 +1,9 @@
 # Tuya feature parity: remaining gaps
 
+Update: see the [Linux hardening candidate and 22-area tracking](18-linux-hardening.md).
+This page retains the original inventory; prepared code is not a claim of
+deployment or hardware validation.
+
 Read-only inventory dated 18 November 2026, comparing the private stock dump,
 project code and reference panel. No factory test, IR transmission, Bluetooth
 command, sound, relay change or reboot was performed for this audit.

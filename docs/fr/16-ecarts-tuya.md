@@ -1,5 +1,9 @@
 # Fonctions Tuya : écarts et vérifications restantes
 
+Mise à jour : voir le [suivi des 22 domaines et les correctifs candidats](18-consolidation-linux.md).
+Ce document conserve l'état de l'inventaire initial ; « préparé » ne signifie
+pas installé ou validé sur le matériel.
+
 Inventaire du 18 novembre 2026, à partir du firmware sauvegardé, du code du
 projet et de lectures du panneau de référence. Aucun test usine, émission IR,
 commande Bluetooth, son, changement de relais ou redémarrage pour cet audit.

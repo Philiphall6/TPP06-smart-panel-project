@@ -1,0 +1,74 @@
+# Modèle complet portable. Compiler dans ESPHome Device Builder sur HA.
+# Aucun Wi-Fi, mot de passe, adresse IP ou appareil personnel n'est inclus.
+# Garder l'identité et les clés de votre installation lors d'une mise à jour.
+# Les imports sont figés sur la même release ; pas de suivi automatique de main.
+
+# [TPP06] 01 — PERSONNALISATION : noms, entités HA, matériel et couleurs
+substitutions:
+  device_name: "tpp06-lvgl"
+  device_address: "${device_name}.local"
+  friendly_name: "TPP06 ESPHome LVGL"
+  api_encryption_key: !secret tpp06_api_encryption_key
+  # IMPORTER VOS ENTITÉS HOME ASSISTANT ICI
+  cover_entity: "cover.tpp06_example_cover"
+  cave_light_entity: "light.tpp06_example_light_1"
+  bar_light_entity: "light.tpp06_example_light_2"
+  weather_entity: "weather.tpp06_example"
+  weather_location: "Chez vous"
+  # Libellés de la page des trois relais physiques, distincts des lumières HA.
+  local_relay_1_label: "Relais 1"
+  local_relay_2_label: "Relais 2"
+  local_relay_3_label: "Relais 3"
+
+# [TPP06] 02 — MODULES : imports des fonctionnalités complémentaires
+packages:
+  release:
+    url: https://github.com/Philiphall6/TPP06-smart-panel-project
+    ref: v0.1.7
+    files:
+      - esphome/tpp06-lvgl-modern.yaml
+      - esphome/packages/local-relays-experimental.yaml
+      - esphome/packages/runtime-health.yaml
+      - esphome/packages/mute-input-observation.yaml
+      - esphome/packages/local-controls-ui.yaml
+      - esphome/packages/driver-diagnostics.yaml
+      - esphome/packages/screen-controls.yaml
+      - esphome/packages/linux-ble.yaml
+    refresh: never
+
+# Tous les pilotes de cette liste proviennent du même tag que les packages.
+# [TPP06] 04 — PILOTES : sources et version des composants Linux
+external_components:
+  - source:
+      type: git
+      url: https://github.com/Philiphall6/TPP06-smart-panel-project
+      ref: v0.1.7
+      path: esphome-components
+    refresh: never
+    components:
+      - evdev
+      - fbdev
+      - host
+      - md5
+      - sha256
+      - tpp06_compat
+      - tpp06_mdns
+      - tpp06_backlight
+      - tpp06_ui
+      - tpp06_buzzer
+      - tpp06_system
+      - tpp06_wifi
+      - tpp06_health
+      - tpp06_local_relays
+      - bluetooth_proxy
+
+# SÉCURITÉ : première mise en service en observation, aucune sortie commandée.
+# Après validation sur place seulement : passer control_enabled à true.
+# Mise à jour d'un panneau déjà validé : reporter votre réglage existant.
+tpp06_local_relays:
+  control_enabled: false
+
+# [TPP06] BUILDER : modèle public proposé à l'import
+dashboard_import:
+  package_import_url: github://Philiphall6/TPP06-smart-panel-project/esphome/tpp06-lvgl-complete.yaml@v0.1.7
+  import_full_config: true

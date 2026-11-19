@@ -41,6 +41,7 @@ PROGRAM = r'''
 #include <sys/ioctl.h>
 #include <sys/utsname.h>
 #include "local_relays.h"
+#include "esphome/components/text_sensor/text_sensor.h"
 using namespace esphome::tpp06_local_relays;
 struct Event { int32_t sec, us; uint16_t type, code; int32_t value; };
 struct File { std::string path; size_t offset; int flags; };
@@ -53,6 +54,7 @@ static int writes = 0, led_writes = 0, next_fd = 100;
 static bool stock = false, stock_iter = false, bad_kernel = false, bad_keys = false;
 static bool short_write = false, wrong_readback = false, short_event = false, lock_busy = false;
 static bool lock_read_only = false;
+static bool mute_value = false, mute_supported = true;
 namespace esphome { uint32_t millis() { return now; } }
 
 extern "C" int __wrap_uname(struct utsname *u) {
@@ -115,6 +117,14 @@ extern "C" int __wrap_ioctl(int fd, unsigned long request, ...) {
   assert(fd == 80);
   va_list ap; va_start(ap, request); void *arg = va_arg(ap, void*); va_end(ap);
   constexpr size_t n = (KEY_MAX+8)/8;
+  constexpr size_t sw_n = (SW_MAX+8)/8;
+  if (request == EVIOCGBIT(EV_SW,sw_n) || request == EVIOCGSW(sw_n)) {
+    std::memset(arg, 0, sw_n);
+    if (!mute_supported) return -1;
+    if (request == EVIOCGBIT(EV_SW,sw_n) || mute_value)
+      static_cast<unsigned char*>(arg)[SW_MUTE_DEVICE/8] |= 1U << (SW_MUTE_DEVICE%8);
+    return sw_n;
+  }
   if (request == EVIOCGNAME(64)) { std::strcpy(static_cast<char*>(arg), bad_keys ? "goodix-ts" : "gpiokeys"); return 9; }
   if (request == EVIOCGKEY(n) || request == EVIOCGBIT(EV_KEY,n)) {
     std::memset(arg, 0, n); auto *bits = static_cast<unsigned char*>(arg);
@@ -151,6 +161,24 @@ struct Fixture {
   void event(int code, int value) { events.push_back({0,0,EV_KEY,uint16_t(code),value}); hub.loop(); }
 };
 int main() {
+  reset();
+  { Fixture f; esphome::text_sensor::TextSensor sensor; f.hub.set_mute_sensor(&sensor);
+    f.hub.setup(); assert(sensor.state=="Inactif" && writes==0);
+    events.push_back({0,0,EV_SW,SW_MUTE_DEVICE,1}); f.hub.loop();
+    assert(sensor.state=="Actif" && writes==0);
+    events.push_back({0,0,EV_SYN,SYN_DROPPED,0}); f.hub.loop();
+    assert(sensor.state=="Indisponible");
+    events.push_back({0,0,EV_SW,SW_MUTE_DEVICE,1}); f.hub.loop();
+    assert(sensor.state=="Indisponible");
+    events.push_back({0,0,EV_SYN,SYN_REPORT,0}); f.hub.loop();
+    assert(sensor.state=="Inactif" && writes==0 && f.hub.control_available());
+  }
+  reset(); mute_supported=false;
+  { Fixture f; esphome::text_sensor::TextSensor sensor; f.hub.set_mute_sensor(&sensor);
+    f.hub.setup(); assert(sensor.state=="Indisponible" && f.hub.control_available());
+    f.event(KEY_F1,1); assert(writes==1);
+  }
+  mute_supported=true;
   reset();
   {
     fs[value_path(1)] = "1\n";
@@ -244,6 +272,7 @@ class LocalRelayNativeTests(unittest.TestCase):
             for name, content in {
                 "esphome/core/component.h": COMPONENT,
                 "esphome/components/switch/switch.h": SWITCH,
+                "esphome/components/text_sensor/text_sensor.h": '#pragma once\n#include <string>\nnamespace esphome::text_sensor {class TextSensor {public:std::string state;void publish_state(const std::string &v){state=v;}};}\n',
                 "esphome/core/hal.h": '#include <cstdint>\nnamespace esphome { uint32_t millis(); }\n',
                 "esphome/core/log.h": '\n'.join('#define '+macro+'(...) ((void)0)' for macro in
                     ("ESP_LOGE", "ESP_LOGW", "ESP_LOGI", "ESP_LOGCONFIG"))+'\n',
@@ -252,7 +281,7 @@ class LocalRelayNativeTests(unittest.TestCase):
                 path = base/name; path.parent.mkdir(parents=True, exist_ok=True); path.write_text(content)
             driver = ROOT/"esphome-components/tpp06_local_relays"
             binary = base/"test"
-            command = ["g++", "-std=c++17", "-DUSE_HOST", "-I"+str(base), "-I"+str(driver),
+            command = ["g++", "-std=c++17", "-DUSE_HOST", "-DUSE_TPP06_MUTE_INPUT", "-I"+str(base), "-I"+str(driver),
                        str(base/"test.cpp"), str(driver/"local_relays.cpp"), "-o", str(binary)]
             command += ["-Wl,--wrap="+name for name in (
                 "uname", "opendir", "readdir", "closedir", "open", "close", "flock", "read", "write", "ioctl")]

@@ -1,5 +1,7 @@
 # TPP06 — local ESPHome + LVGL
 
+[![Latest release asset downloads](https://img.shields.io/github/downloads/Philiphall6/TPP06-smart-panel-project/latest/total?label=asset%20downloads)](https://github.com/Philiphall6/TPP06-smart-panel-project/releases/latest)
+
 **[Latest release: version, changes and limitations](https://github.com/Philiphall6/TPP06-smart-panel-project/releases/latest)** ·
 [Release history](https://github.com/Philiphall6/TPP06-smart-panel-project/releases)
 
@@ -23,6 +25,8 @@
 - Home Assistant logo gently pulses blue with a connected HA client, grey
   otherwise. Small clock and Wi-Fi appear in the home page’s top bar only.
 - Cover/light pages, settings, brightness, sleep and diagnostics.
+- Experimental BLE advertisement forwarding to HA, controlled from HA and the
+  panel (no GATT/audio), plus HA backlight controls and local quiet hours.
 - Local touch beep, enabled by default with a remembered off setting.
 - Three physical buttons, local relays and indicators exposed in HA.
   Public configuration defaults to **observation-only** pending hardware checks.
@@ -43,6 +47,13 @@ Compile in Home Assistant’s ESPHome Device Builder; no Mint workstation or
 external build server is required. The [complete YAML](esphome/tpp06-lvgl-modern.yaml)
 is editable. Use the latest release’s tagged sources for reproducibility;
 keep your own keys, addresses and entity bindings private.
+
+Download **`TPP06-HA-Panel-v<version>-sources.zip`** and its SHA256 file from
+the latest release. The badge counts asset downloads, not installations, and
+may be cached. The [complete template](esphome/tpp06-lvgl-complete.yaml) adds
+the new modules; see [BLE, screen and YAML sections](docs/en/20-ble-screen-yaml.md).
+Public relay control defaults to observation: retain the commissioned setting
+when updating an already validated panel.
 
 1. **Already running ESPHome:** [update wirelessly](docs/en/START-HERE.md#5-update-a-panel-already-running-esphome).
    Do not reinstall the overlay or supervisor for a UI update.
@@ -69,6 +80,7 @@ not an end-to-end hardware validation for unassisted beginners.
 - [Local relays](docs/en/14-local-relays.md) · [Touch beep](docs/en/15-touch-beep.md)
 - [On-screen Wi-Fi settings](docs/en/17-screen-wifi.md)
 - [Remaining Tuya feature gaps](docs/en/16-tuya-gaps.md)
+- [Linux hardening candidate and validation gates](docs/en/18-linux-hardening.md)
 - [Network access](docs/en/00-network-authkey-access.md) · [Tuya Cutter](docs/en/07-tuya-cutter.md)
 - [Native port history](docs/en/06-native-esphome-lvgl.md) · [openHASP](docs/en/05-openhasp-local.md)
 - [Boot logo: separate optional advanced NAND operation, not OTA](docs/en/12-boot-logo.md)

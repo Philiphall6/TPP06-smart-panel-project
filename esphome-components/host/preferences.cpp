@@ -1,16 +1,14 @@
 #ifdef USE_HOST
 
-#include <filesystem>
-#include <fstream>
 #include <cerrno>
 #include <cstring>
 #include <sys/stat.h>
 #include "preferences.h"
+#include "preferences_file.h"
 #include "esphome/core/application.h"
 #include "esphome/core/log.h"
 
 namespace esphome::host {
-namespace fs = std::filesystem;
 
 static const char *const TAG = "preferences";
 
@@ -29,6 +27,9 @@ static bool create_directories_legacy(const std::string &path) {
         current += '/';
       current += part;
       if (::mkdir(current.c_str(), 0755) != 0 && errno != EEXIST)
+        return false;
+      struct stat st {};
+      if (::stat(current.c_str(), &st) != 0 || !S_ISDIR(st.st_mode))
         return false;
     }
     if (end == std::string::npos)
@@ -53,7 +54,7 @@ void HostPreferences::setup_() {
     }
     pref_path = std::string(home) + "/.esphome/prefs";
   }
-  if (!create_directories_legacy(pref_path)) {
+  if (pref_path.empty() || !create_directories_legacy(pref_path)) {
     ESP_LOGE(TAG, "Failed to create preferences directory: %s (%s)", pref_path.c_str(), std::strerror(errno));
     return;
   }
@@ -61,22 +62,24 @@ void HostPreferences::setup_() {
   this->filename_.append("/");
   this->filename_.append(App.get_name());
   this->filename_.append(".prefs");
-  FILE *fp = fopen(this->filename_.c_str(), "rb");
-  if (fp != nullptr) {
-    while (!feof(fp)) {
-      uint32_t key;
-      uint8_t len;
-      if (fread(&key, sizeof(key), 1, fp) != 1)
-        break;
-      if (fread(&len, sizeof(len), 1, fp) != 1)
-        break;
-      uint8_t data[len];
-      if (fread(data, sizeof(uint8_t), len, fp) != len)
-        break;
-      std::vector vec(data, data + len);
-      this->data_[key] = vec;
-    }
-    fclose(fp);
+  const std::string legacy_filename = this->filename_;
+  this->filename_.append(".v2");
+  bool loaded = preference_file::load(this->filename_, this->data_);
+  if (!loaded && preference_file::load(this->filename_ + ".bak", this->data_)) {
+    loaded = true;
+    ESP_LOGW(TAG, "Recovered preferences from previous valid copy");
+    this->dirty_ = true;
+  }
+  struct stat st {};
+  const bool primary_missing = ::lstat(this->filename_.c_str(), &st) != 0 && errno == ENOENT;
+  const bool backup_missing = ::lstat((this->filename_ + ".bak").c_str(), &st) != 0 && errno == ENOENT;
+  if (primary_missing && backup_missing && preference_file::load(legacy_filename, this->data_, true)) {
+    // Leave the old format intact for an old application used as recovery.
+    // Never resurrect legacy settings over a present but damaged v2 store.
+    this->dirty_ = true;
+    ESP_LOGI(TAG, "Migrating legacy preferences; original copy retained");
+  } else if (!loaded && (!primary_missing || !backup_missing)) {
+    ESP_LOGW(TAG, "No valid preference copy; defaults used, legacy not resurrected");
   }
   this->setup_complete_ = true;
 }
@@ -87,24 +90,22 @@ bool HostPreferences::sync() {
     ESP_LOGE(TAG, "Preferences filename not set, unable to save preferences");
     return false;
   }
-  FILE *fp = fopen(this->filename_.c_str(), "wb");
-  if (fp == nullptr) {
-    ESP_LOGE(TAG, "Failed to open preferences file for writing: %s", this->filename_.c_str());
+  if (!this->dirty_)
+    return true;
+  if (!preference_file::save(this->filename_, this->data_)) {
+    ESP_LOGE(TAG, "Atomic preference save failed; will retry");
     return false;
   }
-
-  for (auto &it : this->data_) {
-    fwrite(&it.first, sizeof(uint32_t), 1, fp);
-    uint8_t len = it.second.size();
-    fwrite(&len, sizeof(len), 1, fp);
-    fwrite(it.second.data(), sizeof(uint8_t), it.second.size(), fp);
-  }
-  fclose(fp);
+  this->dirty_ = false;
   return true;
 }
 
 bool HostPreferences::reset() {
-  host_preferences->data_.clear();
+  this->setup_();
+  if (!this->setup_complete_)
+    return false;
+  this->data_.clear();
+  this->dirty_ = true;
   return true;
 }
 

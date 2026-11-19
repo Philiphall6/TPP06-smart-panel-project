@@ -30,7 +30,8 @@ Sélectionner le modèle exact et utiliser l’adaptateur approprié. Vérifier 
 - ![Sélection dans XGPro](../../../media/lecture-nand/06-xgpro-selection.png)
 - ![Lecture en cours](../../../media/lecture-nand/09-lecture-en-cours.png)
 - ![Lecture vérifiée](../../../media/lecture-nand/10-lecture-verifiee.png)
-- ![Contenu lu](../../../media/lecture-nand/11-contenu-de-sauvegarde.png)
+- Le contenu brut d'une sauvegarde n'est pas illustré : il peut contenir
+  des empreintes de mots de passe et des identifiants propres au panneau.
 
 Ne jamais cliquer sur **Erase** ou **Program** pour effectuer une sauvegarde.
 

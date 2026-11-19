@@ -1,5 +1,7 @@
 # TPP06 — documentation française
 
+[![Téléchargements des assets de la dernière release](https://img.shields.io/github/downloads/Philiphall6/TPP06-smart-panel-project/latest/total?label=assets%20t%C3%A9l%C3%A9charg%C3%A9s)](https://github.com/Philiphall6/TPP06-smart-panel-project/releases/latest)
+
 **[Dernière release : version, nouveautés et limites](https://github.com/Philiphall6/TPP06-smart-panel-project/releases/latest)**
 
 **[Guide débutant : commencer ici, sans démontage](docs/fr/DEMARRER-ICI.md)**
@@ -24,11 +26,19 @@ Device Builder sur Home Assistant ; aucun poste Mint imposé. Le
 secrets restent locaux. Prendre les sources du tag de la dernière release
 pour conserver ensemble les versions des pilotes et de l’interface.
 
+Le paquet **`TPP06-HA-Panel-v<version>-sources.zip`**, accompagné de son SHA256,
+se trouve dans la dernière release. Le compteur suit les téléchargements des
+assets, pas les installations. Le [modèle complet](esphome/tpp06-lvgl-complete.yaml)
+ajoute BLE, réglages d'écran dans HA, relais locaux, silence et diagnostics.
+Lire le [guide BLE, écran et YAML commenté](docs/fr/20-ble-ecran-yaml.md) :
+les relais du modèle public restent en observation avant validation sur place.
+
 - [Interface actuelle : météo, logo animé, navigation et paramètres](docs/fr/interface.md)
 - [Relais physiques et HA](docs/fr/14-relais-locaux.md)
 - [Bip tactile configurable](docs/fr/15-bip-tactile.md)
 - [Wi-Fi depuis le panneau et limites du service Linux](docs/fr/17-wifi-depuis-ecran.md)
 - [Écarts avec Tuya et vérifications restantes](docs/fr/16-ecarts-tuya.md)
+- [Consolidation Linux : candidat et suivi des 22 domaines](docs/fr/18-consolidation-linux.md)
 - [Logo de démarrage — opération NAND distincte de l’OTA](docs/fr/12-logo-demarrage.md)
 
 ## Installation et récupération

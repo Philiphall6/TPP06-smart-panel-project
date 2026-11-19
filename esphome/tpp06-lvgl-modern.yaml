@@ -3,6 +3,7 @@
 # Requires the optional Linux supervisor helper in addition to a firmware OTA.
 # Compile in HA; no automatic reboot, Wi-Fi switch or boot-policy activation.
 # Earlier templates remain available separately. Sound defaults ON; user OFF is saved.
+# [TPP06] 01 — PERSONNALISATION : noms, entités HA, matériel et couleurs
 substitutions:
   device_name: "tpp06-lvgl"
   # Use a unique device_name per panel. Keep a known IP during the first migration.
@@ -34,6 +35,7 @@ substitutions:
   ui_muted: "0x9DA5B4"
   api_encryption_key: !secret tpp06_api_encryption_key
 
+# [TPP06] 03 — APPLICATION : identité, démarrage et compilation
 esphome:
   name: "${device_name}"
   friendly_name: "${friendly_name}"
@@ -89,7 +91,7 @@ esphome:
       - lambda: id(panel_backlight).set_percent(id(mobile_brightness));
   project:
     name: philiphall6.tpp06
-    version: "0.1.6-glass.2-dev"
+    version: "0.1.7"
   build_flags:
     - -static
     # Keep debug/symbol tables out of the OTA payload on the small /data volume.
@@ -103,11 +105,12 @@ esphome:
     - -Wl,-u,pthread_mutex_destroy
     - -Wl,-u,pthread_self
 
+# [TPP06] 04 — PILOTES : sources et version des composants Linux
 external_components:
   - source:
       type: git
       url: https://github.com/Philiphall6/TPP06-smart-panel-project
-      ref: v0.1.6
+      ref: v0.1.7
       path: esphome-components
     refresh: 5min
     components:
@@ -137,6 +140,7 @@ tpp06_buzzer:
 # Same ESPHome device as the local relay entities; no extra HA integration.
 # Two explicit actions. Device reboot interrupts the network; relay states
 # across a full Linux boot are not guaranteed. Neither button runs at startup.
+# [TPP06] COMMANDES HA : boutons, redémarrage logiciel et panneau
 button:
   - platform: tpp06_system
     id: panel_restart
@@ -148,6 +152,7 @@ button:
     mode: device
     icon: mdi:power-cycle
 
+# [TPP06] RÉGLAGES HA : interrupteurs et préférences
 switch:
   - platform: template
     id: touch_beep
@@ -166,6 +171,7 @@ tpp06_backlight:
   id: panel_backlight
   device: "${backlight_device}"
 
+# [TPP06] LINUX : cible, interface réseau et compilation croisée
 host:
   use_address: "${device_address}"
   network_interface: "${network_interface}"
@@ -177,17 +183,20 @@ tpp06_compat:
 
 # The native host component only constructs records. This adapter publishes
 # those records on Linux; it does not configure Wi-Fi or change DHCP.
+# [TPP06] DÉCOUVERTE : annonce du panneau sur le réseau local
 mdns:
   disabled: false
 tpp06_mdns:
   network_interface: "${network_interface}"
 
+# [TPP06] JOURNAUX : niveau des messages
 logger:
   level: INFO
 
 # Synchronize Linux time through the encrypted HA API, without Tuya/NTP.
 # Leave timezone unset so Home Assistant supplies the installation's timezone.
 # Before HA connects, the clock can still be invalid after a cold boot.
+# [TPP06] HORLOGE : synchronisation avec Home Assistant
 time:
   - platform: homeassistant
     id: tpp06_ha_time
@@ -201,6 +210,7 @@ time:
                 format: "Home Assistant time synchronized"
       - script.execute: tpp06_refresh_clock
 
+# [TPP06] CONNEXION HA : API chiffrée et événements de connexion
 api:
   reboot_timeout: 0s
   encryption:
@@ -212,21 +222,25 @@ api:
 
 # The first deployment is performed by TPP06 Cutter. Once this binary is
 # running, Device Builder can update it directly over the LAN.
+# [TPP06] MISE À JOUR : transfert sans fil chiffré
 ota:
   - platform: esphome
     encryption:
 
+# [TPP06] BUILDER : modèle public proposé à l'import
 dashboard_import:
   # "Take control" copies the complete LVGL configuration into Device Builder.
   # The owner can then freely edit every page, widget and Home Assistant action.
-  package_import_url: github://Philiphall6/TPP06-smart-panel-project/esphome/tpp06-lvgl-modern.yaml@v0.1.6
+  package_import_url: github://Philiphall6/TPP06-smart-panel-project/esphome/tpp06-lvgl-modern.yaml@v0.1.7
   import_full_config: true
 
+# [TPP06] IMPORTS ET DIAGNOSTICS : textes, météo, lumières et volet HA
 text_sensor:
   - platform: tpp06_system
     id: panel_storage
     name: "Stockage disponible et total"
     update_interval: 60s
+  # [TPP06] IMPORT HOME ASSISTANT — MÉTÉO
   - platform: homeassistant
     id: mobile_weather_state
     entity_id: "${weather_entity}"
@@ -236,6 +250,7 @@ text_sensor:
           id(mobile_weather_received) = true;
           id(mobile_weather_stamp) = millis();
       - script.execute: tpp06_refresh_weather
+  # [TPP06] IMPORT HOME ASSISTANT — MÉTÉO
   - platform: homeassistant
     id: mobile_weather_unit
     entity_id: "${weather_entity}"
@@ -243,6 +258,7 @@ text_sensor:
     internal: true
     on_value:
       - script.execute: tpp06_refresh_weather
+  # [TPP06] IMPORT HOME ASSISTANT — MÉTÉO
   - platform: homeassistant
     id: mobile_wind_unit
     entity_id: "${weather_entity}"
@@ -277,6 +293,7 @@ text_sensor:
     name: "Version ESPHome"
     entity_category: diagnostic
 
+  # [TPP06] IMPORT HOME ASSISTANT — VOLET
   - platform: homeassistant
     id: ha_cover_sdb_state
     entity_id: "${cover_entity}"
@@ -291,6 +308,7 @@ text_sensor:
             if (x == "closing") return std::string("FERMETURE...");
             return std::string("ETAT INCONNU");
 
+  # [TPP06] IMPORT HOME ASSISTANT — LUMIÈRE 1
   - platform: homeassistant
     id: ha_cave_state
     entity_id: "${cave_light_entity}"
@@ -305,6 +323,7 @@ text_sensor:
           text_color: !lambda |-
             return x == "on" ? lv_color_hex(0x52D273) : lv_color_hex(0x9AA4B2);
 
+  # [TPP06] IMPORT HOME ASSISTANT — LUMIÈRE 2
   - platform: homeassistant
     id: ha_cave_bar_state
     entity_id: "${bar_light_entity}"
@@ -319,7 +338,9 @@ text_sensor:
           text_color: !lambda |-
             return x == "on" ? lv_color_hex(0x52D273) : lv_color_hex(0x9AA4B2);
 
+# [TPP06] IMPORTS ET MESURES : température, humidité, position et luminosité
 sensor:
+  # [TPP06] IMPORT HOME ASSISTANT — MÉTÉO
   - platform: homeassistant
     id: mobile_weather_temperature
     entity_id: "${weather_entity}"
@@ -328,6 +349,7 @@ sensor:
     on_value:
       - lambda: id(mobile_temperature_stamp) = millis();
       - script.execute: tpp06_refresh_weather
+  # [TPP06] IMPORT HOME ASSISTANT — MÉTÉO
   - platform: homeassistant
     id: mobile_weather_humidity
     entity_id: "${weather_entity}"
@@ -336,6 +358,7 @@ sensor:
     on_value:
       - lambda: id(mobile_humidity_stamp) = millis();
       - script.execute: tpp06_refresh_weather
+  # [TPP06] IMPORT HOME ASSISTANT — MÉTÉO
   - platform: homeassistant
     id: mobile_weather_wind
     entity_id: "${weather_entity}"
@@ -350,6 +373,7 @@ sensor:
     entity_category: diagnostic
     update_interval: 30s
 
+  # [TPP06] IMPORT HOME ASSISTANT — LUMIÈRE 1
   - platform: homeassistant
     id: mobile_cave_brightness_from_ha
     entity_id: "${cave_light_entity}"
@@ -371,6 +395,7 @@ sensor:
                 id: cave_brightness_value
                 text: "-- %"
 
+  # [TPP06] IMPORT HOME ASSISTANT — LUMIÈRE 2
   - platform: homeassistant
     id: mobile_bar_brightness_from_ha
     entity_id: "${bar_light_entity}"
@@ -392,6 +417,7 @@ sensor:
                 id: bar_brightness_value
                 text: "-- %"
 
+# [TPP06] AFFICHAGE : framebuffer Linux et format des couleurs
 display:
   - platform: fbdev
     id: tpp06_display
@@ -403,6 +429,7 @@ display:
     auto_clear_enabled: false
     update_interval: never
 
+# [TPP06] TACTILE : entrée, réveil et retour sonore
 touchscreen:
   - platform: evdev
     id: tpp06_touch
@@ -420,6 +447,7 @@ touchscreen:
 
 # Native LVGL only: built-in symbol fonts, no bitmap wallpaper or cloud font.
 # This is a separate design candidate. Compile in HA and test before deployment.
+# [TPP06] PRÉFÉRENCES : réglages mémorisés et état de l'interface
 globals:
   - id: mobile_weather_received
     type: bool
@@ -469,6 +497,7 @@ globals:
     restore_value: false
     initial_value: '4'
 
+# [TPP06] LOGIQUE : actualisation des vues et actions locales
 script:
   - id: tpp06_refresh_connection
     then:
@@ -676,6 +705,7 @@ script:
               lv_obj_set_style_text_color(lv_obj_get_child(tabs[i], child), ink, 0);
           }
 
+# [TPP06] ACTUALISATION : tâches périodiques
 interval:
   - interval: 2s
     then:
@@ -688,6 +718,7 @@ interval:
     then:
       - script.execute: tpp06_refresh_menu
 
+# [TPP06] INTERFACE : styles, navigation et pages tactiles
 lvgl:
   id: mobile_ui
   displays: tpp06_display
@@ -923,6 +954,7 @@ lvgl:
                   - lvgl.page.show: page_home
 
   pages:
+    # [TPP06] VUE ACCUEIL : heure, date, météo et raccourcis
     - id: page_home
       bg_color: "${ui_background}"
       bg_grad_color: 0x1C2331
@@ -1129,6 +1161,7 @@ lvgl:
             on_click:
               - lvgl.page.show: page_cave
 
+    # [TPP06] VUE VOLET : état importé et commandes HA
     - id: page_sdb
       bg_color: "${ui_background}"
       on_load:
@@ -1239,6 +1272,7 @@ lvgl:
             text_font: montserrat_12
             text_color: "${ui_muted}"
             text: "Commandes via Home Assistant"
+    # [TPP06] VUE LUMIÈRE 1 : état importé et commandes HA
     - id: page_cave
       bg_color: "${ui_background}"
       on_load:
@@ -1439,6 +1473,7 @@ lvgl:
                     entity_id: "${cave_light_entity}"
                     color_temp_kelvin: "2700"
 
+    # [TPP06] VUE LUMIÈRE 2 : état importé et commandes HA
     - id: page_bar
       bg_color: "${ui_background}"
       on_load:
@@ -1639,6 +1674,7 @@ lvgl:
                     entity_id: "${bar_light_entity}"
                     color_temp_kelvin: "2700"
 
+    # [TPP06] VUE PARAMÈTRES : menu principal
     - id: page_menu
       bg_color: "${ui_background}"
       on_load:
@@ -1785,6 +1821,7 @@ lvgl:
             on_click:
               - lvgl.page.show: page_wifi_discovery
 
+    # [TPP06] VUE WI-FI : recherche et sélection du réseau
     - id: page_wifi_discovery
       bg_color: "${ui_background}"
       on_load:
@@ -1930,6 +1967,7 @@ lvgl:
               - lambda: id(panel_wifi_editor).next_scan_page();
               - script.execute: tpp06_refresh_wifi_scan
 
+    # [TPP06] VUE WI-FI : mot de passe et confirmation
     - id: page_wifi_settings
       bg_color: "${ui_background}"
       on_load:
@@ -2042,6 +2080,7 @@ lvgl:
             mode: TEXT_LOWER
             textarea: mobile_wifi_ssid
 
+    # [TPP06] VUE ÉCRAN : luminosité, veille et horloge
     - id: page_display_settings
       bg_color: "${ui_background}"
       on_load:
@@ -2166,6 +2205,7 @@ lvgl:
             on_click:
               - lvgl.page.show: page_sound
 
+    # [TPP06] VUE SON : activation du bip tactile
     - id: page_sound
       bg_color: "${ui_background}"
       on_load:
@@ -2256,6 +2296,7 @@ lvgl:
             on_click:
               - lvgl.page.show: page_display_settings
 
+    # [TPP06] VUE MÉTÉO : détails des mesures HA
     - id: page_weather
       bg_color: "${ui_background}"
       on_load:
@@ -2360,6 +2401,7 @@ lvgl:
             text_color: "${ui_muted}"
             text: "Conditions actuelles / pas de previsions"
 
+    # [TPP06] VUE DIAGNOSTICS : état et version du panneau
     - id: page_diagnostics
       bg_color: "${ui_background}"
       on_load:
