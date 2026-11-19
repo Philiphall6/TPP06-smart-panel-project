@@ -101,6 +101,51 @@ class PortableConfigTests(unittest.TestCase):
             full.get.return_value = {"host": config, "mdns": {"disabled": False}}
             final_validate(config)
 
+    def test_ota_hook_is_registered_and_missing_api_is_reported(self):
+        self.test_local_configuration_and_diagnostics()
+        from esphome import platform_hooks
+        from esphome.components import host
+        import esphome.config_validation as cv
+        self.assertIs(platform_hooks.get_platform_hook("host", "upload_program"), host.upload_program)
+        if "ota_image" in platform_hooks.PLATFORM_HOOKS:
+            self.assertIs(platform_hooks.get_platform_hook("host", "ota_image"), host.ota_image)
+        with patch.dict(platform_hooks.PLATFORM_HOOKS, {}, clear=True):
+            with self.assertRaisesRegex(cv.Invalid, "OTA image-check API is unavailable"):
+                host.install_ota_image_check({"cross_compile": {}})
+            host.install_ota_image_check({})  # Unrelated native host remains usable.
+        with patch.object(CORE, "config", {"host": {}}):
+            self.assertEqual(host.ota_image("native-host-program"), "native-host-program")
+
+    def test_full_config_does_not_reject_a_new_version_number(self):
+        self.test_local_configuration_and_diagnostics()
+        from esphome import const
+        config_path = CORE.config_path
+        for version in ("2026.11.1", "2026.12.0", "2027.1.0-dev"):
+            CORE.reset()
+            CORE.config_path = config_path
+            config = yaml_util.load_yaml(config_path)
+            config["external_components"][0]["source"] = {
+                "type": "local", "path": str(Path(__file__).resolve().parents[1] / "esphome-components"),
+            }
+            with self.subTest(version=version), patch.object(const, "__version__", version):
+                result = validate_config(config, {})
+                self.assertFalse(result.errors, str(result.errors))
+
+    def test_ota_rejects_actual_bad_file_before_network_transport(self):
+        self.test_local_configuration_and_diagnostics()
+        from types import SimpleNamespace
+        from esphome import espota2
+        from esphome import __main__ as cli
+        from esphome.core import EsphomeError
+        with tempfile.TemporaryDirectory() as directory:
+            bad_file = Path(directory) / "wrong-program"
+            bad_file.write_bytes(b"not an ARM ELF" * 10)
+            transport = Mock(side_effect=AssertionError("Upload must not run"))
+            with patch.object(espota2, "run_ota", transport):
+                with self.assertRaisesRegex(EsphomeError, "ELF32 little-endian required"):
+                    cli.upload_program(CORE.config, SimpleNamespace(file=bad_file), ["192.0.2.1"])
+            transport.assert_not_called()
+
     def test_address_bridge_is_idempotent_and_does_not_affect_other_platforms(self):
         import importlib.util
         from esphome.core import EsphomeCore
@@ -109,6 +154,10 @@ class PortableConfigTests(unittest.TestCase):
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         original = EsphomeCore.address
+        fallback = EsphomeCore()
+        fallback.name = "host-address-test"
+        fallback.config = {"host": {}}
+        original_fallback = original.__get__(fallback, EsphomeCore)
         self.addCleanup(setattr, EsphomeCore, "address", original)
         module.install_address_bridge()
         installed = EsphomeCore.address
@@ -120,7 +169,10 @@ class PortableConfigTests(unittest.TestCase):
         core.config = {"wifi": {"use_address": "example.local"}}
         self.assertEqual(core.address, "example.local")
         core.config = {"host": {}}
-        self.assertIsNone(core.address)
+        core.name = fallback.name
+        # 2026.11 now supplies a host .local fallback; preserve upstream's
+        # behavior instead of requiring the older None result.
+        self.assertEqual(core.address, original_fallback)
         core.config = None
         with self.assertRaises(ValueError):
             _ = core.address
@@ -146,6 +198,10 @@ class PortableConfigTests(unittest.TestCase):
                 compiled_config.save_compiled_config({"host": {"use_address": "192.0.2.1"}})
                 self.assertFalse(cache.exists())
                 original.assert_not_called()
+                cache.write_text("{}")
+                compiled_config.save_compiled_config({"host": {"cross_compile": {}}})
+                self.assertFalse(cache.exists())
+                original.assert_not_called()
                 wifi = {"wifi": {"use_address": "example.local"}}
                 compiled_config.save_compiled_config(wifi)
                 original.assert_called_once_with(wifi)
@@ -163,12 +219,14 @@ class MobileConfigTests(PortableConfigTests):
         # build installation or toolchain download is invoked.
         from esphome.__main__ import generate_cpp_contents
         generate_cpp_contents(CORE.config)
-        code = CORE.cpp_main_section
+        # 2026.11 hoists reusable action lambdas into the global section.
+        code = CORE.cpp_global_section + CORE.cpp_main_section
         self.assertIn("set_pixel_format(fbdev::PixelFormat::RGB565)", code)
         self.assertIn("/sys/class/net/wlan0/carrier", code)
         self.assertIn("mobile_home_date", code)
         self.assertIn("mobile_clock_visible", code)
-        self.assertIn("LV_OBJ_FLAG_HIDDEN", code)
+        self.assertTrue("LV_OBJ_FLAG_HIDDEN" in code or "lv_obj_set_hidden(" in code,
+                        "Clock visibility must still generate an LVGL hide/show operation")
         # LVGL inlines single-return text lambdas, then calls .c_str(). A
         # ternary between string literals yields const char*, not std::string.
         # Code generation alone accepts that invalid C++; check each regression.
@@ -289,14 +347,14 @@ class MobileConfigTests(PortableConfigTests):
 class ModernConfigTests(MobileConfigTests):
     CONFIG_FILE = "tpp06-lvgl-modern.yaml"
     PAGE_COUNT = 11
-    UI_VERSION = "0.1.7"
+    UI_VERSION = "0.1.8"
     IMPORT_MARKER = "modern"
 
     def test_release_sources_are_pinned_together(self):
         self.test_local_configuration_and_diagnostics()
         config = yaml_util.load_yaml(CORE.config_path)
-        self.assertEqual(config["external_components"][0]["source"]["ref"], "v0.1.7")
-        self.assertTrue(config["dashboard_import"]["package_import_url"].endswith("@v0.1.7"))
+        self.assertEqual(config["external_components"][0]["source"]["ref"], "v0.1.8")
+        self.assertTrue(config["dashboard_import"]["package_import_url"].endswith("@v0.1.8"))
 
     def test_glass_status_and_weather_layout(self):
         self.test_local_configuration_and_diagnostics()

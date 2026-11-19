@@ -43,6 +43,10 @@ les relais du modèle public restent en observation avant validation sur place.
 
 ## Installation et récupération
 
+Les contrôles OTA refusent les exécutables incompatibles détectés, pas les
+nouveaux numéros de version ESPHome. Voir le [périmètre des contrôles](docs/fr/DEMARRER-ICI.md#protection-technique-des-mises-à-jour)
+et conserver les essais sur matériel après mise à jour.
+
 [SSH Dropbear et changement du mot de passe root](docs/fr/19-ssh-dropbear.md) : guide manuel, sans activation automatique au démarrage.
 
 1. [Identifier son cas et préparer HA](docs/fr/DEMARRER-ICI.md).

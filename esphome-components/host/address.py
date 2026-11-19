@@ -23,7 +23,9 @@ def _disable_host_fast_cache() -> None:
 
     def save(config):
         host = config.get("host")
-        if isinstance(host, dict) and host.get("use_address"):
+        if isinstance(host, dict) and (host.get("use_address") or "cross_compile" in host):
+            # Cross-compiled TPP06 uploads must register the image-check hook,
+            # including configurations with no explicit deployment address.
             compiled_config.compiled_config_path(CORE.config_filename).unlink(missing_ok=True)
             return
         return original(config)

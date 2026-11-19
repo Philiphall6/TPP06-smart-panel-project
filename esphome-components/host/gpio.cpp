@@ -1,6 +1,7 @@
 #ifdef USE_HOST
 
 #include "gpio.h"
+#include "esphome/core/hal.h"
 #include "esphome/core/log.h"
 
 namespace esphome {
@@ -20,7 +21,7 @@ ISRInternalGPIOPin HostGPIOPin::to_isr() const {
   return ISRInternalGPIOPin((void *) arg);
 }
 
-void HostGPIOPin::attach_interrupt(void (*func)(void *), void *arg, gpio::InterruptType type) const {
+void HostGPIOPin::attach_interrupt_(void (*func)(void *), void *arg, gpio::InterruptType type) const {
   ESP_LOGD(TAG, "Attaching interrupt %p to pin %d and mode %d", func, pin_, (uint32_t) type);
 }
 void HostGPIOPin::pin_mode(gpio::Flags flags) { ESP_LOGD(TAG, "Setting pin %d mode to %02X", pin_, (uint32_t) flags); }
@@ -48,6 +49,10 @@ void IRAM_ATTR ISRInternalGPIOPin::digital_write(bool value) {
 void IRAM_ATTR ISRInternalGPIOPin::clear_interrupt() {
   auto *arg = reinterpret_cast<ISRPinArg *>(arg_);
   ESP_LOGD(TAG, "Clearing interrupt for pin %d", arg->pin);
+}
+void IRAM_ATTR ISRInternalGPIOPin::pin_mode(gpio::Flags flags) {
+  // The host GPIO implementation is a stub, as upstream. Real TPP06 relay
+  // control uses the separate Linux driver and is not changed by this bridge.
 }
 
 }  // namespace esphome

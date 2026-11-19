@@ -160,6 +160,28 @@ Success on another panel does not validate yours.
 
 ## 5. Update a panel already running ESPHome
 
+**There is no version allowlist.** A new ESPHome release is not rejected merely
+for its number. Configuration/compilation errors stop the normal Builder flow.
+The GPIO and main-thread adapters have test coverage on 2026.10.2 and 2026.11.0.
+
+For `host.cross_compile`, the executable is also inspected after compilation and
+when selecting the normal OTA image, including `--file` with a YAML. It must be
+ELF32 little-endian ARM EABI5 soft-float, without a dynamic interpreter/loader,
+with non-truncated segments and a file-backed executable entry point. The image
+is never executed in HA. Problems stop the transfer with an explicit error.
+If ESPHome removes the image-check hook API, validation reports that concrete
+incompatibility instead of silently skipping the check. Fast validation caching
+is disabled for this target to register the hook on uploads; the upstream
+transport and encryption are unchanged. Update notifications remain available.
+Old local driver copies do not gain this check automatically.
+
+This is not signing or an on-device version lock. External tools, uploads without
+a YAML and modified drivers can bypass it. Header checks do not prove that every
+instruction is ARMv5-compatible, every syscall fits the panel kernel or the UI is
+stable. Keep the ARMv5 toolchain, backups, the space check below and post-install
+tests. Hardware acceptance of 2026.11.0 is still pending. No Linux boot/recovery
+policy changes are required.
+
 1. Privately back up the YAML, `secrets.yaml`, previous working executable and
    Cutter archive. Do not change the device name or key during the UI update.
 2. Compare your YAML with the chosen release’s complete template. Keep your

@@ -91,7 +91,7 @@ esphome:
       - lambda: id(panel_backlight).set_percent(id(mobile_brightness));
   project:
     name: philiphall6.tpp06
-    version: "0.1.7"
+    version: "0.1.8"
   build_flags:
     - -static
     # Keep debug/symbol tables out of the OTA payload on the small /data volume.
@@ -110,7 +110,7 @@ external_components:
   - source:
       type: git
       url: https://github.com/Philiphall6/TPP06-smart-panel-project
-      ref: v0.1.7
+      ref: v0.1.8
       path: esphome-components
     refresh: 5min
     components:
@@ -231,7 +231,7 @@ ota:
 dashboard_import:
   # "Take control" copies the complete LVGL configuration into Device Builder.
   # The owner can then freely edit every page, widget and Home Assistant action.
-  package_import_url: github://Philiphall6/TPP06-smart-panel-project/esphome/tpp06-lvgl-modern.yaml@v0.1.7
+  package_import_url: github://Philiphall6/TPP06-smart-panel-project/esphome/tpp06-lvgl-modern.yaml@v0.1.8
   import_full_config: true
 
 # [TPP06] IMPORTS ET DIAGNOSTICS : textes, météo, lumières et volet HA

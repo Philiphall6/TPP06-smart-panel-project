@@ -180,6 +180,38 @@ Une sélection réussie sur un autre panneau ne valide pas le vôtre.
 
 ## 5. Mettre à jour un panneau déjà sous ESPHome
 
+### Protection technique des mises à jour
+
+**Aucune liste de versions autorisées : une nouvelle version ESPHome n'est pas
+bloquée pour son numéro.** Les erreurs de configuration et de compilation
+arrêtent le parcours normal Builder. Les adaptations GPIO et du fil principal
+restent compatibles avec les contrats testés d'ESPHome 2026.10.2 et 2026.11.0.
+
+Pour `host.cross_compile`, le programme est également contrôlé après compilation
+et lors du choix du fichier à envoyer par l'OTA normale, y compris `--file` avec
+un YAML. Le contrôle exige un exécutable ELF32 ARM little-endian EABI5 soft-float,
+sans chargeur/interpréteur dynamique, des segments non tronqués et un point
+d'entrée dans un segment exécutable. Il ne lance jamais le programme dans HA.
+Un problème produit une erreur explicite avant le transfert. Si l'API permettant
+d'insérer ce contrôle dans ESPHome disparaît, la configuration signale cette
+incompatibilité technique au lieu de supprimer silencieusement le contrôle.
+
+Le cache de validation rapide est désactivé pour cette cible afin de réinstaller
+le contrôle lors d'un envoi. Les transports et le chiffrement d'ESPHome ne sont
+pas remplacés. Les notifications de mise à jour restent disponibles. Les anciennes
+copies locales des pilotes ne bénéficient pas automatiquement de ce contrôle.
+
+**Limites :** ce n'est ni une signature ni un verrou du récepteur OTA. Un outil
+extérieur, un envoi sans YAML ou des pilotes modifiés peuvent le contourner.
+Ces contrôles ne prouvent pas que chaque instruction est compatible ARMv5, que
+tous les appels système conviennent au noyau du panneau, ni que l'interface sera
+stable. Conserver la toolchain ARMv5, les sauvegardes et le contrôle d'espace
+ci-dessous ; vérifier le fonctionnement après installation. L'acceptation sur
+matériel de 2026.11.0 reste à effectuer. Aucun changement du démarrage ou du
+secours Linux n'est requis.
+
+### Procédure de mise à jour
+
 1. Sauvegarder le YAML actuel, `secrets.yaml`, le dernier programme fonctionnel
    et la sauvegarde Cutter, hors GitHub. Ne pas renommer le panneau ou changer
    sa clé en même temps que l’interface.

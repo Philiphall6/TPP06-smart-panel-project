@@ -28,6 +28,7 @@ from esphome.types import ConfigType
 
 from .const import KEY_HOST
 from .address import install_address_bridge
+from .binary_check import check_panel_binary
 
 # force import gpio to register pin schema
 from .gpio import host_pin_to_code  # noqa: F401
@@ -44,6 +45,41 @@ CONF_SHA256 = "sha256"
 CONF_DIRECTORY = "directory"
 CONF_PREFIX = "prefix"
 CONF_NETWORK_INTERFACE = "network_interface"
+
+def ota_image(binary):
+    """Check the actual selected image, including CLI --file, before transport."""
+    if CORE.config and CONF_CROSS_COMPILE in CORE.config.get(DOMAIN, {}):
+        check_panel_binary(binary)
+    return binary
+
+
+def upload_program(config, args, host):
+    """Preflight only; False leaves sending and encryption to ESPHome."""
+    if CONF_CROSS_COMPILE in config.get(DOMAIN, {}):
+        check_panel_binary(getattr(args, "file", None) or CORE.firmware_bin)
+    return False
+
+
+def install_ota_image_check(config):
+    if CONF_CROSS_COMPILE not in config:
+        return
+    # The upstream registry does not auto-probe external overrides of in-tree
+    # platforms. Register our image-only hook; leave transport/encryption alone.
+    from esphome import platform_hooks
+    registry = getattr(platform_hooks, "PLATFORM_HOOKS", None)
+    resolver = getattr(platform_hooks, "get_platform_hook", None)
+    if not isinstance(registry, dict) or "upload_program" not in registry or not callable(resolver):
+        raise cv.Invalid("TPP06: OTA image-check API is unavailable; cannot check uploads")
+    registry["upload_program"] = registry["upload_program"] | {PLATFORM_HOST}
+    if resolver(PLATFORM_HOST, "upload_program") is not upload_program:
+        raise cv.Invalid("TPP06: OTA image-check hook could not be registered")
+    # Newer ESPHome also offers a hook after selecting/transforming an image.
+    # Feature detection, never a version comparison; older releases retain
+    # the upload preflight above and do not need this additional hook.
+    if "ota_image" in registry:
+        registry["ota_image"] = registry["ota_image"] | {PLATFORM_HOST}
+        if resolver(PLATFORM_HOST, "ota_image") is not ota_image:
+            raise cv.Invalid("TPP06: selected-image check could not be registered")
 
 
 def validate_network_interface(value):
@@ -89,6 +125,7 @@ CROSS_COMPILE_SCHEMA = cv.Schema(
 
 
 def set_core_data(config: ConfigType) -> ConfigType:
+    install_ota_image_check(config)
     install_address_bridge()
     CORE.data[KEY_HOST] = {}
     CORE.data[KEY_CORE][KEY_TARGET_PLATFORM] = PLATFORM_HOST
@@ -161,6 +198,9 @@ def run_compile(args: object, config: ConfigType) -> bool:
         _configure_cross_compiler(cross_compile)
     if toolchain.run_compile(config, CORE.verbose) != 0:
         raise EsphomeError("Host build failed")
+    if CONF_CROSS_COMPILE in config[DOMAIN]:
+        check_panel_binary(CORE.firmware_bin)
+        _LOGGER.info("TPP06 executable checks passed (not a runtime stability guarantee)")
     return True
 
 

@@ -65,6 +65,10 @@ et le [guide BLE, écran et sections YAML](docs/fr/20-ble-ecran-yaml.md)
 expliquent quoi personnaliser. Les relais restent en observation dans le modèle
 public : conserver son réglage existant sur un panneau déjà validé.
 
+Les contrôles OTA vérifient le format du programme avant envoi, **sans bloquer
+une nouvelle version ESPHome pour son numéro**. Ils ne remplacent pas les essais
+sur le panneau ; [périmètre et limites](docs/fr/DEMARRER-ICI.md#protection-technique-des-mises-à-jour).
+
 | Votre situation | Prochaine étape |
 | --- | --- |
 | ESPHome fonctionne déjà | [Mise à jour OTA](docs/fr/DEMARRER-ICI.md#5-mettre-à-jour-un-panneau-déjà-sous-esphome), sans réinstaller le démarrage |

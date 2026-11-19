@@ -42,6 +42,10 @@ for the tested build and remaining checks. `main` may contain newer development.
 
 ## Installation and updates
 
+OTA checks reject detected executable incompatibilities, not new ESPHome version
+numbers. See the [checks and limitations](docs/en/START-HERE.md#5-update-a-panel-already-running-esphome);
+post-install hardware testing is still necessary.
+
 Native ESPHome runs on the original **Anyka ARMv5 Linux**, not an ESP32.
 Compile in Home Assistant’s ESPHome Device Builder; no Mint workstation or
 external build server is required. The [complete YAML](esphome/tpp06-lvgl-modern.yaml)
