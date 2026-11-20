@@ -6,7 +6,9 @@
 [Release history](https://github.com/Philiphall6/TPP06-smart-panel-project/releases)
 
 [Complete “Latest” release: ESPHome + included FR/EN assistant 0.1.0-rc3](https://github.com/Philiphall6/TPP06-smart-panel-project/releases/tag/v0.1.9-rc2)
-— one ZIP includes the project, assistant, public boot logo and documentation.
+— one installation ZIP includes the assistant, required Linux scripts, a single
+ESPHome YAML, the public boot logo and setup instructions. ESPHome fetches
+drivers and pages from the pinned GitHub source; no driver folder to copy into HA.
 Experimental limitations and outstanding hardware validation still apply.
 See the [assistant guide](README-assistant.md). Launching it does not install panel firmware.
 
@@ -57,11 +59,13 @@ external build server is required. The [complete YAML](esphome/tpp06-lvgl-modern
 is editable. Use the latest release’s tagged sources for reproducibility;
 keep your own keys, addresses and entity bindings private.
 
-Download **`TPP06-HA-Panel-v<version>-sources.zip`** and its SHA256 file from
+Download **`TPP06-HA-Panel-v<version>-package.zip`** and its SHA256 file from
 the latest release. The badge adds up downloads of assets still published across
 **all releases**, including SHA256 files, not installations. It may be cached.
 The [complete template](esphome/tpp06-lvgl-complete.yaml) adds
 the new modules; see [BLE, screen and YAML sections](docs/en/20-ble-screen-yaml.md).
+The ZIP contains installation files only, not ESPHome driver/page sources.
+Tests, photos, historical documentation and maintainer tools remain in GitHub.
 Public relay control defaults to observation: retain the commissioned setting
 when updating an already validated panel.
 

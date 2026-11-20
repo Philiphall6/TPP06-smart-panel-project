@@ -10,8 +10,9 @@ ce n’est pas un ESP32 et il ne faut pas lui envoyer un firmware ESP32.
 [Historique des releases](https://github.com/Philiphall6/TPP06-smart-panel-project/releases)
 
 **[Release complète « Latest » : projet ESPHome + dernier assistant](https://github.com/Philiphall6/TPP06-smart-panel-project/releases/tag/v0.1.9-rc2)** :
-un seul paquet avec YAML, composants, services Linux, assistant FR/EN **0.1.0-rc3**,
-logo Home Assistant et documentation. Voir [le démarrage de l’assistant](README-assistant.md).
+un seul paquet d’installation avec le YAML, l’assistant FR/EN **0.1.0-rc3**,
+ses scripts Linux nécessaires et le logo Home Assistant. Les pilotes et pages
+sont téléchargés par ESPHome depuis GitHub. Voir [le démarrage de l’assistant](README-assistant.md).
 Le statut « Latest » facilite le téléchargement ; les limites expérimentales
 et les validations matérielles restantes restent applicables.
 
@@ -66,10 +67,15 @@ reste éditable : pages, titres, couleurs et entités. Pour une installation
 reproductible, prendre les sources du tag indiqué dans la dernière release,
 pas une copie arbitraire de `main`.
 
-Télécharger **`TPP06-HA-Panel-v<version>-sources.zip`** et son fichier SHA256
+Télécharger **`TPP06-HA-Panel-v<version>-package.zip`** et son fichier SHA256
 depuis la dernière release. Le compteur additionne les téléchargements des fichiers
 encore publiés dans **toutes les releases**, y compris les fichiers SHA256.
 Ce n’est pas le nombre d’installations ; sa mise à jour peut être différée.
+Le paquet contient uniquement les fichiers d’installation et leurs instructions :
+assistant, scripts Linux nécessaires, un seul YAML, logo et licences. Les pilotes,
+pages et modules ESPHome sont importés depuis GitHub à partir du YAML ; ne pas
+copier de dossier de composants dans Home Assistant. Tests, photos et archives
+restent dans le dépôt, hors du ZIP. Aucun fichier privé n’est inclus.
 Le [modèle complet avec les nouveaux modules](esphome/tpp06-lvgl-complete.yaml)
 et le [guide BLE, écran et sections YAML](docs/fr/20-ble-ecran-yaml.md)
 expliquent quoi personnaliser. Les relais restent en observation dans le modèle

@@ -32,11 +32,15 @@ Device Builder sur Home Assistant ; aucun poste Mint imposé. Le
 secrets restent locaux. Prendre les sources du tag de la dernière release
 pour conserver ensemble les versions des pilotes et de l’interface.
 
-Le paquet **`TPP06-HA-Panel-v<version>-sources.zip`**, accompagné de son SHA256,
+Le paquet **`TPP06-HA-Panel-v<version>-package.zip`**, accompagné de son SHA256,
 se trouve dans la dernière release. Le compteur additionne les téléchargements des
 fichiers encore publiés dans **toutes les releases**, SHA256 inclus, pas les
 installations. Sa mise à jour peut être différée. Le [modèle complet](esphome/tpp06-lvgl-complete.yaml)
 ajoute BLE, réglages d'écran dans HA, relais locaux, silence et diagnostics.
+Le ZIP conserve uniquement les fichiers d’installation : assistant, scripts Linux
+requis, un YAML, logo et instructions. ESPHome récupère pilotes et pages depuis
+GitHub ; aucun dossier de composants à copier dans HA. Tests, photos et archives
+restent dans le dépôt, hors du paquet.
 Lire le [guide BLE, écran et YAML commenté](docs/fr/20-ble-ecran-yaml.md) :
 les relais du modèle public restent en observation avant validation sur place.
 
