@@ -358,14 +358,14 @@ class MobileConfigTests(PortableConfigTests):
 class ModernConfigTests(MobileConfigTests):
     CONFIG_FILE = "tpp06-lvgl-modern.yaml"
     PAGE_COUNT = 11
-    UI_VERSION = "0.1.9-rc1"
+    UI_VERSION = "0.1.9-rc2"
     IMPORT_MARKER = "modern"
 
     def test_release_sources_are_pinned_together(self):
         self.test_local_configuration_and_diagnostics()
         config = yaml_util.load_yaml(CORE.config_path)
-        self.assertEqual(config["external_components"][0]["source"]["ref"], "v0.1.9-rc1")
-        self.assertTrue(config["dashboard_import"]["package_import_url"].endswith("@v0.1.9-rc1"))
+        self.assertEqual(config["external_components"][0]["source"]["ref"], "v0.1.9-rc2")
+        self.assertTrue(config["dashboard_import"]["package_import_url"].endswith("@v0.1.9-rc2"))
 
     def test_glass_status_and_weather_layout(self):
         self.test_local_configuration_and_diagnostics()

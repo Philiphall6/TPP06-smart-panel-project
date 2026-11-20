@@ -4,11 +4,11 @@
 
 **[Dernière release : version, nouveautés et limites](https://github.com/Philiphall6/TPP06-smart-panel-project/releases/latest)**
 
-[Préversion : assistant ordinateur et correctifs récents](https://github.com/Philiphall6/TPP06-smart-panel-project/releases/tag/v0.1.9-rc1)
+[Préversion complète : ESPHome + assistant FR/EN 0.1.0-rc3 inclus](https://github.com/Philiphall6/TPP06-smart-panel-project/releases/tag/v0.1.9-rc2)
 — distincte de la dernière release non-préversion.
 
-[Assistant FR / EN : paquet avec logo et outils guidés](https://github.com/Philiphall6/TPP06-smart-panel-project/releases/tag/assistant-v0.1.0-rc3)
-— mise à jour du logiciel PC uniquement, pas du firmware OTA.
+Un seul ZIP complet suffit. Voir [le guide de l’assistant](README-assistant.md) ;
+le lancement du logiciel PC n’installe pas de firmware sur le panneau.
 
 **[Guide débutant : commencer ici, sans démontage](docs/fr/DEMARRER-ICI.md)**
 
