@@ -9,10 +9,11 @@ ce n’est pas un ESP32 et il ne faut pas lui envoyer un firmware ESP32.
 **[Dernière release : version, nouveautés et limites](https://github.com/Philiphall6/TPP06-smart-panel-project/releases/latest)** ·
 [Historique des releases](https://github.com/Philiphall6/TPP06-smart-panel-project/releases)
 
-**[Préversion complète : projet ESPHome + dernier assistant](https://github.com/Philiphall6/TPP06-smart-panel-project/releases/tag/v0.1.9-rc2)** :
+**[Release complète « Latest » : projet ESPHome + dernier assistant](https://github.com/Philiphall6/TPP06-smart-panel-project/releases/tag/v0.1.9-rc2)** :
 un seul paquet avec YAML, composants, services Linux, assistant FR/EN **0.1.0-rc3**,
 logo Home Assistant et documentation. Voir [le démarrage de l’assistant](README-assistant.md).
-Ce candidat ne remplace pas la dernière release non-préversion.
+Le statut « Latest » facilite le téléchargement ; les limites expérimentales
+et les validations matérielles restantes restent applicables.
 
 Le ZIP complet contient déjà l’assistant : pas besoin d’un second téléchargement.
 Son installation sur le PC ne déclenche aucune OTA du panneau.

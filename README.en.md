@@ -5,8 +5,9 @@
 **[Latest release: version, changes and limitations](https://github.com/Philiphall6/TPP06-smart-panel-project/releases/latest)** ·
 [Release history](https://github.com/Philiphall6/TPP06-smart-panel-project/releases)
 
-[Complete prerelease: ESPHome + included FR/EN assistant 0.1.0-rc3](https://github.com/Philiphall6/TPP06-smart-panel-project/releases/tag/v0.1.9-rc2)
+[Complete “Latest” release: ESPHome + included FR/EN assistant 0.1.0-rc3](https://github.com/Philiphall6/TPP06-smart-panel-project/releases/tag/v0.1.9-rc2)
 — one ZIP includes the project, assistant, public boot logo and documentation.
+Experimental limitations and outstanding hardware validation still apply.
 See the [assistant guide](README-assistant.md). Launching it does not install panel firmware.
 
 **[Beginner guide: start here, without dismantling](docs/en/START-HERE.md)**

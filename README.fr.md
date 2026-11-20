@@ -4,8 +4,8 @@
 
 **[Dernière release : version, nouveautés et limites](https://github.com/Philiphall6/TPP06-smart-panel-project/releases/latest)**
 
-[Préversion complète : ESPHome + assistant FR/EN 0.1.0-rc3 inclus](https://github.com/Philiphall6/TPP06-smart-panel-project/releases/tag/v0.1.9-rc2)
-— distincte de la dernière release non-préversion.
+[Release complète « Latest » : ESPHome + assistant FR/EN 0.1.0-rc3 inclus](https://github.com/Philiphall6/TPP06-smart-panel-project/releases/tag/v0.1.9-rc2)
+— fonctions expérimentales et validations matérielles restantes signalées dans la release.
 
 Un seul ZIP complet suffit. Voir [le guide de l’assistant](README-assistant.md) ;
 le lancement du logiciel PC n’installe pas de firmware sur le panneau.
