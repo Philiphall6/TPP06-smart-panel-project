@@ -38,6 +38,10 @@ Ces dimensions ne sont **pas une règle pour tous les appareils**.
 
 ## Préparation hors ligne
 
+Le paquet de l’assistant inclut désormais le [PNG et l’image RGB565 publics](../../assets/boot-logo/README.md),
+avec attribution, licence et SHA-256. Le formulaire Logo les propose directement.
+Ils ne proviennent pas d’un dump d’appareil et ne contiennent aucune donnée personnelle.
+
 Après rendu du SVG en PNG opaque 320 × 480, avec Python et Pillow :
 
 ```sh
@@ -51,8 +55,10 @@ comme firmware OTA ESPHome.**
 
 ## Précautions de programmation
 
-La procédure privée est liée au matériel vérifié, pas un installateur
-universel. Aucun script d'effacement automatique n'est fourni ici.
+L’action Logo de l’[assistant expérimental](21-assistant-ordinateur.md) est liée
+au matériel vérifié, pas à tous les panneaux similaires. Elle exige une confirmation
+distincte, une récupération locale et les contrôles de sauvegarde/compatibilité.
+Le convertisseur hors ligne, lui, ne programme rien.
 
 Avant une programmation, résoudre la partition par son **nom**, contrôler
 sa géométrie et les compteurs ECC/blocs défectueux, conserver deux lectures

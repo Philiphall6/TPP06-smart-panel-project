@@ -1,5 +1,6 @@
 # Desktop optional operations: SSH verification and encrypted ESPHome API.
-# Python >=3.11; Tkinter and adb/readelf are provided by the OS, not pip.
+# Python >=3.11; Tkinter and adb are installed separately, not by pip.
+# pyelftools provides the elftools module; no readelf/binutils required on Windows.
 paramiko==4.0.0
 aioesphomeapi==46.12.0
 pyelftools==0.32

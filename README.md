@@ -13,6 +13,10 @@ ce n’est pas un ESP32 et il ne faut pas lui envoyer un firmware ESP32.
 installation accompagnée Linux/Windows, sauvegarde après ADB et limites détaillées.
 Ce candidat ne remplace pas la dernière release non-préversion.
 
+**[Assistant FR / EN — nouveau paquet avec logo et outils guidés](https://github.com/Philiphall6/TPP06-smart-panel-project/releases/tag/assistant-v0.1.0-rc3)** :
+liens officiels Python/ADB, dossiers expliqués et logo Home Assistant inclus.
+Mise à jour du logiciel PC seulement, pas une OTA du panneau.
+
 **[Commencer ici — guide débutant français](docs/fr/DEMARRER-ICI.md)** ·
 **[Start here — English beginner guide](docs/en/START-HERE.md)**
 

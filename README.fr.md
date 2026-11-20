@@ -7,6 +7,9 @@
 [Préversion : assistant ordinateur et correctifs récents](https://github.com/Philiphall6/TPP06-smart-panel-project/releases/tag/v0.1.9-rc1)
 — distincte de la dernière release non-préversion.
 
+[Assistant FR / EN : paquet avec logo et outils guidés](https://github.com/Philiphall6/TPP06-smart-panel-project/releases/tag/assistant-v0.1.0-rc3)
+— mise à jour du logiciel PC uniquement, pas du firmware OTA.
+
 **[Guide débutant : commencer ici, sans démontage](docs/fr/DEMARRER-ICI.md)**
 
 [Accueil du projet](README.md) · [English](README.en.md)

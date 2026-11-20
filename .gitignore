@@ -1,5 +1,6 @@
 # Données d’appareil et fichiers volumineux
 *.bin
+!assets/boot-logo/home-assistant-320x480-rgb565.bin
 *.BIN
 *.img
 *.dump

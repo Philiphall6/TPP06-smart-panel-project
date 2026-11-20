@@ -5,6 +5,9 @@
 **[Latest release: version, changes and limitations](https://github.com/Philiphall6/TPP06-smart-panel-project/releases/latest)** ·
 [Release history](https://github.com/Philiphall6/TPP06-smart-panel-project/releases)
 
+[FR / EN desktop assistant: bundled logo and guided tools](https://github.com/Philiphall6/TPP06-smart-panel-project/releases/tag/assistant-v0.1.0-rc3)
+— experimental PC application update, not panel OTA firmware.
+
 **[Beginner guide: start here, without dismantling](docs/en/START-HERE.md)**
 
 [Project home](README.md) · [Français](README.fr.md)

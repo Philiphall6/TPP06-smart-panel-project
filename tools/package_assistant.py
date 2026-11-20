@@ -2,6 +2,7 @@
 """Build a source-only desktop assistant package from an explicit allowlist.
 
 No firmware, keys, dumps, host paths, private journals or venv are included.
+The public Home Assistant boot-logo image is explicitly included, not a dump.
 """
 import argparse
 import hashlib
@@ -9,15 +10,20 @@ from pathlib import Path
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
-VERSION = "0.1.0-rc2"
+VERSION = "0.1.0-rc3"
 FILES = [
     "Assistant-TPP06.sh", "Assistant-TPP06.cmd", "Installer-dependances.sh",
     "Installer-dependances.cmd", "requirements-assistant.txt", "README-assistant.md",
     "tools/tpp06_assistant.py", "tools/tpp06_assistant_core.py",
     "tools/tpp06_assistant_jobs.py", "tools/tpp06_assistant_transport.py", "tools/tpp06_assistant_elf.py",
     "tools/tpp06_assistant_nand.py",
+    "tools/tpp06_assistant_i18n.py", "tools/tpp06_assistant_resources.py",
     "tools/tpp06_tuya_cutter.py", "tools/tpp06_authkey_reader.py", "tools/tpp06_ota_uploader.py",
-    "tools/tpp06_logo.py", "tools/package_assistant.py",
+    "tools/tpp06_logo.py", "tools/package_assistant.py", "tools/render_boot_logo.py",
+    "assets/boot-logo/home-assistant-320x480.png",
+    "assets/boot-logo/home-assistant-320x480-rgb565.bin",
+    "assets/boot-logo/SHA256SUMS.txt", "assets/boot-logo/README.md",
+    "docs/images/tpp06-home-assistant-boot.svg",
     "device/tpp06-multiboot.sh", "device/tpp06-network-profile.sh",
     "device/tpp06-wifi-edit.sh", "device/tpp06-assistant-logo.sh", "device/dropbear/service.sh",
     "device/dropbear/localoptions.h",
@@ -25,6 +31,8 @@ FILES = [
     "tests/test_tpp06_assistant_jobs.py", "tests/test_tpp06_assistant_transport.py",
     "tests/test_tpp06_assistant_elf.py",
     "tests/test_tpp06_assistant_nand.py",
+    "tests/test_tpp06_assistant_resources.py",
+    "docs/en/21-assistant-ordinateur.md",
     "docs/fr/21-assistant-ordinateur.md", "docs/fr/19-ssh-dropbear.md",
     "docs/fr/12-logo-demarrage.md", "docs/fr/04-adb-wifi-sans-uart.md",
     "docs/fr/00-acces-reseau-authkey.md", "docs/fr/07-tuya-cutter.md",

@@ -1,6 +1,6 @@
 # Assistant TPP06 sur ordinateur — installation et maintenance
 
-Version de l’assistant : **0.1.0-rc2**. Les huit parcours sont raccordés à la
+Version de l’assistant : **0.1.0-rc3**. Les huit parcours sont raccordés à la
 fenêtre ; les opérations ne partent jamais au lancement. **L’orchestration
 complète n’est pas encore validée sur un panneau neuf, ni sur Windows réel.**
 Les tests automatisés utilisent des consoles, fichiers, API et NAND simulés.
@@ -15,6 +15,37 @@ Python sont installées dans un environnement privé au projet :
 
 - Linux : `sh Installer-dependances.sh`, puis `sh Assistant-TPP06.sh`.
 - Windows : ouvrir `Installer-dependances.cmd`, puis `Assistant-TPP06.cmd`.
+
+Liens officiels : [Python](https://www.python.org/downloads/),
+[Android Platform Tools / ADB](https://developer.android.com/tools/releases/platform-tools).
+Choisir l’installateur Python avec Tcl/Tk (pas le paquet « embeddable »), puis
+extraire **tout** le ZIP Platform Tools. Choisir `platform-tools/adb.exe` sous
+Windows, ou `platform-tools/adb` sous Linux. Android Studio n’est pas nécessaire.
+Le module `elftools` est fourni par `pyelftools` dans Installer-dependances.
+
+Les boutons **Français / English** changent les libellés et confirmations sans
+effacer les champs, reconnecter le panneau ou modifier le mot de passe. Certains
+rapports techniques conservent leur langue d’origine. L’onglet **Logiciels et aide**
+rassemble les liens, les explications des dossiers et l’aperçu du logo.
+
+### Quels dossiers choisir ?
+
+Ce sont deux dossiers **sur votre PC**, ni sur HA ni sur le panneau :
+
+- **Sauvegardes sur cet ordinateur** : `TPP06-Backups` dans votre dossier utilisateur
+  est proposé. Vous pouvez choisir un disque personnel. Les copies NAND et les
+  journaux `operation.json` seront dans des sous-dossiers privés distincts.
+  Gardez-les pour une récupération ; ne les publiez pas et évitez les dossiers
+  partagés, synchronisés dans le cloud ou dans Git.
+- **Outils TPP06 sur cet ordinateur** : `TPP06-Tools` est proposé. Pour ADB et la NAND,
+  **Préparer les outils** récupère les seuls fichiers reconnus, après confirmation,
+  puis vérifie leur SHA-256. Cliquer **Vérifier les outils** pour actualiser l’état.
+  Aucune exécution ni connexion au panneau pendant ce téléchargement. Dropbear
+  n’est pas téléchargé automatiquement : suivre le guide SSH indiqué.
+
+Rien n’est créé au lancement ou à l’annulation du formulaire. La préparation
+confirmée crée le dossier d’outils ; la confirmation de l’opération crée le dossier
+de sauvegarde si nécessaire. Les fichiers inconnus ne sont jamais remplacés.
 
 Sur Mint, si Tkinter manque, installer `python3-tk` **sur le PC**, pas sur le
 Linux embarqué. Aucun `apt`, Python ou compilateur n’est installé sur le panneau.
@@ -164,7 +195,10 @@ fiche ensemble. Les secrets sauvegardés ne doivent jamais être publiés.
 
 ### Logo
 
-Fournir une image binaire opaque **RGB565 320 × 480**, complétée à **512 Kio**.
+Le [logo Home Assistant fourni](../../assets/boot-logo/README.md) est proposé
+automatiquement, avec un aperçu dans Logiciels et aide. Il est créé depuis le
+SVG public, sans données d’appareil ; licence et attribution sont incluses.
+Pour une image personnalisée, fournir une image binaire opaque **RGB565 320 × 480**, complétée à **512 Kio**.
 Le [convertisseur existant](12-logo-demarrage.md) prépare ce format hors ligne.
 Un PNG, un ELF ESPHome et un dump NAND complet ne sont pas des images logo.
 
@@ -215,7 +249,9 @@ L’ajout à HA et les entités de votre installation restent personnels.
 ## 5. Fichiers auxiliaires reconnus
 
 Le paquet de sources ne contient aucun binaire personnel, dump ou clé.
-Créer un dossier local avec les fichiers nécessaires à l’action choisie.
+Le logo public est inclus. Le bouton **Préparer les outils** télécharge sur demande
+les fichiers NAND et ADB ci-dessous et les renomme correctement. Dropbear reste à
+préparer séparément selon le guide SSH. En préparation manuelle, utiliser un dossier local avec les fichiers nécessaires à l’action choisie.
 Leurs noms et SHA-256 reconnus pour le profil testé sont :
 
 | Nom dans le dossier local | SHA-256 |

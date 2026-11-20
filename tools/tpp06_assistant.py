@@ -10,12 +10,18 @@ import threading
 import webbrowser
 
 import tpp06_assistant_core as core
+import tpp06_assistant_resources as resources
+from tpp06_assistant_i18n import Language, Widgets, Dialogs
 
 
 class Assistant:
     def __init__(self, root):
         import tkinter as tk
-        from tkinter import ttk
+        from tkinter import ttk, filedialog, messagebox
+        self.language = Language()
+        ttk = Widgets(ttk, self.language)
+        self.filedialog = Dialogs(filedialog, self.language)
+        self.messagebox = Dialogs(messagebox, self.language)
         self.tk, self.ttk, self.root = tk, ttk, root
         self.events = queue.Queue()
         self.busy = False
@@ -23,7 +29,10 @@ class Assistant:
         self.inputs = []
         self.host = tk.StringVar()
         self.password = tk.StringVar()
-        self.adb = tk.StringVar(value="adb")
+        self.adb = tk.StringVar(value=resources.default_adb())
+        self.backup_parent = str(resources.default_backups())
+        self.tools_dir = str(resources.default_tools())
+        self.tab_titles = []
         self.status = tk.StringVar(value="Prêt — aucune connexion automatique")
         root.title("Assistant TPP06 · Installation et maintenance")
         root.geometry("960x760")
@@ -37,7 +46,11 @@ class Assistant:
 
         outer = ttk.Frame(root, padding=18)
         outer.pack(fill="both", expand=True)
-        ttk.Label(outer, text="Votre panneau, étape par étape", style="Title.TLabel").pack(anchor="w")
+        heading = ttk.Frame(outer)
+        heading.pack(fill="x")
+        self.button(heading, "English", lambda: self.set_language("en")).pack(side="right")
+        self.button(heading, "Français", lambda: self.set_language("fr")).pack(side="right", padx=4)
+        ttk.Label(heading, text="Votre panneau, étape par étape", style="Title.TLabel").pack(side="left")
         ttk.Label(outer, text="Expérimental · Aucune opération au lancement · Sauvegardes privées et confirmations avant écriture",
                   style="Note.TLabel").pack(anchor="w", pady=(6, 14))
         connection = ttk.LabelFrame(outer, text="Votre appareil — données conservées uniquement en mémoire", padding=10)
@@ -60,10 +73,22 @@ class Assistant:
         self.button(connection, "Choisir…", self.choose_adb).grid(row=1, column=4, pady=(10, 0))
 
         tabs = ttk.Notebook(outer, height=300)
+        self.tabs = tabs
+        help_page = self.scroll_page(tabs, "0. Logiciels et aide")
         access = self.scroll_page(tabs, "1. Accès et diagnostic")
         files = self.scroll_page(tabs, "2. Sauvegarde et fichiers")
         installation = self.scroll_page(tabs, "3. Installer / administrer")
         recovery = self.scroll_page(tabs, "4. Reprendre / vérifier")
+        self.row(help_page, "Python — site officiel", "Installer Python 3.11 ou plus récent avec Tcl/Tk. Ne pas choisir le paquet embeddable Windows.",
+                 lambda: webbrowser.open(resources.SOFTWARE["python"]))
+        self.row(help_page, "ADB — Android Platform Tools", "Télécharger pour Windows ou Linux, extraire le ZIP entier, puis choisir platform-tools/adb.exe (Windows) ou adb (Linux). Android Studio n’est pas nécessaire.",
+                 lambda: webbrowser.open(resources.SOFTWARE["adb"]))
+        self.row(help_page, "Installer les dépendances Python", "Lancer Installer-dependances.cmd (Windows) ou Installer-dependances.sh (Linux), puis rouvrir l’assistant. Le module elftools est fourni par pyelftools.", self.dependencies)
+        self.row(help_page, "Comprendre les dossiers", "Les deux dossiers sont sur cet ordinateur, pas dans Home Assistant ni dans le panneau.", self.folder_help)
+        self.row(help_page, "Voir le logo Home Assistant fourni", "Logo 320 × 480 sur fond noir, RGB565, 512 Kio. Réservé à la partition logo compatible ; jamais comme firmware OTA.",
+                 lambda: webbrowser.open((core.PROJECT_ROOT / "assets/boot-logo/home-assistant-320x480.png").as_uri()))
+        self.row(help_page, "Guide SSH / Dropbear", "Dropbear compatible doit être préparé selon le guide SSH. Aucun binaire ARM arbitraire n’est accepté.",
+                 lambda: self.guide("19-ssh-dropbear.md"))
 
         self.row(access, "Vérifier cet ordinateur", "Python, ADB et dépendances ; aucun contact avec le panneau.", self.pc)
         self.row(access, "Vérifier les accès réseau", "Teste uniquement les cinq ports connus sur l’IP saisie.", self.ports)
@@ -105,9 +130,30 @@ class Assistant:
         self.timer = root.after(100, self.poll)
         self.host.trace_add("write", lambda *_: self.password.set(""))
 
+    def set_language(self, code):
+        if self.busy or code not in ("fr", "en"):
+            return
+        self.language.code = code
+        self.language.refresh()
+        self.root.title(self.language.text("Assistant TPP06 · Installation et maintenance"))
+        for shell, title in self.tab_titles:
+            self.tabs.tab(shell, text=self.language.text(title))
+        self.status.set(self.language.text("Prêt — aucune connexion automatique"))
+        self.append("Certains diagnostics techniques restent dans leur langue d’origine ; les confirmations sont traduites.")
+
+    def dependencies(self):
+        self.messagebox.showinfo("Installer les dépendances Python",
+            "Lancer Installer-dependances.cmd (Windows) ou Installer-dependances.sh (Linux), puis rouvrir l’assistant. Le module elftools est fourni par pyelftools.", parent=self.root)
+
+    def folder_help(self):
+        self.messagebox.showinfo("Comprendre les dossiers", "Les deux dossiers sont sur cet ordinateur, pas dans Home Assistant ni dans le panneau.\n\n"
+            "Sauvegardes : copies et journaux de récupération. Choisir un emplacement personnel, hors Git et hors dossier partagé/cloud. Le sous-dossier privé sera créé automatiquement.\n\n"
+            "Outils : fichiers techniques pour ADB, NAND ou SSH, différents du programme adb.exe. Le bouton Préparer les outils télécharge les fichiers disponibles et contrôle leur SHA-256, sans les exécuter.", parent=self.root)
+
     def scroll_page(self, tabs, title):
         shell = self.ttk.Frame(tabs)
-        tabs.add(shell, text=title)
+        tabs.add(shell, text=self.language.text(title))
+        self.tab_titles.append((shell, title))
         canvas = self.tk.Canvas(shell, highlightthickness=0, height=300)
         scrollbar = self.ttk.Scrollbar(shell, orient="vertical", command=canvas.yview)
         scrollbar.pack(side="right", fill="y")
@@ -149,7 +195,7 @@ class Assistant:
 
     def append(self, message):
         self.log.configure(state="normal")
-        self.log.insert("end", message + "\n")
+        self.log.insert("end", self.language.text(message) + "\n")
         self.log.see("end")
         self.log.configure(state="disabled")
 
@@ -157,7 +203,7 @@ class Assistant:
         if self.busy:
             return
         self.busy = True
-        self.status.set(title + "… Ne pas lancer d’OTA en parallèle.")
+        self.status.set(self.language.text(title) + self.language.text("… Ne pas lancer d’OTA en parallèle."))
         for button, _ in self.buttons:
             button.configure(state="disabled")
         for entry in self.inputs:
@@ -178,7 +224,7 @@ class Assistant:
             pass
         else:
             if kind == "progress":
-                self.status.set(value)
+                self.status.set(self.language.text(value))
                 self.timer = self.root.after(100, self.poll)
                 return
             self.busy = False
@@ -186,7 +232,7 @@ class Assistant:
                 button.configure(state="normal" if enabled else "disabled")
             for entry in self.inputs:
                 entry.configure(state="normal")
-            self.status.set(title + (" — non terminé" if kind == "error" else " — terminé"))
+            self.status.set(self.language.text(title) + self.language.text(" — non terminé" if kind == "error" else " — terminé"))
             if kind == "password":
                 self.visible.set(False)
                 self.toggle_password()
@@ -214,7 +260,7 @@ class Assistant:
         self.start("Accès réseau", lambda: core.probe_ports(host, adb))
 
     def read_password(self):
-        from tkinter import messagebox
+        messagebox = self.messagebox
         if not messagebox.askyesno("Lecture du mot de passe d’origine", "Uniquement sur votre propre panneau.\n\n"
                 "Cette lecture entre dans le mode de test temporaire du service 8090. Elle ne change pas le mot de passe, "
                 "n’écrit pas le firmware et ne redémarre pas l’appareil.\n\nContinuer ?", parent=self.root):
@@ -227,7 +273,7 @@ class Assistant:
         self.start("Diagnostic Linux", lambda: core.device_report(core.connect_adb(*values)))
 
     def backup(self):
-        from tkinter import filedialog, messagebox
+        filedialog, messagebox = self.filedialog, self.messagebox
         parent = filedialog.askdirectory(title="Dossier privé hors du dépôt Git", parent=self.root)
         if not parent:
             return
@@ -240,65 +286,127 @@ class Assistant:
         self.start("Sauvegarde du panneau", lambda: core.backup_panel(core.connect_adb(*values), parent))
 
     def archive(self):
-        from tkinter import filedialog
+        filedialog = self.filedialog
         path = filedialog.askopenfilename(title="Archive Cutter", filetypes=[("Archive gzip", "*.tar.gz"), ("Tous", "*")], parent=self.root)
         if path:
             self.start("Contrôle de sauvegarde", lambda: core.inspect_backup(path))
 
     def nand_archive(self):
-        from tkinter import filedialog
+        filedialog = self.filedialog
         from tpp06_assistant_nand import inspect_reference
         path = filedialog.askopenfilename(title="Manifeste NAND privé", filetypes=[("Manifeste", "nand-manifest.json")], parent=self.root)
         if path:
             self.start("Contrôle NAND local", lambda: inspect_reference(path))
 
     def firmware(self):
-        from tkinter import filedialog
+        filedialog = self.filedialog
         path = filedialog.askopenfilename(title="Programme ARM compilé dans Home Assistant", parent=self.root)
         if path:
             self.start("Contrôle du programme", lambda: core.inspect_firmware(path))
 
     def choose_adb(self):
-        from tkinter import filedialog
+        filedialog = self.filedialog
         path = filedialog.askopenfilename(title="Exécutable adb / adb.exe", parent=self.root)
         if path:
             self.adb.set(path)
 
     def guide(self, name):
         path = core.PROJECT_ROOT / "docs" / "fr" / name
+        english = core.PROJECT_ROOT / "docs" / "en" / name
+        if self.language.code == "en" and english.is_file():
+            path = english
         # Local documentation: no automatic web fetch or upload.
         webbrowser.open(path.as_uri())
 
     def inspect_journal(self):
-        from tkinter import filedialog
+        filedialog = self.filedialog
         from tpp06_assistant_jobs import inspect_job
         path = filedialog.askopenfilename(title="operation.json", filetypes=[("Journal", "*.json")], parent=self.root)
         if path:
             self.start("Journal privé", lambda: inspect_job(path))
 
-    def operation_form(self, title, fields, warning, mutating=True):
-        from tkinter import filedialog, messagebox
+    def operation_form(self, title, fields, warning, mutating=True, action=None):
+        filedialog, messagebox = self.filedialog, self.messagebox
         window = self.tk.Toplevel(self.root)
-        window.title(title)
+        window.title(self.language.text(title))
         window.transient(self.root)
         window.grab_set()
-        frame = self.ttk.Frame(window, padding=16)
-        frame.pack(fill="both", expand=True)
-        self.ttk.Label(frame, text=title, font=("TkDefaultFont", 14, "bold")).grid(row=0, column=0, columnspan=3, sticky="w")
+        window.geometry("820x650")
+        # Keep confirmation buttons visible on smaller Windows displays.
+        footer = self.ttk.Frame(window, padding=10)
+        footer.pack(side="bottom", fill="x")
+        canvas = self.tk.Canvas(window, highlightthickness=0)
+        scrollbar = self.ttk.Scrollbar(window, command=canvas.yview)
+        scrollbar.pack(side="right", fill="y")
+        canvas.pack(fill="both", expand=True)
+        canvas.configure(yscrollcommand=scrollbar.set)
+        frame = self.ttk.Frame(canvas, padding=16)
+        item = canvas.create_window(0, 0, anchor="nw", window=frame)
+        frame.bind("<Configure>", lambda _: canvas.configure(scrollregion=canvas.bbox("all")))
+        canvas.bind("<Configure>", lambda event: canvas.itemconfigure(item, width=event.width))
+        frame.columnconfigure(1, weight=1)
+        self.ttk.Label(frame, text=title, wraplength=740, font=("TkDefaultFont", 14, "bold")).grid(row=0, column=0, columnspan=3, sticky="w")
         self.ttk.Label(frame, text=warning, wraplength=660).grid(row=1, column=0, columnspan=3, pady=12, sticky="w")
         values = {}
-        for row, (key, label, kind) in enumerate(fields, start=2):
-            value = self.tk.StringVar()
+        row = 2
+        defaults = {"parent": self.backup_parent, "artifacts": self.tools_dir, "image": resources.bundled_logo()}
+        for key, label, kind in fields:
+            value = self.tk.StringVar(value=defaults.get(key, ""))
             values[key] = value
-            self.ttk.Label(frame, text=label).grid(row=row, column=0, sticky="w", pady=4)
-            self.ttk.Entry(frame, textvariable=value, width=44, show="•" if kind == "secret" else "").grid(row=row, column=1, padx=6, sticky="ew")
+            self.ttk.Label(frame, text=label, wraplength=210).grid(row=row, column=0, sticky="w", pady=4)
+            self.ttk.Entry(frame, textvariable=value, width=34, show="•" if kind == "secret" else "").grid(row=row, column=1, padx=6, sticky="ew")
             if kind in ("file", "dir"):
                 def browse(v=value, k=kind):
                     path = filedialog.askdirectory(parent=window) if k == "dir" else filedialog.askopenfilename(parent=window)
                     if path:
                         v.set(path)
                 self.ttk.Button(frame, text="Choisir…", command=browse).grid(row=row, column=2)
-        row = len(fields) + 2
+            row += 1
+        if "parent" in values:
+            self.ttk.Label(frame, text="Sauvegardes : copies et journaux de récupération. Choisir un emplacement personnel, hors Git et hors dossier partagé/cloud. Le sous-dossier privé sera créé automatiquement.", wraplength=740, style="Note.TLabel").grid(row=row, column=0, columnspan=3, sticky="w", pady=8)
+            row += 1
+        if "artifacts" in values:
+            self.ttk.Label(frame, text="Outils : fichiers techniques pour ADB, NAND ou SSH, différents du programme adb.exe. Le bouton Préparer les outils télécharge les fichiers disponibles et contrôle leur SHA-256, sans les exécuter.", wraplength=740, style="Note.TLabel").grid(row=row, column=0, columnspan=3, sticky="w", pady=8)
+            row += 1
+            tools_status = self.tk.StringVar()
+            self.ttk.Label(frame, textvariable=tools_status, wraplength=740).grid(row=row, column=0, columnspan=3, sticky="w")
+            row += 1
+
+            def check_tools():
+                try:
+                    states = resources.tool_status(values["artifacts"].get(), action)
+                    labels = {"ready": "prêt", "missing": "manquant", "invalid": "empreinte incorrecte"}
+                    tools_status.set("\n".join(name + " : " + self.language.text(labels[state]) for name, state in states.items()))
+                    return bool(states) and all(state == "ready" for state in states.values())
+                except OSError:
+                    tools_status.set(self.language.text("Impossible de lire ce dossier sur le PC."))
+                    return False
+
+            def prepare():
+                if self.busy:
+                    return
+                directory = values["artifacts"].get()
+                if not directory.strip():
+                    return
+                if action == "ssh":
+                    messagebox.showinfo("Guide SSH / Dropbear", "Dropbear compatible doit être préparé selon le guide SSH. Aucun binaire ARM arbitraire n’est accepté.", parent=window)
+                    self.guide("19-ssh-dropbear.md")
+                    return
+                if messagebox.askyesno("Téléchargement des outils", "Télécharger les outils reconnus sur cet ordinateur ? Aucune connexion au panneau, aucune installation ni exécution. Les fichiers existants non reconnus seront conservés et refusés.", parent=window):
+                    tools_status.set(self.language.text("Téléchargement en cours… Le résultat détaillé apparaîtra dans le journal de la fenêtre principale."))
+                    self.start("Téléchargement des outils", lambda: resources.prepare_tools(directory, action))
+                    def refresh_when_done():
+                        if not window.winfo_exists():
+                            return
+                        if self.busy:
+                            self.root.after(200, refresh_when_done)
+                        else:
+                            check_tools()
+                    self.root.after(200, refresh_when_done)
+            self.ttk.Button(frame, text="Préparer les outils", command=prepare).grid(row=row, column=0, sticky="w", pady=8)
+            self.ttk.Button(frame, text="Vérifier les outils", command=check_tools).grid(row=row, column=1, sticky="w")
+            check_tools()
+            row += 1
         confirmation = self.tk.BooleanVar()
         if mutating:
             self.ttk.Checkbutton(frame, text="Je confirme la variante compatible, ma présence avec récupération UART possible,\n"
@@ -308,6 +416,9 @@ class Assistant:
         result = []
 
         def accept():
+            if self.busy:
+                messagebox.showinfo("Opération en cours", "Attendre la fin du téléchargement avant de continuer.", parent=window)
+                return
             data = {key: value.get() for key, value in values.items()}
             if any(not value for value in data.values()) or (mutating and not confirmation.get()):
                 messagebox.showerror("Vérification requise", "Compléter tous les champs et les confirmations.", parent=window)
@@ -315,19 +426,32 @@ class Assistant:
             if "repeat" in data and data["new_password"] != data["repeat"]:
                 messagebox.showerror("Mot de passe", "Les deux saisies sont différentes.", parent=window)
                 return
+            if "artifacts" in data and not check_tools():
+                messagebox.showerror("Vérification requise", "Outils manquants ou non reconnus. Utiliser Préparer les outils, puis Vérifier les outils.", parent=window)
+                return
             if mutating and not messagebox.askyesno("Confirmer cette opération uniquement", title + "\n\n" + warning, parent=window):
                 return
+            if "parent" in data:
+                try:
+                    Path(data["parent"]).expanduser().mkdir(parents=True, exist_ok=True, mode=0o700)
+                except OSError:
+                    messagebox.showerror("Vérification requise", "Impossible de créer le dossier de sauvegarde sur ce PC.", parent=window)
+                    return
+                data["parent"] = str(Path(data["parent"]).expanduser())
+                self.backup_parent = data["parent"]
+            if "artifacts" in data:
+                self.tools_dir = data["artifacts"]
             result.append(data)
             window.destroy()
-        self.ttk.Button(frame, text="Annuler", command=window.destroy).grid(row=row, column=1, sticky="e", pady=8)
-        self.ttk.Button(frame, text="Continuer", command=accept).grid(row=row, column=2, pady=8)
+        self.ttk.Button(footer, text="Continuer", command=accept).pack(side="right")
+        self.ttk.Button(footer, text="Annuler", command=window.destroy).pack(side="right", padx=8)
         self.root.wait_window(window)
         return result[0] if result else None
 
     def operation(self, action):
         import tpp06_assistant_jobs as jobs
-        workspace = ("parent", "Dossier privé des opérations", "dir")
-        artifacts = ("artifacts", "Dossier des outils compatibles", "dir")
+        workspace = ("parent", "Sauvegardes sur cet ordinateur", "dir")
+        artifacts = ("artifacts", "Outils TPP06 sur cet ordinateur", "dir")
         journal = ("journal", "Journal operation.json", "file")
         forms = {
             "adb": ("Activer ADB Wi-Fi — référence après déblocage", [workspace, artifacts],
@@ -349,7 +473,7 @@ class Assistant:
                         "Nouveau panneau sous Tuya uniquement. Sauvegarde du lanceur et du Wi-Fi, puis remplacement du démarrage. "
                         "Aucun retour automatique Tuya, aucun reboot ici. Ne pas couper l’alimentation pendant la préparation. "
                         "Conserver la clé API propre à ce programme pour l’étape Vérifier."),
-            "logo": ("Remplacer uniquement le logo NAND", [workspace, artifacts, ("image", "Image RGB565 512 Kio / logo.before", "file")],
+            "logo": ("Remplacer uniquement le logo NAND", [workspace, artifacts, ("image", "Logo Home Assistant fourni / autre image compatible", "file")],
                      "Écriture NAND distincte de l’OTA : double lecture de l’original et sauvegarde PC, puis relecture après écriture. "
                      "Une coupure électrique reste dangereuse. Une seule tentative de restauration de l’original est prévue en cas d’échec. Aucun reboot."),
             "restore": ("Restaurer une opération sauvegardée", [workspace, journal],
@@ -364,7 +488,7 @@ class Assistant:
                             "Lecture du résultat et comparaison des octets. Ne renvoie ni effacement, ni écriture NAND, ni reboot."),
         }
         title, fields, warning = forms[action]
-        data = self.operation_form(title, fields, warning, mutating=action not in ("verify", "logo-status"))
+        data = self.operation_form(title, fields, warning, mutating=action not in ("verify", "logo-status"), action=action)
         if data is None:
             return
         if action == "restore":
@@ -413,7 +537,7 @@ class Assistant:
         self.start(title, run, kind)
 
     def close(self):
-        from tkinter import messagebox
+        messagebox = self.messagebox
         if self.busy:
             messagebox.showinfo("Opération en cours", "Attendre la fin du contrôle ou de la sauvegarde avant de fermer.", parent=self.root)
             return

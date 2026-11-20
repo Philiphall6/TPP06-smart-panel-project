@@ -69,6 +69,53 @@ class GuiTests(unittest.TestCase):
     def test_layout_does_not_request_a_tall_unscrollable_window(self):
         self.assertLessEqual(self.root.winfo_reqheight(), 800)
 
+    def test_language_preserves_fields_password_mask_and_translates_dialogs(self):
+        self.app.host.set("192.0.2.10")
+        self.app.password.set("synthetic-private-password")
+        self.app.set_language("en")
+        self.assertEqual(self.app.host.get(), "192.0.2.10")
+        self.assertEqual(self.app.password.get(), "synthetic-private-password")
+        self.assertNotEqual(self.app.password_entry.cget("show"), "")
+        self.assertIn("Setup", self.root.title())
+        self.assertIn("Software", self.app.tabs.tab(0, "text"))
+        with patch("tkinter.messagebox.showinfo") as info:
+            self.app.folder_help()
+            self.assertEqual(info.call_args.args[0], "Understanding the folders")
+            self.assertIn("Both folders are on this computer", info.call_args.args[1])
+        self.assertNotIn("synthetic-private-password", self.app.log.get("1.0", "end"))
+        self.app.set_language("fr")
+        self.assertIn("Logiciels", self.app.tabs.tab(0, "text"))
+
+    def test_form_defaults_and_cancel_create_nothing(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as directory:
+            parent = Path(directory) / "backups"
+            tools = Path(directory) / "tools"
+            self.app.backup_parent, self.app.tools_dir = str(parent), str(tools)
+            self.app.set_language("en")
+            observed = []
+            def cancel():
+                window = next(child for child in self.root.winfo_children() if child.winfo_class() == "Toplevel")
+                def descendants(widget):
+                    for child in widget.winfo_children():
+                        yield child
+                        yield from descendants(child)
+                widgets = list(descendants(window))
+                entries = [widget.get() for widget in widgets if widget.winfo_class() == "TEntry"]
+                labels = [widget.cget("text") for widget in widgets if widget.winfo_class() == "TLabel"]
+                observed.append((entries, labels, window.winfo_height()))
+                window.destroy()
+            self.root.after(100, cancel)
+            self.app.operation("logo")
+            entries, labels, height = observed[0]
+            self.assertIn(str(parent), entries)
+            self.assertIn(str(tools), entries)
+            self.assertTrue(any(value.endswith("-rgb565.bin") for value in entries))
+            self.assertIn("Backups on this computer", labels)
+            self.assertLessEqual(height, 700)
+            self.assertFalse(parent.exists())
+            self.assertFalse(tools.exists())
+
     def test_adb_form_uses_explicit_post_adb_consent_without_dump(self):
         data = {"parent": "synthetic-private-folder", "artifacts": "synthetic-tools"}
         with patch.object(self.app, "operation_form", return_value=data) as form, \

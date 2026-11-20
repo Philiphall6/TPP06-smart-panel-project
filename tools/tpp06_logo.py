@@ -52,7 +52,7 @@ def write_new_regular(path, data):
     if parent == Path("/dev") or Path("/dev") in parent.parents:
         raise ValueError("Device paths are forbidden")
     target = parent / path.name
-    fd = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+    fd = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0), 0o600)
     with os.fdopen(fd, "wb") as stream:
         if not stat.S_ISREG(os.fstat(stream.fileno()).st_mode):
             raise ValueError("Regular output files only")
