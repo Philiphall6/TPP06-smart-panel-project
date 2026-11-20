@@ -1,6 +1,6 @@
 # TPP06 — local ESPHome + LVGL
 
-[![Latest release asset downloads](https://img.shields.io/github/downloads/Philiphall6/TPP06-smart-panel-project/latest/total?label=asset%20downloads)](https://github.com/Philiphall6/TPP06-smart-panel-project/releases/latest)
+[![Total asset downloads across all releases](https://img.shields.io/github/downloads/Philiphall6/TPP06-smart-panel-project/total?label=total%20downloads)](https://github.com/Philiphall6/TPP06-smart-panel-project/releases)
 
 **[Latest release: version, changes and limitations](https://github.com/Philiphall6/TPP06-smart-panel-project/releases/latest)** ·
 [Release history](https://github.com/Philiphall6/TPP06-smart-panel-project/releases)
@@ -58,8 +58,9 @@ is editable. Use the latest release’s tagged sources for reproducibility;
 keep your own keys, addresses and entity bindings private.
 
 Download **`TPP06-HA-Panel-v<version>-sources.zip`** and its SHA256 file from
-the latest release. The badge counts asset downloads, not installations, and
-may be cached. The [complete template](esphome/tpp06-lvgl-complete.yaml) adds
+the latest release. The badge adds up downloads of assets still published across
+**all releases**, including SHA256 files, not installations. It may be cached.
+The [complete template](esphome/tpp06-lvgl-complete.yaml) adds
 the new modules; see [BLE, screen and YAML sections](docs/en/20-ble-screen-yaml.md).
 Public relay control defaults to observation: retain the commissioned setting
 when updating an already validated panel.

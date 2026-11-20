@@ -1,6 +1,6 @@
 # TPP06 — documentation française
 
-[![Téléchargements des assets de la dernière release](https://img.shields.io/github/downloads/Philiphall6/TPP06-smart-panel-project/latest/total?label=assets%20t%C3%A9l%C3%A9charg%C3%A9s)](https://github.com/Philiphall6/TPP06-smart-panel-project/releases/latest)
+[![Téléchargements cumulés de toutes les releases](https://img.shields.io/github/downloads/Philiphall6/TPP06-smart-panel-project/total?label=t%C3%A9l%C3%A9chargements%20cumul%C3%A9s)](https://github.com/Philiphall6/TPP06-smart-panel-project/releases)
 
 **[Dernière release : version, nouveautés et limites](https://github.com/Philiphall6/TPP06-smart-panel-project/releases/latest)**
 
@@ -33,8 +33,9 @@ secrets restent locaux. Prendre les sources du tag de la dernière release
 pour conserver ensemble les versions des pilotes et de l’interface.
 
 Le paquet **`TPP06-HA-Panel-v<version>-sources.zip`**, accompagné de son SHA256,
-se trouve dans la dernière release. Le compteur suit les téléchargements des
-assets, pas les installations. Le [modèle complet](esphome/tpp06-lvgl-complete.yaml)
+se trouve dans la dernière release. Le compteur additionne les téléchargements des
+fichiers encore publiés dans **toutes les releases**, SHA256 inclus, pas les
+installations. Sa mise à jour peut être différée. Le [modèle complet](esphome/tpp06-lvgl-complete.yaml)
 ajoute BLE, réglages d'écran dans HA, relais locaux, silence et diagnostics.
 Lire le [guide BLE, écran et YAML commenté](docs/fr/20-ble-ecran-yaml.md) :
 les relais du modèle public restent en observation avant validation sur place.

@@ -8,6 +8,13 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class DocumentationTests(unittest.TestCase):
+    def test_download_badges_count_all_releases(self):
+        base = 'https://img.shields.io/github/downloads/Philiphall6/TPP06-smart-panel-project/'
+        for name in ('README.md', 'README.fr.md', 'README.en.md'):
+            text = (ROOT / name).read_text()
+            self.assertIn(base + 'total?', text)
+            self.assertNotIn(base + 'latest/total', text)
+
     def test_product_images_remain_in_readmes(self):
         images = ('media/visuels-produit/01-panneau-blanc.png',
                   'media/visuels-produit/02-panneau-noir.png')

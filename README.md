@@ -1,6 +1,6 @@
 # TPP06 · ESPHome + LVGL, en local
 
-[![Téléchargements des assets de la dernière release](https://img.shields.io/github/downloads/Philiphall6/TPP06-smart-panel-project/latest/total?label=assets%20t%C3%A9l%C3%A9charg%C3%A9s)](https://github.com/Philiphall6/TPP06-smart-panel-project/releases/latest)
+[![Téléchargements cumulés de toutes les releases](https://img.shields.io/github/downloads/Philiphall6/TPP06-smart-panel-project/total?label=t%C3%A9l%C3%A9chargements%20cumul%C3%A9s)](https://github.com/Philiphall6/TPP06-smart-panel-project/releases)
 
 Une interface tactile personnalisable pour le panneau **MOES / Tuya TPP06**,
 reliée à Home Assistant. ESPHome fonctionne sur le **Linux Anyka d’origine** :
@@ -67,8 +67,9 @@ reproductible, prendre les sources du tag indiqué dans la dernière release,
 pas une copie arbitraire de `main`.
 
 Télécharger **`TPP06-HA-Panel-v<version>-sources.zip`** et son fichier SHA256
-depuis la dernière release. Le compteur indique les téléchargements des assets,
-pas le nombre d'installations ; sa mise à jour peut être différée.
+depuis la dernière release. Le compteur additionne les téléchargements des fichiers
+encore publiés dans **toutes les releases**, y compris les fichiers SHA256.
+Ce n’est pas le nombre d’installations ; sa mise à jour peut être différée.
 Le [modèle complet avec les nouveaux modules](esphome/tpp06-lvgl-complete.yaml)
 et le [guide BLE, écran et sections YAML](docs/fr/20-ble-ecran-yaml.md)
 expliquent quoi personnaliser. Les relais restent en observation dans le modèle
