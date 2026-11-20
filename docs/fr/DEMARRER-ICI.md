@@ -2,6 +2,11 @@
 
 [English](../en/START-HERE.md) · [Accueil](../../README.md)
 
+**Assistant sur ordinateur :** l’[interface graphique expérimentale](21-assistant-ordinateur.md)
+regroupe accès, sauvegarde après ADB, SSH, mot de passe, logo et préparation ESPHome.
+Chaque action est distincte et confirmée. Le parcours matériel complet et la
+restauration NAND globale ne sont pas validés ; lire les limites du guide.
+
 Ce guide distingue une **première préparation** d’une **mise à jour**.
 Il n’est pas nécessaire d’ouvrir un panneau compatible pour utiliser la voie
 réseau. Cela reste un projet expérimental : aucune garantie de récupération

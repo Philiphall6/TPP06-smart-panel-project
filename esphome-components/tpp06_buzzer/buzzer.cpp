@@ -1,4 +1,5 @@
 #include "buzzer.h"
+#include "process_identity.h"
 #ifdef USE_HOST
 #include "pulse.h"
 #include <cerrno>
@@ -47,8 +48,7 @@ static bool stock_absent() {
     }
     ssize_t n = read(fd, buf, sizeof(buf) - 1); close(fd);
     if (n < 0) { ok = false; break; }
-    for (ssize_t i = 0; i < n; ++i) if (!buf[i]) buf[i] = ' ';
-    if (std::strstr(buf, "voice_control_ak3760e") || std::strstr(buf, "tuya_monitor.sh")) {
+    if (tpp06_process_identity::stock_cmdline(buf, static_cast<size_t>(n))) {
       ok = false; break;
     }
   }

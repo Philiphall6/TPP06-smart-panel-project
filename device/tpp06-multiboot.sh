@@ -58,6 +58,10 @@ read_count() {
 }
 
 write_state() {
+    # Explicit owner opt-in: no failure or stop may select Tuya on next boot.
+    if [ "$1" = mode ] && [ "$2" = tuya ] && stock_fallback_disabled; then
+        set -- mode esphome
+    fi
     echo "$2" >"$BASE/$1.tmp" || return 1
     mv "$BASE/$1.tmp" "$BASE/$1" || return 1
     sync
@@ -96,7 +100,29 @@ maintain_runtime_logs() {
     trim_runtime_log "$LOG_DIR/tuya-factory.log" 262144
 }
 
+stock_fallback_disabled() {
+    # Marker presence is intentional; an empty/malformed marker must not
+    # silently re-enable cloud software. Removal is a manual policy change.
+    [ -e "$BASE/no_stock_fallback" ] || [ -L "$BASE/no_stock_fallback" ]
+}
+
+start_management_ssh() {
+    management_ssh=${TPP06_SSH_SERVICE:-/data/tpp06-ssh/service.sh}
+    if [ -x "$management_ssh" ]; then
+        "$management_ssh" start >>"$LOG_DIR/ssh-start.log" 2>&1 ||
+            log "ERROR SSH service start failed; check local administration"
+    else
+        log "WARNING SSH service not installed"
+    fi
+}
+
 start_stock() {
+    if stock_fallback_disabled; then
+        start_management_ssh
+        log "Tuya launch blocked by owner ESPHome-only policy"
+        write_state active_mode esphome-maintenance
+        return 1
+    fi
     if [ ! -x "$STOCK" ]; then
         log "ERROR stock launcher missing: $STOCK"
         write_state active_mode stock-missing
@@ -210,6 +236,8 @@ stop_recorded_process() {
 }
 
 cleanup_independent_services() {
+    # Keep the existing management connection when ESPHome stops or fails.
+    stock_fallback_disabled && return 0
     # Only stop daemons whose PID files were created by this supervisor.  A
     # stock-owned Wi-Fi process is therefore never touched accidentally.
     stop_recorded_process "$DHCP_PID_FILE" udhcpc
@@ -246,6 +274,21 @@ local_offline_policy() {
 }
 
 start_independent_network() {
+    # A soft restart in ESPHome-only mode retains our network daemons.
+    # Never adopt an unverified process just because a PID file exists.
+    if stock_fallback_disabled; then
+        owned_network=yes
+        for pair in "$WPA_PID_FILE:wpa_supplicant" "$DHCP_PID_FILE:udhcpc"; do
+            saved_pid=$(read_value "${pair%:*}" '')
+            case "$saved_pid" in ''|*[!0-9]*|0) owned_network=no; continue ;; esac
+            if ! kill -0 "$saved_pid" 2>/dev/null ||
+               ! tr '\000' '\n' < "$PROC_ROOT/$saved_pid/cmdline" 2>/dev/null |
+                   grep -Eq "(^|/)${pair##*:}$"; then
+                owned_network=no
+            fi
+        done
+        [ "$owned_network" = yes ] && return 0
+    fi
     if ! network_profile_valid; then
         log "ERROR independent Wi-Fi profile is unavailable or incomplete"
         return 1
@@ -330,6 +373,21 @@ increment_failure() {
 
 fallback_stock() {
     reason=$1
+    if stock_fallback_disabled; then
+        write_state mode esphome || log "ERROR could not retain ESPHome selection"
+        start_management_ssh
+        wifi_edit_recover || log "ERROR Wi-Fi recovery incomplete; keeping journal"
+        # If boot failed before networking (e.g. missing engine), try once to
+        # provide local administration. No retry/reboot loop, no stock launch.
+        if ! stock_runtime_present; then
+            start_rescue_service || log "ERROR local 8090 service unavailable"
+            start_independent_network || log "ERROR network recovery needs attention"
+        fi
+        rm -f "$BASE/boot_pending" "$BASE/engine.pid"
+        write_state active_mode esphome-maintenance
+        log "ESPHOME-ONLY maintenance reason=$reason; Tuya remains disabled"
+        return 0
+    fi
     # Disarm persistence before stopping any service: a reset during cleanup
     # must not retry the engine that just failed.
     if ! write_state mode tuya; then
@@ -429,6 +487,7 @@ monitor_persistent() {
 }
 
 supervise() {
+    stock_fallback_disabled && start_management_ssh
     if [ -f "$BASE/tpp06-wifi-edit.sh" ]; then
         . "$BASE/tpp06-wifi-edit.sh"
         if ! wifi_edit_init; then
@@ -437,6 +496,15 @@ supervise() {
         fi
     fi
     requested=$(read_value "$BASE/mode" tuya)
+    if stock_fallback_disabled; then
+        requested=esphome
+        if [ "$(read_value "$BASE/boot_policy" one-shot)" != persistent ] ||
+           [ "$(read_value "$BASE/network_mode" learning)" != isolated ] ||
+           [ "$SESSION_SECONDS" != 0 ]; then
+            fallback_stock incompatible-esphome-only-policy
+            return 1
+        fi
+    fi
     write_state requested_mode "$requested"
 
     case "$requested" in
@@ -463,7 +531,11 @@ supervise() {
         start_stock
         return 1
     fi
-    log "one-shot custom boot consumed; next reboot remains stock"
+    if stock_fallback_disabled; then
+        log "ESPHome-only policy: next reboot remains ESPHome"
+    else
+        log "one-shot custom boot consumed; next reboot remains stock"
+    fi
 
     boot_policy=$(read_value "$BASE/boot_policy" one-shot)
     case "$boot_policy" in
@@ -491,7 +563,7 @@ supervise() {
     else
         failures=$(read_count "$BASE/failure_count")
     fi
-    if [ "$failures" -ge "$FAIL_LIMIT" ]; then
+    if [ "$failures" -ge "$FAIL_LIMIT" ] && ! stock_fallback_disabled; then
         fallback_stock failure-limit
         return
     fi
@@ -648,6 +720,7 @@ supervisor_is_running() {
 
 case "$1" in
     start)
+        stock_fallback_disabled && start_management_ssh
         if supervisor_is_running; then
             log "supervisor already running pid=$old_pid"
             exit 0
@@ -669,6 +742,7 @@ case "$1" in
         "$0" start
         ;;
     status)
+        stock_fallback_disabled && echo "fallback=local-maintenance" || echo "fallback=tuya"
         echo "requested=$(read_value "$BASE/mode" tuya)"
         echo "active=$(read_value "$BASE/active_mode" unknown)"
         echo "failures=$(read_count "$BASE/failure_count")"

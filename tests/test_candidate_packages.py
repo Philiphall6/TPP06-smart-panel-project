@@ -27,7 +27,7 @@ class CandidateConfigTests(unittest.TestCase):
                 "tpp06_api_encryption_key: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=\n")
             config = yaml_util.load_yaml(CORE.config_path)
             release = config["packages"]["release"]
-            self.assertEqual(release["ref"], "v0.1.8")
+            self.assertEqual(release["ref"], "v0.1.9-rc1")
             packages = {}
             for index, name in enumerate(release["files"]):
                 item = yaml_util.load_yaml(ROOT / name)
@@ -41,7 +41,7 @@ class CandidateConfigTests(unittest.TestCase):
             result = validate_config(config, {})
             self.assertFalse(result.errors, str(result.errors))
             self.assertFalse(result["tpp06_local_relays"]["control_enabled"])
-            self.assertEqual(result["esphome"]["project"]["version"], "0.1.8")
+            self.assertEqual(result["esphome"]["project"]["version"], "0.1.9-rc1")
             self.assertEqual(len(result["lvgl"][0]["pages"]), 14)
             CORE.config = result
             from esphome.__main__ import generate_cpp_contents

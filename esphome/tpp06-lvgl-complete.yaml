@@ -24,7 +24,7 @@ substitutions:
 packages:
   release:
     url: https://github.com/Philiphall6/TPP06-smart-panel-project
-    ref: v0.1.8
+    ref: v0.1.9-rc1
     files:
       - esphome/tpp06-lvgl-modern.yaml
       - esphome/packages/local-relays-experimental.yaml
@@ -42,7 +42,7 @@ external_components:
   - source:
       type: git
       url: https://github.com/Philiphall6/TPP06-smart-panel-project
-      ref: v0.1.8
+      ref: v0.1.9-rc1
       path: esphome-components
     refresh: never
     components:
@@ -70,5 +70,5 @@ tpp06_local_relays:
 
 # [TPP06] BUILDER : modèle public proposé à l'import
 dashboard_import:
-  package_import_url: github://Philiphall6/TPP06-smart-panel-project/esphome/tpp06-lvgl-complete.yaml@v0.1.8
+  package_import_url: github://Philiphall6/TPP06-smart-panel-project/esphome/tpp06-lvgl-complete.yaml@v0.1.9-rc1
   import_full_config: true

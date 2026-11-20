@@ -52,6 +52,7 @@ static std::array<bool, 3> held{};
 static uint32_t now = 0;
 static int writes = 0, led_writes = 0, next_fd = 100;
 static bool stock = false, stock_iter = false, bad_kernel = false, bad_keys = false;
+static std::string process_command = "voice_control_ak3760e";
 static bool short_write = false, wrong_readback = false, short_event = false, lock_busy = false;
 static bool lock_read_only = false;
 static bool mute_value = false, mute_supported = true;
@@ -79,7 +80,7 @@ extern "C" int __wrap_open(const char *p, int flags, ...) {
     if (lock_read_only) { errno = EROFS; return -1; }
     return 81;
   }
-  if (path == "/proc/123/cmdline") fs[path] = "voice_control_ak3760e";
+  if (path == "/proc/123/cmdline") fs[path] = process_command;
   if (!fs.count(path)) { errno = ENOENT; return -1; }
   if ((flags & O_ACCMODE) == O_WRONLY) {
     assert((path.find("/sys/class/gpio/KC_CTL") == 0 && path.substr(path.size()-6) == "/value") ||
@@ -138,6 +139,7 @@ static std::string value_path(int i) { return "/sys/class/gpio/KC_CTL" + std::to
 static void reset() {
   fs.clear(); files.clear(); events.clear(); held = {}; now = 0; writes = led_writes = 0;
   stock = bad_kernel = bad_keys = short_write = wrong_readback = short_event = lock_busy = false;
+  process_command = "voice_control_ak3760e";
   for (int i=0; i<3; ++i) {
     std::string base = "/proc/device-tree/gpio_export/kc_ctl" + std::to_string(i+1);
     std::string gpio(12, '\0'); gpio[3] = 6; gpio[7] = 65+i; fs[base+"/gpios"] = gpio;
@@ -161,6 +163,17 @@ struct Fixture {
   void event(int code, int value) { events.push_back({0,0,EV_KEY,uint16_t(code),value}); hub.loop(); }
 };
 int main() {
+  reset();
+  { stock = true;
+    const char diagnostic[] = "sh\0-c\0pidof voice_control_ak3760e; ps | grep tuya_monitor.sh";
+    process_command.assign(diagnostic, sizeof(diagnostic));
+    Fixture f; f.hub.setup(); assert(f.hub.control_available());
+    now = 2000; f.hub.loop(); assert(f.hub.control_available());
+    f.event(KEY_F1, 1); assert(writes == 1 && f.relay[0].state);
+    process_command = "voice_control_ak3760e";
+    now = 4000; f.hub.loop(); assert(!f.hub.control_available());
+    f.event(KEY_F2, 1); assert(writes == 1);
+  }
   reset();
   { Fixture f; esphome::text_sensor::TextSensor sensor; f.hub.set_mute_sensor(&sensor);
     f.hub.setup(); assert(sensor.state=="Inactif" && writes==0);

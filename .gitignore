@@ -33,3 +33,7 @@ connection.json
 commission.json
 api-key.txt
 .venv-commission/
+.venv-assistant/
+operation.json
+adb-operation.json
+tpp06-operation-*/

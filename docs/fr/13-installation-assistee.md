@@ -2,6 +2,11 @@
 
 [English](../en/13-assisted-setup.md) · [Guide débutant](DEMARRER-ICI.md)
 
+Un [assistant graphique sur ordinateur](21-assistant-ordinateur.md) est
+désormais disponible avec ses propres parcours d’installation et de maintenance.
+Il ne lance pas automatiquement cette ancienne procédure ; sa validation
+matérielle complète reste à faire. Le présent document décrit l’outil CLI historique.
+
 **Statut : code et simulations hors ligne uniquement. Cette nouvelle procédure
 complète n'a pas encore été exécutée sur un panneau.** Elle ne remplace pas
 la validation sur matériel et n'est pas encore recommandée pour un novice seul.

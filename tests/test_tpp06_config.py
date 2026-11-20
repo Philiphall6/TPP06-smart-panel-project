@@ -275,7 +275,13 @@ class MobileConfigTests(PortableConfigTests):
             self.assertIn(required, ids)
         for kind, value in widgets:
             if kind == "button":
-                self.assertGreaterEqual(value["width"], 44)
+                if value["width"] == "100%":
+                    container = next(w["obj"] for p in ui["pages"] if p["id"] == "page_menu"
+                                     for w in p["widgets"] if "obj" in w)
+                    self.assertIn({"button": value}, container["widgets"])
+                    self.assertGreaterEqual(container["width"] - container["pad_left"] - container["pad_right"], 44)
+                else:
+                    self.assertGreaterEqual(value["width"], 44)
                 self.assertGreaterEqual(value["height"], 44)
         brightness = [x for x in config["sensor"] if x.get("attribute") == "brightness"]
         self.assertEqual(len(brightness), 2)
@@ -304,13 +310,18 @@ class MobileConfigTests(PortableConfigTests):
             for item in items:
                 _, value = next(iter(item.items()))
                 width, height = value.get("width"), value.get("height")
+                if isinstance(width, str) and width.endswith("%"):
+                    width = int(parent_width * float(width[:-1]) / 100)
+                if isinstance(height, str) and height.endswith("%"):
+                    height = int(parent_height * float(height[:-1]) / 100)
                 if str(value.get("align", "")).upper() != "CENTER":
                     if isinstance(width, int):
                         self.assertLessEqual(value.get("x", 0) + width, parent_width)
                     if isinstance(height, int):
                         self.assertLessEqual(value.get("y", 0) + height, parent_height)
                 if value.get("widgets"):
-                    check_bounds(value["widgets"], width, height)
+                    content_width = width - value.get("pad_left", 0) - value.get("pad_right", 0)
+                    check_bounds(value["widgets"], content_width, height)
         check_bounds(ui["top_layer"]["widgets"], 320, 480)
         for page in ui["pages"]:
             check_bounds(page["widgets"], 320, 480)
@@ -347,14 +358,14 @@ class MobileConfigTests(PortableConfigTests):
 class ModernConfigTests(MobileConfigTests):
     CONFIG_FILE = "tpp06-lvgl-modern.yaml"
     PAGE_COUNT = 11
-    UI_VERSION = "0.1.8"
+    UI_VERSION = "0.1.9-rc1"
     IMPORT_MARKER = "modern"
 
     def test_release_sources_are_pinned_together(self):
         self.test_local_configuration_and_diagnostics()
         config = yaml_util.load_yaml(CORE.config_path)
-        self.assertEqual(config["external_components"][0]["source"]["ref"], "v0.1.8")
-        self.assertTrue(config["dashboard_import"]["package_import_url"].endswith("@v0.1.8"))
+        self.assertEqual(config["external_components"][0]["source"]["ref"], "v0.1.9-rc1")
+        self.assertTrue(config["dashboard_import"]["package_import_url"].endswith("@v0.1.9-rc1"))
 
     def test_glass_status_and_weather_layout(self):
         self.test_local_configuration_and_diagnostics()
@@ -421,13 +432,15 @@ class ModernConfigTests(MobileConfigTests):
         for button in buttons:
             self.assertLessEqual(button["y"] + button["height"], 406)
         menu = next(p for p in config["lvgl"]["pages"] if p["id"] == "page_menu")
-        rows = sorted((w["button"] for w in menu["widgets"] if "button" in w), key=lambda b: b["y"])
+        container = next(w["obj"] for w in menu["widgets"] if "obj" in w)
+        self.assertTrue(container["scrollable"])
+        self.assertEqual(container["layout"]["flex_flow"], "COLUMN")
+        self.assertLessEqual(container["y"] + container["height"], 406)
+        rows = [w["button"] for w in container["widgets"] if "button" in w]
         self.assertEqual(len(rows), 5)
         for row in rows:
             self.assertGreaterEqual(row["height"], 44)
-            self.assertLessEqual(row["y"] + row["height"], 406)
-        for previous, following in zip(rows, rows[1:]):
-            self.assertLess(previous["y"] + previous["height"], following["y"])
+            self.assertNotIn("y", row)  # Flex, not overlapping absolute positions.
 
     def test_storage_and_restart_are_native_same_device_entities(self):
         self.test_local_configuration_and_diagnostics()

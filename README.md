@@ -9,6 +9,10 @@ ce n’est pas un ESP32 et il ne faut pas lui envoyer un firmware ESP32.
 **[Dernière release : version, nouveautés et limites](https://github.com/Philiphall6/TPP06-smart-panel-project/releases/latest)** ·
 [Historique des releases](https://github.com/Philiphall6/TPP06-smart-panel-project/releases)
 
+**[Préversion de l’assistant et correctifs récents](https://github.com/Philiphall6/TPP06-smart-panel-project/releases/tag/v0.1.9-rc1)** :
+installation accompagnée Linux/Windows, sauvegarde après ADB et limites détaillées.
+Ce candidat ne remplace pas la dernière release non-préversion.
+
 **[Commencer ici — guide débutant français](docs/fr/DEMARRER-ICI.md)** ·
 **[Start here — English beginner guide](docs/en/START-HERE.md)**
 
@@ -79,12 +83,20 @@ Le parcours courant est **réseau → ADB → sauvegarde → compilation HA → 
 encadré → OTA**. Le démontage et l’UART restent dans les archives de récupération.
 L’[assistant de première mise en service](docs/fr/13-installation-assistee.md)
 est testé hors ligne ; son parcours complet n’est pas validé pour un novice seul.
+L’[assistant graphique sur ordinateur](docs/fr/21-assistant-ordinateur.md) propose
+des actions distinctes, avec confirmations et journaux privés. L’état après
+déblocage ADB peut servir de référence souhaitée sans dump préalable obligatoire.
+La copie des partitions NAND exposées ne certifie ni une image physique intégrale
+cohérente ni sa restauration. Ne pas effacer les sauvegardes existantes.
 
 > [!WARNING]
 > Projet expérimental, spécifique au matériel testé, pas un installateur universel.
 > La première préparation écrit un overlay. Sauvegardes et récupération locale
-> sont nécessaires. Le secours revient à **Tuya d’origine**, pas automatiquement
-> au précédent programme ESPHome ; il ne protège pas d’une panne NAND ou du noyau.
+> sont nécessaires. Le parcours historique revient à **Tuya d’origine**, pas
+> automatiquement au précédent programme ESPHome. La politique optionnelle
+> [ESPHome seul](docs/fr/20-esphome-seul.md), utilisée par le nouvel assistant,
+> conserve une maintenance locale sans relancer Tuya ; elle ne protège pas
+> d’une panne NAND ou du noyau.
 > Veille/réveil, coupure électrique, perte réseau et endurance restent à tester
 > selon votre installation. Ne pas ouvrir un panneau sous tension ni exposer ses ports sur Internet.
 

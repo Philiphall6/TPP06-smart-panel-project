@@ -1,4 +1,5 @@
 #include "local_relays.h"
+#include "process_identity.h"
 #ifdef USE_HOST
 #include <cerrno>
 #include <cstdio>
@@ -85,8 +86,7 @@ bool LocalRelays::stock_present_() {
     }
     const ssize_t size = read(fd, buffer, sizeof(buffer) - 1); close(fd);
     if (size < 0) { found = true; break; }
-    for (ssize_t i = 0; i < size; ++i) if (buffer[i] == '\0') buffer[i] = ' ';
-    if (std::strstr(buffer, "voice_control_ak3760e") || std::strstr(buffer, "tuya_monitor.sh")) {
+    if (tpp06_process_identity::stock_cmdline(buffer, static_cast<size_t>(size))) {
       found = true; break;
     }
   }

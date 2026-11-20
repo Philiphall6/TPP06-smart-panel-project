@@ -91,7 +91,7 @@ esphome:
       - lambda: id(panel_backlight).set_percent(id(mobile_brightness));
   project:
     name: philiphall6.tpp06
-    version: "0.1.8"
+    version: "0.1.9-rc1"
   build_flags:
     - -static
     # Keep debug/symbol tables out of the OTA payload on the small /data volume.
@@ -110,7 +110,7 @@ external_components:
   - source:
       type: git
       url: https://github.com/Philiphall6/TPP06-smart-panel-project
-      ref: v0.1.8
+      ref: v0.1.9-rc1
       path: esphome-components
     refresh: 5min
     components:
@@ -231,7 +231,7 @@ ota:
 dashboard_import:
   # "Take control" copies the complete LVGL configuration into Device Builder.
   # The owner can then freely edit every page, widget and Home Assistant action.
-  package_import_url: github://Philiphall6/TPP06-smart-panel-project/esphome/tpp06-lvgl-modern.yaml@v0.1.8
+  package_import_url: github://Philiphall6/TPP06-smart-panel-project/esphome/tpp06-lvgl-modern.yaml@v0.1.9-rc1
   import_full_config: true
 
 # [TPP06] IMPORTS ET DIAGNOSTICS : textes, météo, lumières et volet HA
@@ -1676,150 +1676,224 @@ lvgl:
 
     # [TPP06] VUE PARAMÈTRES : menu principal
     - id: page_menu
-      bg_color: "${ui_background}"
+      bg_color: ${ui_background}
       on_load:
-        - globals.set:
-            id: mobile_active_nav
-            value: '3'
-        - script.execute: tpp06_refresh_menu
+      - globals.set:
+          id: mobile_active_nav
+          value: '3'
+      - script.execute: tpp06_refresh_menu
       widgets:
-        - label:
-            x: 20
-            y: 60
-            width: 280
-            height: 36
-            text_font: montserrat_28
-            text: "Parametres"
-        - label:
-            x: 20
-            y: 102
-            width: 280
-            text_font: montserrat_12
-            text_color: "${ui_muted}"
-            text: "Votre panneau, a votre facon"
-        - button:
-            id: mobile_setting_0
-            x: 16
-            y: 126
-            width: 288
-            height: 48
-            styles: mobile_card
-            widgets:
+      - label:
+          x: 20
+          y: 60
+          width: 280
+          height: 36
+          text_font: montserrat_28
+          text: Parametres
+      - label:
+          x: 20
+          y: 102
+          width: 280
+          text_font: montserrat_12
+          text_color: ${ui_muted}
+          text: Faites glisser pour voir les options
+      - obj:
+          id: mobile_settings_list
+          align: TOP_LEFT
+          x: 12
+          y: 122
+          width: 296
+          height: 282
+          bg_opa: TRANSP
+          border_width: 0
+          radius: 0
+          pad_left: 4
+          pad_right: 8
+          pad_top: 4
+          pad_bottom: 8
+          scrollable: true
+          scroll_dir: VER
+          scrollbar_mode: AUTO
+          layout:
+            type: FLEX
+            flex_flow: COLUMN
+            pad_row: 8
+            flex_align_main: START
+            flex_align_cross: START
+          widgets:
+          - label:
+              text: ECRAN ET CONFORT
+              text_font: montserrat_12
+              text_color: ${ui_muted}
+              width: 100%
+              height: 24
+          - button:
+              id: mobile_setting_2
+              width: 100%
+              height: 64
+              styles: mobile_card
+              widgets:
               - label:
                   x: 16
-                  y: 8
+                  y: 10
                   text_font: montserrat_12
-                  text_color: "${ui_muted}"
-                  text: "\uF043  ACCENT NAVIGATION"
-              - label:
-                  id: mobile_accent_value
-                  x: 16
-                  y: 27
-                  width: 232
-                  text_font: montserrat_16
-                  text: "Couleur du YAML"
-              - label:
-                  x: 260
-                  y: 20
-                  text: ">"
-            on_click:
-              - lambda: id(mobile_purple_accent) = !id(mobile_purple_accent);
-              - script.execute: tpp06_refresh_menu
-        - button:
-            id: mobile_setting_1
-            x: 16
-            y: 180
-            width: 288
-            height: 48
-            styles: mobile_card
-            widgets:
-              - label:
-                  x: 16
-                  y: 8
-                  text_font: montserrat_12
-                  text_color: "${ui_muted}"
-                  text: "FORMAT DE L'HEURE"
-              - label:
-                  id: mobile_format_value
-                  x: 16
-                  y: 27
-                  width: 232
-                  text_font: montserrat_16
-                  text: "24 heures"
-              - label:
-                  x: 260
-                  y: 20
-                  text: ">"
-            on_click:
-              - lambda: id(mobile_clock_12h) = !id(mobile_clock_12h);
-              - script.execute: tpp06_refresh_menu
-        - button:
-            id: mobile_setting_2
-            x: 16
-            y: 234
-            width: 288
-            height: 48
-            styles: mobile_card
-            widgets:
-              - label:
-                  x: 16
-                  y: 8
-                  text_font: montserrat_12
-                  text_color: "${ui_muted}"
-                  text: "\uF013  AFFICHAGE"
+                  text_color: ${ui_muted}
+                  text:   AFFICHAGE
+                  width: 224
+                  height: 22
+                  long_mode: DOT
               - label:
                   id: mobile_display_link
                   x: 16
-                  y: 27
-                  width: 232
+                  y: 34
+                  width: 224
                   text_font: montserrat_16
-                  text: "Ecran et sons"
+                  text: Ecran et sons
+                  height: 22
+                  long_mode: DOT
               - label:
-                  x: 260
-                  y: 20
-                  text: ">"
-            on_click:
+                  x: 252
+                  y: 23
+                  text: '>'
+              on_click:
               - lvgl.page.show: page_display_settings
-        - button:
-            id: mobile_setting_3
-            x: 16
-            y: 288
-            width: 288
-            height: 48
-            styles: mobile_card
-            widgets:
+              radius: 16
+              scrollable: false
+          - button:
+              id: mobile_setting_0
+              width: 100%
+              height: 64
+              styles: mobile_card
+              widgets:
               - label:
                   x: 16
-                  y: 8
+                  y: 10
                   text_font: montserrat_12
-                  text_color: "${ui_muted}"
-                  text: "SYSTEME"
+                  text_color: ${ui_muted}
+                  text:   ACCENT NAVIGATION
+                  width: 224
+                  height: 22
+                  long_mode: DOT
+              - label:
+                  id: mobile_accent_value
+                  x: 16
+                  y: 34
+                  width: 224
+                  text_font: montserrat_16
+                  text: Couleur du YAML
+                  height: 22
+                  long_mode: DOT
+              - label:
+                  x: 252
+                  y: 23
+                  text: '>'
+              on_click:
+              - lambda: id(mobile_purple_accent) = !id(mobile_purple_accent);
+              - script.execute: tpp06_refresh_menu
+              radius: 16
+              scrollable: false
+          - button:
+              id: mobile_setting_1
+              width: 100%
+              height: 64
+              styles: mobile_card
+              widgets:
+              - label:
+                  x: 16
+                  y: 10
+                  text_font: montserrat_12
+                  text_color: ${ui_muted}
+                  text: FORMAT DE L'HEURE
+                  width: 224
+                  height: 22
+                  long_mode: DOT
+              - label:
+                  id: mobile_format_value
+                  x: 16
+                  y: 34
+                  width: 224
+                  text_font: montserrat_16
+                  text: 24 heures
+                  height: 22
+                  long_mode: DOT
+              - label:
+                  x: 252
+                  y: 23
+                  text: '>'
+              on_click:
+              - lambda: id(mobile_clock_12h) = !id(mobile_clock_12h);
+              - script.execute: tpp06_refresh_menu
+              radius: 16
+              scrollable: false
+          - label:
+              text: CONNEXIONS
+              text_font: montserrat_12
+              text_color: ${ui_muted}
+              width: 100%
+              height: 24
+          - button:
+              width: 100%
+              height: 64
+              styles: mobile_card
+              widgets:
+              - label:
+                  x: 16
+                  y: 10
+                  text_font: montserrat_16
+                  text: Wi-Fi
+              - label:
+                  x: 16
+                  y: 34
+                  text_font: montserrat_12
+                  text_color: ${ui_muted}
+                  text: Reseaux et mot de passe
+              - label:
+                  x: 252
+                  y: 23
+                  text: '>'
+              on_click:
+              - lvgl.page.show: page_wifi_discovery
+              radius: 16
+              scrollable: false
+          - label:
+              text: SYSTEME
+              text_font: montserrat_12
+              text_color: ${ui_muted}
+              width: 100%
+              height: 24
+          - button:
+              id: mobile_setting_3
+              width: 100%
+              height: 64
+              styles: mobile_card
+              widgets:
+              - label:
+                  x: 16
+                  y: 10
+                  text_font: montserrat_12
+                  text_color: ${ui_muted}
+                  text: SYSTEME
+                  width: 224
+                  height: 22
+                  long_mode: DOT
               - label:
                   id: mobile_diagnostics_link
                   x: 16
-                  y: 27
-                  width: 232
+                  y: 34
+                  width: 224
                   text_font: montserrat_16
-                  text: "Diagnostics"
+                  text: Diagnostics
+                  height: 22
+                  long_mode: DOT
               - label:
-                  x: 260
-                  y: 20
-                  text: ">"
-            on_click:
+                  x: 252
+                  y: 23
+                  text: '>'
+              on_click:
               - lvgl.page.show: page_diagnostics
-
-        - button:
-            x: 16
-            y: 342
-            width: 288
-            height: 48
-            styles: mobile_card
-            widgets:
-              - label:
-                  align: CENTER
-                  text: "\uF1EB  Wi-Fi  >"
-            on_click:
-              - lvgl.page.show: page_wifi_discovery
+              radius: 16
+              scrollable: false
+      scrollable: false
 
     # [TPP06] VUE WI-FI : recherche et sélection du réseau
     - id: page_wifi_discovery
@@ -2072,6 +2146,9 @@ lvgl:
               - lambda: id(panel_wifi_editor).cancel();
         - keyboard:
             id: mobile_wifi_keyboard
+            # LVGL anchors keyboards to BOTTOM_MID by default: with y: 280
+            # this would put the keys below the screen. Use page coordinates.
+            align: TOP_LEFT
             x: 0
             y: 280
             width: 320

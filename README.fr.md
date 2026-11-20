@@ -4,6 +4,9 @@
 
 **[Dernière release : version, nouveautés et limites](https://github.com/Philiphall6/TPP06-smart-panel-project/releases/latest)**
 
+[Préversion : assistant ordinateur et correctifs récents](https://github.com/Philiphall6/TPP06-smart-panel-project/releases/tag/v0.1.9-rc1)
+— distincte de la dernière release non-préversion.
+
 **[Guide débutant : commencer ici, sans démontage](docs/fr/DEMARRER-ICI.md)**
 
 [Accueil du projet](README.md) · [English](README.en.md)
@@ -42,6 +45,12 @@ les relais du modèle public restent en observation avant validation sur place.
 - [Logo de démarrage — opération NAND distincte de l’OTA](docs/fr/12-logo-demarrage.md)
 
 ## Installation et récupération
+
+Une [fenêtre de préparation sur ordinateur](docs/fr/21-assistant-ordinateur.md)
+est disponible via `Assistant-TPP06.sh` (Linux) ou `Assistant-TPP06.cmd` (Windows).
+Les parcours d’installation et de maintenance sont raccordés, avec confirmations
+et journaux privés. **Version expérimentale**, pas encore validée de bout en bout
+sur un panneau neuf ni sur Windows réel. Voir les prérequis du paquet et les limites.
 
 Les contrôles OTA refusent les exécutables incompatibles détectés, pas les
 nouveaux numéros de version ESPHome. Voir le [périmètre des contrôles](docs/fr/DEMARRER-ICI.md#protection-technique-des-mises-à-jour)

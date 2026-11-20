@@ -462,7 +462,9 @@ class MultibootScriptTests(unittest.TestCase):
         result = subprocess.run(
             ["sh", str(self.script), "supervise"],
             env={**self.environment, "TPP06_SESSION_SECONDS": "4"},
-            capture_output=True, timeout=15,
+            # Real sync() may stall on a busy shared host. This checks policy,
+            # not a hard real-time deadline for the host's storage flushes.
+            capture_output=True, timeout=45,
         )
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual((self.base / "mode").read_text().strip(), "tuya")
